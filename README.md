@@ -1,4 +1,4 @@
-# 🎙️ Discord Audio Collective
+# 🎙️ Discord Stereo Patcher & Installer
 
 **Unlocking true stereo and high-bitrate voice across platforms**
 
@@ -413,3 +413,4 @@ Found new offsets? Have test results? Want to help reverse engineer macOS/Linux 
 **[Report Issue](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/issues)** • **[Join the Development Discord](https://discord.gg/gDY6F8RAfM)**
 
 </div>
+
