@@ -382,13 +382,14 @@ Manual hex editing works for a one-off patch, but breaks the moment Discord upda
 - **[UnpackedX](https://codeberg.org/UnpackedX)** - [Voice Playgrounds Site](https://discord-voice.xyz/)
 - **[Oracle (oracle-dsc)](https://github.com/oracle-dsc)**
 - **[Loof-sys](https://github.com/LOOF-sys)**
-- **[HorrorPills / Geeko](https://github.com/HorrorPills)**
+/DiscordStereoPatcher-macOS)**
 - **[Hallow](https://github.com/ProdHallow)**
 - **[Ascend](https://github.com/bloodybapestas)**
 - BluesCat
 - **[Sentry](https://github.com/sentry1000)**
 - **[Sikimzo](https://github.com/sikimzo)**
-- THE MF GOAT **CRÜE**
+- 🍎 **[CRÜE](https://codeberg.org/DiscordStereoPatcher-macOS)**
+- 🍎 **[HorrorPills / Geeko](https://github.com/HorrorPills)** and **[Codeberg](https://codeberg.org
 ---
 
 ## 💬 Get Involved
