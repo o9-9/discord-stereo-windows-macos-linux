@@ -23,8 +23,10 @@ The **v0.5** release is available on GitHub Releases:
 
 ## 🙌 Special Thanks
 
-> Massive shoutout to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills/Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)** for their insane dedication and work on macOS.  
-> The macOS build exists entirely because of their efforts and six months of relentless grinding.  
+> Massive shoutout to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills/Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)** for their insane dedication and work on macOS.
+>   
+> The macOS build exists entirely because of their efforts and six months of relentless grinding.
+> 
 > As a two-person team, they put in immense time, energy, and commitment to make it happen. Absolute respect.
 
 ---
@@ -381,7 +383,8 @@ Manual hex editing works for a one-off patch, but breaks the moment Discord upda
 - **[Shaun (sh6un)](https://github.com/sh6un)**
 - **[UnpackedX](https://codeberg.org/UnpackedX)** - [Voice Playgrounds Site](https://discord-voice.xyz/)
 - **[Oracle (oracle-dsc)](https://github.com/oracle-dsc)**
-- **[Loof-sys](https://github.com/LOOF-sys)**
+- **[Loof-sys](https://github.com/LOOF-sys)**
+
 - **[Hallow](https://github.com/ProdHallow)**
 - **[Ascend](https://github.com/bloodybapestas)**
 - BluesCat
@@ -406,6 +409,7 @@ Found new offsets? Have test results? Want to help reverse engineer macOS/Linux 
 **[Report Issue](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/issues)** • **[Join the Development Discord](https://discord.gg/gDY6F8RAfM)**
 
 </div>
+
 
 
 
