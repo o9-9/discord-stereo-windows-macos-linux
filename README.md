@@ -23,7 +23,7 @@ The **v0.5** release is available on GitHub Releases:
 
 ## 🙌 Special Thanks
 
-> Massive shoutout to **Crüe and HorrorPills/Geeko** for their insane dedication and work on macOS.  
+> Massive shoutout to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills/Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)** for their insane dedication and work on macOS.  
 > The macOS build exists entirely because of their efforts and six months of relentless grinding.  
 > As a two-person team, they put in immense time, energy, and commitment to make it happen. Absolute respect.
 
