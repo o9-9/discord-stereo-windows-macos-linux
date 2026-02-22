@@ -389,8 +389,6 @@ Manual hex editing works for a one-off patch, but breaks the moment Discord upda
 - **[Sentry](https://github.com/sentry1000)**
 - **[Sikimzo](https://github.com/sikimzo)**
 - THE MF GOAT **CRÜE**
-- THE OTHER GOAT **Geeko**
-
 ---
 
 ## 💬 Get Involved
@@ -408,6 +406,7 @@ Found new offsets? Have test results? Want to help reverse engineer macOS/Linux 
 **[Report Issue](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/issues)** • **[Join the Development Discord](https://discord.gg/gDY6F8RAfM)**
 
 </div>
+
 
 
 
