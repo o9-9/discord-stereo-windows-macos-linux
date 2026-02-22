@@ -381,15 +381,14 @@ Manual hex editing works for a one-off patch, but breaks the moment Discord upda
 - **[Shaun (sh6un)](https://github.com/sh6un)**
 - **[UnpackedX](https://codeberg.org/UnpackedX)** - [Voice Playgrounds Site](https://discord-voice.xyz/)
 - **[Oracle (oracle-dsc)](https://github.com/oracle-dsc)**
-- **[Loof-sys](https://github.com/LOOF-sys)**
-/DiscordStereoPatcher-macOS)**
+- **[Loof-sys](https://github.com/LOOF-sys)**
 - **[Hallow](https://github.com/ProdHallow)**
 - **[Ascend](https://github.com/bloodybapestas)**
 - BluesCat
 - **[Sentry](https://github.com/sentry1000)**
 - **[Sikimzo](https://github.com/sikimzo)**
 - 🍎 **[CRÜE](https://codeberg.org/DiscordStereoPatcher-macOS)**
-- 🍎 **[HorrorPills / Geeko](https://github.com/HorrorPills)** and **[Codeberg](https://codeberg.org
+- 🍎 **[HorrorPills / Geeko](https://github.com/HorrorPills)** and **[Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS)**
 ---
 
 ## 💬 Get Involved
