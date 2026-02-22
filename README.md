@@ -17,12 +17,7 @@
 The **v0.5** release is available on GitHub Releases:
 - https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v0.5
 
-**Included:** Windows patcher + installer, Linux patcher + installer, and the macOS patcher.  
-**Not included:** macOS installer (still a placeholder).
-
-> **macOS caution:** I have no way of testing the current macOS patcher as I don't own a Mac.  
-> It might not actually enable stereo / influence stereo, and it may cause crashes when entering a voice channel (VC).  
-> The macOS-side developers (**Geeko** and **Crüe**) are working to get the official release out in the coming weeks.
+**Included:** Windows patcher + installer, Linux patcher + installer
 
 ---
 
@@ -413,5 +408,6 @@ Found new offsets? Have test results? Want to help reverse engineer macOS/Linux 
 **[Report Issue](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/issues)** • **[Join the Development Discord](https://discord.gg/gDY6F8RAfM)**
 
 </div>
+
 
 
