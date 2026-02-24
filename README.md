@@ -56,7 +56,7 @@ We analyze and improve stereo voice handling across Windows, macOS, and Linux �
 | Platform | Status | Notes |
 |----------|:------:|-------|
 | **Windows** | ✅ Active | Full support — GUI patcher with multi-client detection |
-| **macOS** | ✅ Active | Bash patcher with auto-detection, code signing handling, Apple Silicon support |
+| **macOS** | 🚫 Inactive | Bash patcher with auto-detection, code signing handling, Apple Silicon support |
 | **Linux** | ✅ Active | Bash patcher with auto-detection — deb, Flatpak, Snap supported |
 
 ---
@@ -77,7 +77,7 @@ We analyze and improve stereo voice handling across Windows, macOS, and Linux �
 | Repository | Description | Status |
 |------------|-------------|:------:|
 | **[Windows Patcher and Installer](./Windows%20Patcher%20and%20Installer/)** | Windows voice module patcher and installer | ✅ Active |
-| **[macOS Patcher](./MacOS%20Patcher/)** | macOS voice module patcher | ✅ Active |
+| **[macOS Patcher](https://codeberg.org/DiscordStereoPatcher-macOS)** | macOS voice module patcher | 🚫 Inactive |
 | **[Linux Patcher and Installer](./Linux%20Patcher%20and%20Installer/)** | Linux voice module patcher and installer | ✅ Active |
 
 ---
@@ -409,6 +409,7 @@ Found new offsets? Have test results? Want to help reverse engineer macOS/Linux 
 **[Report Issue](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/issues)** • **[Join the Development Discord](https://discord.gg/gDY6F8RAfM)**
 
 </div>
+
 
 
 
