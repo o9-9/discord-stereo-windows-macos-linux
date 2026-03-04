@@ -9,7 +9,12 @@
 ![Windows](https://img.shields.io/badge/Windows-Active-00C853?style=flat-square)
 ![macOS](https://img.shields.io/badge/MacOS-Active-00C853?style=flat-square)
 ![Linux](https://img.shields.io/badge/Linux-Active-00C853?style=flat-square)
+---
+# ⚠️ Can't be heard? Disable your VPN.
 
+VPNs, aggressive firewalls, and antivirus software interfere with Discord's voice packets. Stereo requires higher bandwidth and is especially affected. **This is not a module issue.**
+
+If you must use a VPN, split-tunnel Discord so it bypasses it.
 ---
 
 ## 🚀 v0.5 Release
