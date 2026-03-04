@@ -9,11 +9,25 @@
 ![macOS](https://img.shields.io/badge/MacOS-Active-00C853?style=flat-square)
 ![Linux](https://img.shields.io/badge/Linux-Active-00C853?style=flat-square)
 ---
+
+# 🍎 macOS Patcher — Now Live!
+
+The **macOS patcher** is officially active. Huge thanks to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills/Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)** for six months of grinding to make this happen.
+
+- Bash patcher with auto-detection
+- Code signing handling
+- Apple Silicon (Rosetta) support
+
+👉 **[Get the macOS Patcher](https://codeberg.org/DiscordStereoPatcher-macOS)**
+
+---
+
 # ⚠️ Can't be heard? Disable your VPN.
 
 VPNs, aggressive firewalls, and antivirus software interfere with Discord's voice packets. Stereo requires higher bandwidth and is especially affected. **This is not a module issue.**
 
 If you must use a VPN, split-tunnel Discord so it bypasses it.
+
 ---
 
 ## 🚀 v0.5 Release
@@ -60,7 +74,7 @@ We analyze and improve stereo voice handling across Windows, macOS, and Linux �
 | Platform | Status | Notes |
 |----------|:------:|-------|
 | **Windows** | ✅ Active | Full support — GUI patcher with multi-client detection |
-| **macOS** | 🚫 Inactive | Bash patcher with auto-detection, code signing handling, Apple Silicon support |
+| **macOS** | ✅ Active | Bash patcher with auto-detection, code signing handling, Apple Silicon support |
 | **Linux** | ✅ Active | Bash patcher with auto-detection — deb, Flatpak, Snap supported |
 
 ---
@@ -81,7 +95,7 @@ We analyze and improve stereo voice handling across Windows, macOS, and Linux �
 | Repository | Description | Status |
 |------------|-------------|:------:|
 | **[Windows Patcher and Installer](./Windows%20Patcher%20and%20Installer/)** | Windows voice module patcher and installer | ✅ Active |
-| **[macOS Patcher](https://codeberg.org/DiscordStereoPatcher-macOS)** | macOS voice module patcher | 🚫 Inactive |
+| **[macOS Patcher](https://codeberg.org/DiscordStereoPatcher-macOS)** | macOS voice module patcher | ✅ Active |
 | **[Linux Patcher and Installer](./Linux%20Patcher%20and%20Installer/)** | Linux voice module patcher and installer | ✅ Active |
 
 ---
@@ -258,8 +272,8 @@ Use the Installer for simplicity, the Patcher for flexibility.
 <summary><h2>📋 Changelog</h2></summary>
 
 ### v6.0 — Cross-Platform Release (Feb 2026)
+- 🍎 **macOS Patcher — Now Active** — native bash script, handles code signing, Apple Silicon (Rosetta) support
 - 🧪 **Linux Beta Patcher** — native bash script, auto-detects deb/Flatpak/Snap installs
-- 🧪 **macOS Beta Patcher** — native bash script, handles code signing, Apple Silicon (Rosetta) support
 - Platform-specific patch bytes (r12 vs r13 register, je vs jne branch, Clang vs MSVC prologue)
 - POSIX file I/O (mmap/msync) for Linux/macOS patchers
 - Cross-platform process management and client detection
@@ -413,10 +427,3 @@ Found new offsets? Have test results? Want to help reverse engineer macOS/Linux 
 **[Report Issue](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/issues)** • **[Join the Development Discord](https://discord.gg/gDY6F8RAfM)**
 
 </div>
-
-
-
-
-
-
-
