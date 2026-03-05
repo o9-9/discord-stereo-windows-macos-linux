@@ -14,7 +14,7 @@ Part of the [Discord Audio Collective](https://github.com/ProdHallow/Discord-Ste
 | Before | After |
 |:------:|:-----:|
 | 24 kHz | **48 kHz** |
-| ~64 kbps | **400 kbps** |
+| ~64 kbps | **384 kbps** |
 | Mono downmix | **True Stereo** |
 | Aggressive filtering | **Filterless passthrough** |
 

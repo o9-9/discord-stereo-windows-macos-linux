@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ###############################################################################
 # Discord Voice Quality Patcher - Linux
-# 48kHz | 512kbps | Stereo | Configurable Gain
+# 48kHz | 384kbps | Stereo | Configurable Gain
 # Made by: Oracle | Shaun | Hallow | Ascend | Sentry | Sikimzo | Cypher
 ###############################################################################
 
@@ -23,8 +23,17 @@ WHITE='\033[1;37m'; DIM='\033[0;90m'; BOLD='\033[1m'; NC='\033[0m'
 
 # --- Config ------------------------------------------------------------------
 SAMPLE_RATE=48000
-BITRATE=512
-CACHE_DIR="$HOME/.cache/DiscordVoicePatcher"
+BITRATE=384
+
+# When run with sudo, use invoking user's home so we find their Discord
+DETECT_HOME="${HOME:-}"
+if [[ -n "${SUDO_USER:-}" ]] && [[ "$(id -u 2>/dev/null)" -eq 0 ]]; then
+    _dh=$(getent passwd "$SUDO_USER" 2>/dev/null | cut -d: -f6)
+    [[ -n "${_dh:-}" ]] && DETECT_HOME="$_dh"
+fi
+[[ -z "${DETECT_HOME:-}" ]] && DETECT_HOME="${HOME:-}"
+
+CACHE_DIR="$DETECT_HOME/.cache/DiscordVoicePatcher"
 BACKUP_DIR="$CACHE_DIR/Backups"
 LOG_FILE="$CACHE_DIR/patcher.log"
 TEMP_DIR="$CACHE_DIR/build"
@@ -79,7 +88,7 @@ log_error() { echo -e "${RED}[XX]${NC} $1"; echo "[ERROR] $1" >> "$LOG_FILE" 2>/
 banner() {
     echo ""
     echo -e "${CYAN}===== Discord Voice Quality Patcher v${SCRIPT_VERSION} =====${NC}"
-    echo -e "${CYAN}      48kHz | 512kbps | Stereo | Gain Config${NC}"
+    echo -e "${CYAN}      48kHz | 384kbps | Stereo | Gain Config${NC}"
     echo -e "${CYAN}      Platform: Linux | Multi-Client${NC}"
     echo -e "${CYAN}===============================================${NC}"
     echo ""
@@ -94,6 +103,9 @@ show_settings() {
 }
 
 # --- Parse Args --------------------------------------------------------------
+SILENT_MODE=false
+PATCH_ALL=false
+
 usage() {
     echo "Usage: $0 [gain] [options]"
     echo ""
@@ -101,12 +113,15 @@ usage() {
     echo "  --skip-backup   Don't create backup before patching"
     echo "  --restore       Restore from backup"
     echo "  --list-backups  Show available backups"
+    echo "  --silent        No prompts, patch all clients"
+    echo "  --patch-all     Patch all clients (no selection menu)"
     echo "  --help          Show this help"
     echo ""
     echo "Examples:"
     echo "  $0              # Patch with 1x gain (no boost)"
     echo "  $0 3            # Patch with 3x gain"
     echo "  $0 --restore    # Restore from backup"
+    echo "  $0 --silent 2   # Silently patch all with 2x gain"
     exit 0
 }
 
@@ -115,6 +130,8 @@ for arg in "$@"; do
         --skip-backup) SKIP_BACKUP=true ;;
         --restore) RESTORE_MODE=true ;;
         --list-backups) mkdir -p "$BACKUP_DIR"; ls -la "$BACKUP_DIR/" 2>/dev/null || echo "No backups found"; exit 0 ;;
+        --silent|-s) SILENT_MODE=true; PATCH_ALL=true ;;
+        --patch-all) PATCH_ALL=true ;;
         --help|-h) usage ;;
         [0-9]|[0-9][0-9]) AUDIO_GAIN="$arg" ;;
     esac
@@ -143,49 +160,51 @@ declare -a CLIENT_NODES=()
 find_discord_clients() {
     log_info "Scanning for Discord installations..."
 
-    # discord_voice.node only exists in the per-user config directories,
-    # inside versioned module folders. System-wide install paths like
-    # /opt/discord/resources or /usr/share/discord/resources only contain
-    # the .asar app bundle, not native modules.
-    local home="$HOME"
+    # Comprehensive search paths matching the installer
+    # discord_voice.node lives inside per-user config dirs in
+    # app-*/modules/discord_voice*/discord_voice/
+    # System paths (/opt, /usr/share, /usr/lib, /snap) also searched
+    # in case they have been unpacked or contain modules.
     local search_bases=(
-        "$home/.config/discord"
-        "$home/.config/discordcanary"
-        "$home/.config/discordptb"
-        "$home/.var/app/com.discordapp.Discord/config/discord"
+        "$DETECT_HOME/.config/discord"
+        "$DETECT_HOME/.config/discordcanary"
+        "$DETECT_HOME/.config/discordptb"
+        "$DETECT_HOME/.config/discorddevelopment"
+        "$DETECT_HOME/.var/app/com.discordapp.Discord/config/discord"
+        "/snap/discord/current/usr/share/discord/resources"
+        "/opt/discord/resources"
+        "/opt/discord-canary/resources"
+        "/opt/discord-ptb/resources"
+        "/usr/share/discord/resources"
+        "/usr/lib/discord/resources"
     )
     local search_names=(
         "Discord Stable"
         "Discord Canary"
         "Discord PTB"
-        "Discord Flatpak"
+        "Discord Development"
+        "Discord (Flatpak)"
+        "Discord (Snap)"
+        "Discord (/opt)"
+        "Discord Canary (/opt)"
+        "Discord PTB (/opt)"
+        "Discord (/usr/share)"
+        "Discord (/usr/lib)"
     )
 
-    # Also check root's config if running as root
-    if [[ $EUID -eq 0 && "$home" != "/root" ]]; then
-        search_bases+=(
-            "/root/.config/discord"
-            "/root/.config/discordcanary"
-            "/root/.config/discordptb"
-        )
-        search_names+=(
-            "Discord Stable (root)"
-            "Discord Canary (root)"
-            "Discord PTB (root)"
-        )
-    fi
+    local found_paths=()
 
     for i in "${!search_bases[@]}"; do
         local base="${search_bases[$i]}"
         local name="${search_names[$i]}"
 
-        if [[ ! -d "$base" ]]; then continue; fi
+        [[ -d "$base" ]] || continue
 
-        # Find discord_voice.node inside app-*/modules/discord_voice*/discord_voice/
+        # Find discord_voice.node (up to depth 10 for system installs)
         local found_nodes
-        found_nodes=$(find "$base" -maxdepth 5 -name "discord_voice.node" -type f 2>/dev/null | head -5 || true)
+        found_nodes=$(find "$base" -maxdepth 10 -name "discord_voice.node" -type f 2>/dev/null | head -5 || true)
 
-        if [[ -z "$found_nodes" ]]; then continue; fi
+        [[ -z "$found_nodes" ]] && continue
 
         # Pick the most recent version
         local latest
@@ -194,8 +213,18 @@ find_discord_clients() {
         done | sort -rn | head -1 | cut -d' ' -f2-)
 
         if [[ -n "$latest" && -f "$latest" ]]; then
+            # Deduplicate by resolved path
+            local resolved
+            resolved=$(readlink -f "$latest" 2>/dev/null || echo "$latest")
+            local dup=false
+            for fp in "${found_paths[@]+"${found_paths[@]}"}"; do
+                [[ "$fp" == "$resolved" ]] && { dup=true; break; }
+            done
+            $dup && continue
+
             CLIENT_NAMES+=("$name")
             CLIENT_NODES+=("$latest")
+            found_paths+=("$resolved")
             local size
             size=$(stat -c%s "$latest" 2>/dev/null || echo "?")
             log_ok "Found: $name"
@@ -207,12 +236,21 @@ find_discord_clients() {
     if [[ ${#CLIENT_NAMES[@]} -eq 0 ]]; then
         log_error "No Discord installations found!"
         echo ""
-        echo "Expected discord_voice.node in:"
+        echo "Expected discord_voice.node in one of:"
         echo "  ~/.config/discord/app-*/modules/discord_voice-*/discord_voice/"
         echo "  ~/.config/discordcanary/app-*/modules/discord_voice-*/discord_voice/"
         echo "  ~/.config/discordptb/app-*/modules/discord_voice-*/discord_voice/"
+        echo "  ~/.config/discorddevelopment/app-*/modules/discord_voice-*/discord_voice/"
+        echo "  ~/.var/app/com.discordapp.Discord/config/discord/..."
+        echo "  /opt/discord/... /usr/share/discord/... /snap/discord/..."
         echo ""
-        echo "Make sure Discord has been opened at least once so modules are downloaded."
+        echo "Make sure Discord has been opened and you've joined a voice channel"
+        echo "at least once so the voice module gets downloaded."
+        if [[ -n "${SUDO_USER:-}" ]] && [[ "$(id -u 2>/dev/null)" -eq 0 ]]; then
+            echo ""
+            echo "Tip: Checked config for user $SUDO_USER ($DETECT_HOME)."
+            echo "If Discord is installed for another user, run without sudo as that user."
+        fi
         return 1
     fi
 
@@ -556,11 +594,11 @@ private:
         if (!PatchBytes(Offsets::AudioEncoderOpusConfigSetChannels, "\x02", 1)) return false;
         if (!PatchBytes(Offsets::MonoDownmixer, "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\xE9", 13)) return false;
 
-        printf("  [2/5] Setting bitrate to 512kbps...\n");
-        if (!PatchBytes(Offsets::EmulateBitrateModified, "\x00\xD0\x07", 3)) return false;
-        if (!PatchBytes(Offsets::SetsBitrateBitrateValue, "\x00\xD0\x07\x00\x00", 5)) return false;
+        printf("  [2/5] Setting bitrate to %dkbps...\n", BITRATE);
+        if (!PatchBytes(Offsets::EmulateBitrateModified, "\x00\xDC\x05", 3)) return false;
+        if (!PatchBytes(Offsets::SetsBitrateBitrateValue, "\x00\xDC\x05\x00\x00", 5)) return false;
         if (!PatchBytes(Offsets::SetsBitrateBitwiseOr, "\x90\x90\x90", 3)) return false;
-        if (!PatchBytes(Offsets::DuplicateEmulateBitrateModified, "\x00\xD0\x07", 3)) return false;
+        if (!PatchBytes(Offsets::DuplicateEmulateBitrateModified, "\x00\xDC\x05", 3)) return false;
 
         printf("  [3/5] Enabling 48kHz sample rate...\n");
         if (!PatchBytes(Offsets::Emulate48Khz, "\x90\x90\x90", 3)) return false;
@@ -580,9 +618,9 @@ private:
         // ThrowError: ret (prevents error throws from crashing)
         if (!PatchBytes(Offsets::ThrowError, "\xC3", 1)) return false;
 
-        printf("  [5/5] Patching encoder config (512kbps at creation)...\n");
-        if (!PatchBytes(Offsets::EncoderConfigInit1, "\x00\xD0\x07\x00", 4)) return false;
-        if (!PatchBytes(Offsets::EncoderConfigInit2, "\x00\xD0\x07\x00", 4)) return false;
+        printf("  [5/5] Patching encoder config (%dkbps at creation)...\n", BITRATE);
+        if (!PatchBytes(Offsets::EncoderConfigInit1, "\x00\xDC\x05\x00", 4)) return false;
+        if (!PatchBytes(Offsets::EncoderConfigInit2, "\x00\xDC\x05\x00", 4)) return false;
 
         printf("  All patches applied!\n");
         return true;
@@ -719,6 +757,8 @@ compile_patcher() {
 }
 
 # --- Client Selection --------------------------------------------------------
+SELECTED_CLIENTS=""  # "all" or space-separated indices
+
 select_clients() {
     echo ""
     echo -e "${CYAN}  Installed Discord clients:${NC}"
@@ -736,17 +776,18 @@ select_clients() {
 
     case "${choice^^}" in
         C) log_warn "Cancelled"; exit 0 ;;
-        A) return 255 ;;  # patch all
+        A|"") SELECTED_CLIENTS="all"; return 0 ;;
         [0-9]*)
             if [[ ! "$choice" =~ ^[0-9]+$ ]]; then
                 log_error "Invalid selection"; exit 1
             fi
             if (( choice >= 1 && choice <= ${#CLIENT_NAMES[@]} )); then
-                return $(( choice - 1 ))
+                SELECTED_CLIENTS="$(( choice - 1 ))"
+                return 0
             fi
             log_error "Invalid selection"; exit 1
             ;;
-        *) return 255 ;;  # default: patch all
+        *) SELECTED_CLIENTS="all"; return 0 ;;
     esac
 }
 
@@ -806,6 +847,9 @@ patch_client() {
 
 # --- Cleanup -----------------------------------------------------------------
 cleanup() {
+    # Guard: don't clean if temp dir was never created
+    [[ -d "${TEMP_DIR:-}" ]] || return 0
+
     # Only clean up source/binary on success - preserve on failure for debugging
     if [[ "$PATCH_SUCCESS" == "true" ]]; then
         rm -f "$TEMP_DIR/patcher.cpp" "$TEMP_DIR/amplifier.cpp" \
@@ -834,19 +878,16 @@ main() {
     # Find compiler
     find_compiler || exit 1
 
-    # Select clients. Capture non-zero returns (e.g. 255 = patch all)
-    # without tripping set -e.
-    local selection
-    if select_clients; then
-        selection=$?
+    # Select clients (skip menu in silent/patch-all mode)
+    if $PATCH_ALL; then
+        SELECTED_CLIENTS="all"
     else
-        selection=$?
+        select_clients
     fi
 
     # Check if Discord is running and warn - no kill needed on Linux,
     # files aren't locked like on Windows.
-    # pgrep -x uses ERE: use | not \| for alternation
-    if pgrep -x "Discord|discord|DiscordCanary|DiscordPTB" >/dev/null 2>&1; then
+    if pgrep -f "Discord|discord" >/dev/null 2>&1; then
         log_warn "Discord is currently running. You'll need to restart it after patching."
         echo ""
     fi
@@ -855,7 +896,7 @@ main() {
     local failed=0
     local total=0
 
-    if (( selection == 255 )); then
+    if [[ "$SELECTED_CLIENTS" == "all" ]]; then
         # Patch all
         total=${#CLIENT_NAMES[@]}
         for i in "${!CLIENT_NAMES[@]}"; do
@@ -867,7 +908,7 @@ main() {
         done
     else
         total=1
-        if patch_client "$selection"; then
+        if patch_client "$SELECTED_CLIENTS"; then
             success=1
         else
             failed=1
