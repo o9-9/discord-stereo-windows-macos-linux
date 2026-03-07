@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ###############################################################################
 # Discord Voice Quality Patcher - Linux
-# 48kHz | 384kbps | Stereo | Configurable Gain
+# 48kHz | 384kbps | Stereo
 # Made by: Oracle | Shaun | Hallow | Ascend | Sentry | Sikimzo | Cypher
 ###############################################################################
 
@@ -12,8 +12,7 @@ fi
 
 set -euo pipefail
 
-SCRIPT_VERSION="6.1"
-AUDIO_GAIN=1
+SCRIPT_VERSION="7.0"
 SKIP_BACKUP=false
 RESTORE_MODE=false
 
@@ -42,10 +41,11 @@ TEMP_DIR="$CACHE_DIR/build"
 # Replace this section with offset finder output:
 #   Run: python discord_voice_node_offset_finder_v5.py <path/to/discord_voice.node>
 #   Copy the block "COPY BELOW -> discord_voice_patcher_linux.sh" into this section.
+# Required: exactly 17 offsets (same set as Windows patcher). Paste EXPECTED_MD5, EXPECTED_SIZE, and OFFSET_* lines.
 EXPECTED_MD5="55fa8e3fcf665ffa223e1dcde3cba3b0"
 EXPECTED_SIZE=88674536
 
-# --- Linux/ELF patch offsets --------------------------------------------------
+# --- Linux/ELF patch offsets (17 required) ------------------------------------
 OFFSET_CreateAudioFrameStereo=0x20C4C3
 OFFSET_AudioEncoderOpusConfigSetChannels=0x5E8A55
 OFFSET_MonoDownmixer=0x1DAF86
@@ -61,10 +61,19 @@ OFFSET_DcReject=0x5E1870
 OFFSET_DownmixFunc=0x805BA0
 OFFSET_AudioEncoderOpusConfigIsOk=0x5E8BF0
 OFFSET_ThrowError=0x14E760
-OFFSET_DuplicateEmulateBitrateModified=0x21DA33
 OFFSET_EncoderConfigInit1=0x5E8A5F
 OFFSET_EncoderConfigInit2=0x5E8438
 FILE_OFFSET_ADJUSTMENT=0
+
+# Required offset names (same 17 as Windows patcher). Used to validate before build.
+REQUIRED_OFFSET_NAMES=(
+    CreateAudioFrameStereo AudioEncoderOpusConfigSetChannels MonoDownmixer
+    EmulateStereoSuccess1 EmulateStereoSuccess2 EmulateBitrateModified
+    SetsBitrateBitrateValue SetsBitrateBitwiseOr Emulate48Khz
+    HighPassFilter HighpassCutoffFilter DcReject DownmixFunc
+    AudioEncoderOpusConfigIsOk ThrowError
+    EncoderConfigInit1 EncoderConfigInit2
+)
 
 # --- Original bytes at validation sites (must match offsets above) ------------
 ORIG_Emulate48Khz='{0x0F, 0x43, 0xD0}'
@@ -88,17 +97,14 @@ log_error() { echo -e "${RED}[XX]${NC} $1"; echo "[ERROR] $1" >> "$LOG_FILE" 2>/
 banner() {
     echo ""
     echo -e "${CYAN}===== Discord Voice Quality Patcher v${SCRIPT_VERSION} =====${NC}"
-    echo -e "${CYAN}      48kHz | 384kbps | Stereo | Gain Config${NC}"
+    echo -e "${CYAN}      48kHz | 384kbps | Stereo${NC}"
     echo -e "${CYAN}      Platform: Linux | Multi-Client${NC}"
     echo -e "${CYAN}===============================================${NC}"
     echo ""
 }
 
 show_settings() {
-    local color="$GREEN"
-    if (( AUDIO_GAIN > 5 )); then color="$RED"
-    elif (( AUDIO_GAIN > 2 )); then color="$YELLOW"; fi
-    echo -e "Config: ${SAMPLE_RATE}Hz, ${BITRATE}kbps, Stereo, ${color}${AUDIO_GAIN}x gain${NC} (Linux)"
+    echo -e "Config: ${SAMPLE_RATE}Hz, ${BITRATE}kbps, Stereo (Linux)"
     echo ""
 }
 
@@ -107,9 +113,8 @@ SILENT_MODE=false
 PATCH_ALL=false
 
 usage() {
-    echo "Usage: $0 [gain] [options]"
+    echo "Usage: $0 [options]"
     echo ""
-    echo "  gain            Audio gain multiplier (1-10, default: 1)"
     echo "  --skip-backup   Don't create backup before patching"
     echo "  --restore       Restore from backup"
     echo "  --list-backups  Show available backups"
@@ -118,10 +123,9 @@ usage() {
     echo "  --help          Show this help"
     echo ""
     echo "Examples:"
-    echo "  $0              # Patch with 1x gain (no boost)"
-    echo "  $0 3            # Patch with 3x gain"
+    echo "  $0              # Patch with stereo, 48kHz, 384kbps"
     echo "  $0 --restore    # Restore from backup"
-    echo "  $0 --silent 2   # Silently patch all with 2x gain"
+    echo "  $0 --silent     # Silently patch all clients"
     exit 0
 }
 
@@ -133,25 +137,157 @@ for arg in "$@"; do
         --silent|-s) SILENT_MODE=true; PATCH_ALL=true ;;
         --patch-all) PATCH_ALL=true ;;
         --help|-h) usage ;;
-        [0-9]|[0-9][0-9]) AUDIO_GAIN="$arg" ;;
+        *)
+            echo "Unknown option: $arg"
+            usage
+            ;;
     esac
 done
-
-# Force base-10 interpretation (avoids octal issues with leading zeros like 08/09)
-AUDIO_GAIN=$((10#$AUDIO_GAIN))
-
-# Skip gain validation for modes that don't need it
-if ! $RESTORE_MODE; then
-    if (( AUDIO_GAIN < 1 || AUDIO_GAIN > 10 )); then
-        echo "Error: gain must be 1-10"; exit 1
-    fi
-fi
 
 # --- Initialize --------------------------------------------------------------
 mkdir -p "$CACHE_DIR" "$BACKUP_DIR" "$TEMP_DIR"
 echo "=== Discord Voice Patcher Log ===" > "$LOG_FILE"
 echo "Started: $(date)" >> "$LOG_FILE"
-echo "Platform: Linux | Gain: ${AUDIO_GAIN}x" >> "$LOG_FILE"
+echo "Platform: Linux" >> "$LOG_FILE"
+
+# --- Discord Process Detection -----------------------------------------------
+# Returns 0 if Discord is running, 1 if not.
+# Sets DISCORD_PIDS to the list of matching PIDs.
+DISCORD_PIDS=""
+
+check_discord_running() {
+    # Match only actual Discord electron processes, not this script or grep
+    DISCORD_PIDS=""
+    local pids
+    pids=$(pgrep -f '[D]iscord' 2>/dev/null | head -50 || true)
+
+    if [[ -z "$pids" ]]; then
+        return 1
+    fi
+
+    # Filter to only actual Discord processes (not this script, not grep, not unrelated matches)
+    local filtered_pids=""
+    while IFS= read -r pid; do
+        [[ -z "$pid" ]] && continue
+        # Read the process command line
+        local cmdline
+        cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)
+        [[ -z "$cmdline" ]] && continue
+
+        # Match only real Discord binaries (Discord, DiscordCanary, DiscordPTB, DiscordDevelopment)
+        # Exclude: this script, grep, editors, etc.
+        if [[ "$cmdline" =~ (^|/)(Discord|DiscordCanary|DiscordPTB|DiscordDevelopment)(/| |$) ]] ||
+           [[ "$cmdline" =~ discord_voice_patcher ]] && false ||
+           [[ "$cmdline" =~ /opt/discord[^_] ]] ||
+           [[ "$cmdline" =~ /usr/(share|lib)/discord ]] ||
+           [[ "$cmdline" =~ com\.discordapp\.Discord ]] ||
+           [[ "$cmdline" =~ /snap/discord/ ]]; then
+            filtered_pids+="$pid "
+        fi
+    done <<< "$pids"
+
+    filtered_pids="${filtered_pids% }"
+    if [[ -n "$filtered_pids" ]]; then
+        DISCORD_PIDS="$filtered_pids"
+        return 0
+    fi
+    return 1
+}
+
+# Prompt user to close Discord, or optionally kill it.
+# On Linux, files are not locked like Windows, but patching while the module
+# is mmap'd by a running process can cause crashes or be overwritten on restart.
+# Additionally, Discord auto-updates modules on launch, which can overwrite patches.
+handle_discord_running() {
+    if ! check_discord_running; then
+        return 0
+    fi
+
+    echo ""
+    log_warn "Discord is currently running."
+    log_warn "Patching while Discord is running can cause:"
+    log_warn "  - Crashes if the voice module is in use"
+    log_warn "  - Patches being overwritten when Discord restarts"
+    echo ""
+
+    if $SILENT_MODE; then
+        log_info "Silent mode: Attempting to close Discord..."
+        terminate_discord
+        return $?
+    fi
+
+    echo -e "  [${WHITE}1${NC}] Close Discord and continue patching"
+    echo -e "  [${WHITE}2${NC}] Continue without closing (not recommended)"
+    echo -e "  [${WHITE}3${NC}] Cancel"
+    echo ""
+
+    read -rp "  Choice [1]: " choice
+    case "${choice:-1}" in
+        1)
+            terminate_discord
+            return $?
+            ;;
+        2)
+            log_warn "Continuing with Discord running - patches may not take effect until restart"
+            return 0
+            ;;
+        3)
+            log_info "Cancelled. Close Discord manually and re-run."
+            exit 0
+            ;;
+        *)
+            terminate_discord
+            return $?
+            ;;
+    esac
+}
+
+terminate_discord() {
+    log_info "Closing Discord processes..."
+
+    # Send SIGTERM first (graceful shutdown)
+    local killed=false
+    if check_discord_running && [[ -n "$DISCORD_PIDS" ]]; then
+        for pid in $DISCORD_PIDS; do
+            kill "$pid" 2>/dev/null && killed=true || true
+        done
+    fi
+
+    if ! $killed; then
+        log_ok "No Discord processes to close"
+        return 0
+    fi
+
+    # Wait up to 10 seconds for graceful shutdown
+    local attempts=0
+    while (( attempts < 20 )); do
+        if ! check_discord_running; then
+            log_ok "Discord closed successfully"
+            sleep 1  # Brief settle time
+            return 0
+        fi
+        sleep 0.5
+        (( attempts++ ))
+    done
+
+    # If still running, try SIGKILL
+    log_warn "Discord didn't shut down gracefully, forcing..."
+    if check_discord_running && [[ -n "$DISCORD_PIDS" ]]; then
+        for pid in $DISCORD_PIDS; do
+            kill -9 "$pid" 2>/dev/null || true
+        done
+    fi
+
+    sleep 1
+
+    if check_discord_running; then
+        log_error "Failed to close Discord. Please close it manually."
+        return 1
+    fi
+
+    log_ok "Discord closed"
+    return 0
+}
 
 # --- Discord Client Detection ------------------------------------------------
 declare -a CLIENT_NAMES=()
@@ -160,17 +296,17 @@ declare -a CLIENT_NODES=()
 find_discord_clients() {
     log_info "Scanning for Discord installations..."
 
-    # Comprehensive search paths matching the installer
+    # Comprehensive search paths
     # discord_voice.node lives inside per-user config dirs in
     # app-*/modules/discord_voice*/discord_voice/
-    # System paths (/opt, /usr/share, /usr/lib, /snap) also searched
-    # in case they have been unpacked or contain modules.
+    # System paths (/opt, /usr/share, /usr/lib, /snap) also searched.
     local search_bases=(
         "$DETECT_HOME/.config/discord"
         "$DETECT_HOME/.config/discordcanary"
         "$DETECT_HOME/.config/discordptb"
         "$DETECT_HOME/.config/discorddevelopment"
         "$DETECT_HOME/.var/app/com.discordapp.Discord/config/discord"
+        "$DETECT_HOME/.var/app/com.discordapp.DiscordCanary/config/discordcanary"
         "/snap/discord/current/usr/share/discord/resources"
         "/opt/discord/resources"
         "/opt/discord-canary/resources"
@@ -184,6 +320,7 @@ find_discord_clients() {
         "Discord PTB"
         "Discord Development"
         "Discord (Flatpak)"
+        "Discord Canary (Flatpak)"
         "Discord (Snap)"
         "Discord (/opt)"
         "Discord Canary (/opt)"
@@ -222,14 +359,24 @@ find_discord_clients() {
             done
             $dup && continue
 
+            # Validate file is actually readable and non-zero
+            if [[ ! -r "$latest" ]]; then
+                log_warn "Found but unreadable: $latest"
+                continue
+            fi
+            local fsize
+            fsize=$(stat -c%s "$latest" 2>/dev/null || echo "0")
+            if (( fsize == 0 )); then
+                log_warn "Found but empty (0 bytes): $latest"
+                continue
+            fi
+
             CLIENT_NAMES+=("$name")
             CLIENT_NODES+=("$latest")
             found_paths+=("$resolved")
-            local size
-            size=$(stat -c%s "$latest" 2>/dev/null || echo "?")
             log_ok "Found: $name"
             log_info "  Path: $latest"
-            log_info "  Size: $(numfmt --to=iec "$size" 2>/dev/null || echo "${size} bytes")"
+            log_info "  Size: $(numfmt --to=iec "$fsize" 2>/dev/null || echo "${fsize} bytes")"
         fi
     done
 
@@ -263,6 +410,17 @@ verify_binary() {
     local node_path="$1"
     local name="$2"
 
+    # Check file exists and is readable
+    if [[ ! -f "$node_path" ]]; then
+        log_error "Binary not found: $node_path"
+        return 1
+    fi
+    if [[ ! -r "$node_path" ]]; then
+        log_error "Binary not readable: $node_path"
+        log_error "  Try: chmod +r '$node_path'"
+        return 1
+    fi
+
     local fsize
     fsize=$(stat -c%s "$node_path" 2>/dev/null || echo "0")
 
@@ -289,8 +447,9 @@ verify_binary() {
             return 1
         fi
     else
-        log_warn "No md5sum or md5 found, skipping hash verification"
-        return 0
+        log_error "No md5sum or md5 found - cannot verify binary integrity"
+        log_error "  Install coreutils: sudo apt install coreutils"
+        return 1
     fi
 
     if [[ "$actual_md5" != "$EXPECTED_MD5" ]]; then
@@ -302,7 +461,7 @@ verify_binary() {
         return 1
     fi
 
-    log_ok "Binary verified (hash matches)"
+    log_ok "Binary verified (size + MD5 match)"
     return 0
 }
 
@@ -336,14 +495,26 @@ backup_node() {
     fi
 
     local backup_path="$BACKUP_DIR/discord_voice.node.${sanitized}.$(date +%Y%m%d_%H%M%S).backup"
-    cp "$source" "$backup_path"
+    if ! cp "$source" "$backup_path" 2>/dev/null; then
+        log_error "Failed to create backup at $backup_path"
+        log_error "  Check disk space and permissions on $BACKUP_DIR"
+        return 1
+    fi
     log_ok "Backup: $(basename "$backup_path")"
+
+    # Verify backup integrity
+    if ! cmp -s "$source" "$backup_path"; then
+        log_error "Backup verification failed! Backup does not match source."
+        rm -f "$backup_path"
+        return 1
+    fi
 
     # Prune old backups per client (keep 3 - ~225MB for a 75MB node)
     local count
     count=$(ls -1 "$BACKUP_DIR"/discord_voice.node."${sanitized}".*.backup 2>/dev/null | wc -l || true)
     if (( count > 3 )); then
         ls -1t "$BACKUP_DIR"/discord_voice.node."${sanitized}".*.backup | tail -n +4 | xargs rm -f
+        log_info "  Pruned old backups (kept latest 3)"
     fi
     return 0
 }
@@ -380,10 +551,25 @@ restore_from_backup() {
     fi
     local backup_file="${backups[$(( sel - 1 ))]}"
 
+    # Verify backup file integrity
+    local bfsize
+    bfsize=$(stat -c%s "$backup_file" 2>/dev/null || echo "0")
+    if (( bfsize == 0 )); then
+        log_error "Selected backup is empty (0 bytes) - possibly corrupted"
+        exit 1
+    fi
+
+    # Ensure Discord is not running before restore
+    if check_discord_running; then
+        log_warn "Discord is running. It should be closed before restoring."
+        handle_discord_running
+    fi
+
     find_discord_clients || exit 1
     echo ""
     for i in "${!CLIENT_NAMES[@]}"; do
         echo -e "  [$(( i + 1 ))] ${CLIENT_NAMES[$i]}"
+        echo -e "      ${DIM}${CLIENT_NODES[$i]}${NC}"
     done
     echo ""
     read -rp "Restore to which client? (1-${#CLIENT_NAMES[@]}): " csel
@@ -392,14 +578,30 @@ restore_from_backup() {
         log_error "Invalid client selection"; exit 1
     fi
     local target="${CLIENT_NODES[$(( csel - 1 ))]}"
+    local target_name="${CLIENT_NAMES[$(( csel - 1 ))]}"
 
-    read -rp "Replace $target with backup? (y/N): " confirm
+    echo ""
+    log_info "Backup:  $(basename "$backup_file")"
+    log_info "Target:  $target"
+    log_info "Client:  $target_name"
+    echo ""
+    read -rp "Replace target with backup? (y/N): " confirm
     if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
         log_warn "Cancelled"; exit 0
     fi
 
-    cp "$backup_file" "$target"
-    log_ok "Restored! Restart Discord to apply."
+    if ! cp "$backup_file" "$target" 2>/dev/null; then
+        log_error "Failed to restore! Check permissions on $target"
+        exit 1
+    fi
+
+    # Verify restore
+    if ! cmp -s "$backup_file" "$target"; then
+        log_error "Restore verification failed! File may be corrupted."
+        exit 1
+    fi
+
+    log_ok "Restored successfully! Restart Discord to apply."
     exit 0
 }
 
@@ -412,12 +614,16 @@ find_compiler() {
     if command -v g++ &>/dev/null; then
         COMPILER="g++"
         COMPILER_TYPE="GCC"
-        log_ok "Found g++ ($(g++ --version 2>/dev/null | head -1 || echo 'g++ (version unknown)'))"
+        local ver
+        ver=$(g++ --version 2>/dev/null | head -1 || echo 'g++ (version unknown)')
+        log_ok "Found g++ ($ver)"
         return 0
     elif command -v clang++ &>/dev/null; then
         COMPILER="clang++"
         COMPILER_TYPE="Clang"
-        log_ok "Found clang++ ($(clang++ --version 2>/dev/null | head -1 || echo 'clang++ (version unknown)'))"
+        local ver
+        ver=$(clang++ --version 2>/dev/null | head -1 || echo 'clang++ (version unknown)')
+        log_ok "Found clang++ ($ver)"
         return 0
     fi
     log_error "No C++ compiler found!"
@@ -426,16 +632,22 @@ find_compiler() {
     echo "  Ubuntu/Debian:  sudo apt install g++"
     echo "  Fedora/RHEL:    sudo dnf install gcc-c++"
     echo "  Arch:           sudo pacman -S gcc"
+    echo "  openSUSE:       sudo zypper install gcc-c++"
     return 1
 }
 
 # --- Source Code Generation --------------------------------------------------
+
+# 1x gain amplifier matching the Windows patcher's 1x/2x path.
+# Uses SSE rsqrt for channel normalization: out = in * 1 * (1/sqrt(channels))
+# This is the same formula the Windows patcher uses at GAIN_MULTIPLIER=1.
+# The state manipulation ensures the encoder state machine stays consistent.
 generate_amplifier_source() {
-    local multiplier=$(( AUDIO_GAIN - 2 ))
-    cat > "$TEMP_DIR/amplifier.cpp" << AMPEOF
-#define Multiplier $multiplier
+    cat > "$TEMP_DIR/amplifier.cpp" << 'AMPEOF'
+#define GAIN_MULTIPLIER 1
 
 #include <cstdint>
+#include <xmmintrin.h>
 
 extern "C" void hp_cutoff(const float* in, int cutoff_Hz, float* out, int* hp_mem, int len, int channels, int Fs, int arch)
 {
@@ -444,7 +656,14 @@ extern "C" void hp_cutoff(const float* in, int cutoff_Hz, float* out, int* hp_me
     *(int*)((char*)st + 160) = -1;
     *(int*)((char*)st + 164) = -1;
     *(int*)((char*)st + 184) = 0;
-    for (unsigned long i = 0; i < (unsigned long)(channels * len); i++) out[i] = in[i] * (channels + Multiplier);
+
+    float scale = 1.0f;
+    if (channels > 0) {
+        __m128 v = _mm_cvtsi32_ss(_mm_setzero_ps(), channels);
+        v = _mm_rsqrt_ss(v);
+        scale = _mm_cvtss_f32(v);
+    }
+    for (unsigned long i = 0; i < (unsigned long)(channels * len); i++) out[i] = in[i] * GAIN_MULTIPLIER * scale;
 }
 
 extern "C" void dc_reject(const float* in, float* out, int* hp_mem, int len, int channels, int Fs)
@@ -454,12 +673,38 @@ extern "C" void dc_reject(const float* in, float* out, int* hp_mem, int len, int
     *(int*)((char*)st + 160) = -1;
     *(int*)((char*)st + 164) = -1;
     *(int*)((char*)st + 184) = 0;
-    for (int i = 0; i < channels * len; i++) out[i] = in[i] * (channels + Multiplier);
+
+    float scale = 1.0f;
+    if (channels > 0) {
+        __m128 v = _mm_cvtsi32_ss(_mm_setzero_ps(), channels);
+        v = _mm_rsqrt_ss(v);
+        scale = _mm_cvtss_f32(v);
+    }
+    for (int i = 0; i < channels * len; i++) out[i] = in[i] * GAIN_MULTIPLIER * scale;
 }
 AMPEOF
 }
 
+validate_required_offsets() {
+    local missing=()
+    for name in "${REQUIRED_OFFSET_NAMES[@]}"; do
+        local var="OFFSET_$name"
+        local val="${!var:-}"
+        if [[ -z "$val" ]]; then
+            missing+=("$var")
+        fi
+    done
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        log_error "Missing or empty required offset(s): ${missing[*]}"
+        log_error "Paste the full offset block from the offset finder (17 OFFSET_* lines)."
+        return 1
+    fi
+    return 0
+}
+
 generate_patcher_source() {
+    validate_required_offsets || exit 1
+
     cat > "$TEMP_DIR/patcher.cpp" << 'PATCHEOF'
 #include <cstdio>
 #include <cstdint>
@@ -469,10 +714,10 @@ generate_patcher_source() {
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <errno.h>
 
 #define SAMPLE_RATE SAMPLERATE_VAL
 #define BITRATE BITRATE_VAL
-#define AUDIO_GAIN AUDIOGAIN_VAL
 
 extern "C" void dc_reject(const float*, float*, int*, int, int, int);
 extern "C" void hp_cutoff(const float*, int, float*, int*, int, int, int, int);
@@ -493,7 +738,6 @@ namespace Offsets {
     constexpr uint32_t DownmixFunc                       = OFFSET_VAL_DownmixFunc;
     constexpr uint32_t AudioEncoderOpusConfigIsOk        = OFFSET_VAL_AudioEncoderOpusConfigIsOk;
     constexpr uint32_t ThrowError                        = OFFSET_VAL_ThrowError;
-    constexpr uint32_t DuplicateEmulateBitrateModified   = OFFSET_VAL_DuplicateEmulateBitrateModified;
     constexpr uint32_t EncoderConfigInit1                = OFFSET_VAL_EncoderConfigInit1;
     constexpr uint32_t EncoderConfigInit2                = OFFSET_VAL_EncoderConfigInit2;
     constexpr uint32_t FILE_OFFSET_ADJUSTMENT            = OFFSET_VAL_FileAdjustment;
@@ -532,9 +776,14 @@ private:
             return true;
         };
 
+        auto ReadU32LE = [&](uint32_t offset, uint32_t& value) -> bool {
+            uint32_t fileOffset = offset - Offsets::FILE_OFFSET_ADJUSTMENT;
+            if ((long long)(fileOffset + 4) > fileSize) return false;
+            memcpy(&value, (char*)fileData + fileOffset, 4);
+            return true;
+        };
+
         // --- Pre-patch validation: check original bytes at key sites ---
-        // Probe 3 sections spread across the binary to confirm this is the right build
-        // Linux ELF original bytes (no PE header offset)
         const unsigned char orig_emulate48[]  = ORIG_VAL_Emulate48Khz;
         const unsigned char orig_configisok[] = ORIG_VAL_AudioEncoderOpusConfigIsOk;
         const unsigned char orig_downmix[]    = ORIG_VAL_DownmixFunc;
@@ -585,44 +834,81 @@ private:
             printf("  All validation checks PASSED.\n\n");
         }
 
+        int patchCount = 0;
         printf("Applying patches...\n");
 
         printf("  [1/5] Enabling stereo audio...\n");
         if (!PatchBytes(Offsets::EmulateStereoSuccess1, "\x02", 1)) return false;
+        patchCount++;
         if (!PatchBytes(Offsets::EmulateStereoSuccess2, "\xEB", 1)) return false;
+        patchCount++;
         if (!PatchBytes(Offsets::CreateAudioFrameStereo, "\x49\x89\xC4\x90", 4)) return false;
+        patchCount++;
         if (!PatchBytes(Offsets::AudioEncoderOpusConfigSetChannels, "\x02", 1)) return false;
+        patchCount++;
         if (!PatchBytes(Offsets::MonoDownmixer, "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\xE9", 13)) return false;
+        patchCount++;
 
         printf("  [2/5] Setting bitrate to %dkbps...\n", BITRATE);
         if (!PatchBytes(Offsets::EmulateBitrateModified, "\x00\xDC\x05", 3)) return false;
+        patchCount++;
         if (!PatchBytes(Offsets::SetsBitrateBitrateValue, "\x00\xDC\x05\x00\x00", 5)) return false;
+        patchCount++;
         if (!PatchBytes(Offsets::SetsBitrateBitwiseOr, "\x90\x90\x90", 3)) return false;
-        if (!PatchBytes(Offsets::DuplicateEmulateBitrateModified, "\x00\xDC\x05", 3)) return false;
+        patchCount++;
 
         printf("  [3/5] Enabling 48kHz sample rate...\n");
         if (!PatchBytes(Offsets::Emulate48Khz, "\x90\x90\x90", 3)) return false;
+        patchCount++;
 
-        printf("  [4/5] Injecting audio processing (%dx gain)...\n", AUDIO_GAIN);
+        printf("  [4/5] Injecting audio processing...\n");
         // HighPassFilter: ret (void function, safe)
         if (!PatchBytes(Offsets::HighPassFilter, "\xC3", 1)) return false;
+        patchCount++;
         // Inject compiled hp_cutoff and dc_reject function bodies
         if (!PatchBytes(Offsets::HighpassCutoffFilter, (const char*)hp_cutoff, 0x100)) return false;
+        patchCount++;
         if (!PatchBytes(Offsets::DcReject, (const char*)dc_reject, 0x1B6)) return false;
+        patchCount++;
         // DownmixFunc: ret (void function, safe)
         if (!PatchBytes(Offsets::DownmixFunc, "\xC3", 1)) return false;
+        patchCount++;
         // AudioEncoderOpusConfigIsOk returns bool - must return TRUE (1)
-        // Using mov rax,1; ret (8 bytes) matching Windows patcher approach
         if (!PatchBytes(Offsets::AudioEncoderOpusConfigIsOk,
             "\x48\xC7\xC0\x01\x00\x00\x00\xC3", 8)) return false;
+        patchCount++;
         // ThrowError: ret (prevents error throws from crashing)
         if (!PatchBytes(Offsets::ThrowError, "\xC3", 1)) return false;
+        patchCount++;
 
         printf("  [5/5] Patching encoder config (%dkbps at creation)...\n", BITRATE);
         if (!PatchBytes(Offsets::EncoderConfigInit1, "\x00\xDC\x05\x00", 4)) return false;
+        patchCount++;
         if (!PatchBytes(Offsets::EncoderConfigInit2, "\x00\xDC\x05\x00", 4)) return false;
+        patchCount++;
 
-        printf("  All patches applied!\n");
+        // Post-patch verification (matching Windows patcher behavior)
+        {
+            const unsigned char bps384_3[] = {0x00, 0xDC, 0x05};
+            const unsigned char bps384_5[] = {0x00, 0xDC, 0x05, 0x00, 0x00};
+            if (!CheckBytes(Offsets::EmulateBitrateModified, bps384_3, 3) ||
+                !CheckBytes(Offsets::SetsBitrateBitrateValue, bps384_5, 5)) {
+                printf("ERROR: Post-patch bitrate verification failed!\n");
+                return false;
+            }
+            uint32_t setBitrateValue = 0;
+            if (!ReadU32LE(Offsets::SetsBitrateBitrateValue, setBitrateValue)) {
+                printf("ERROR: Failed to read back bitrate value for verification.\n");
+                return false;
+            }
+            if (setBitrateValue != 384000) {
+                printf("ERROR: Bitrate mismatch after patching (got %u, expected 384000)\n", setBitrateValue);
+                return false;
+            }
+            printf("  Verified bitrate: %u bps\n", setBitrateValue);
+        }
+
+        printf("\n  Applied %d patches successfully!\n", patchCount);
         return true;
     }
 
@@ -634,20 +920,24 @@ public:
         printf("  Discord Voice Quality Patcher (Linux)\n");
         printf("================================================\n");
         printf("  Target:  %s\n", modulePath.c_str());
-        printf("  Config:  %dkHz, %dkbps, Stereo, %dx gain\n", SAMPLE_RATE/1000, BITRATE, AUDIO_GAIN);
+        printf("  Config:  %dkHz, %dkbps, Stereo\n", SAMPLE_RATE/1000, BITRATE);
         printf("================================================\n\n");
 
         printf("Opening file for patching...\n");
         int fd = open(modulePath.c_str(), O_RDWR);
         if (fd < 0) {
-            printf("ERROR: Cannot open file: %s\n", modulePath.c_str());
-            printf("Check file permissions. You may need: chmod +w <file>\n");
+            printf("ERROR: Cannot open file: %s (errno=%d: %s)\n",
+                   modulePath.c_str(), errno, strerror(errno));
+            if (errno == EACCES)
+                printf("Check file permissions. You may need: chmod +w <file>\n");
+            else if (errno == ETXTBSY)
+                printf("File is in use by another process. Close Discord first.\n");
             return false;
         }
 
         struct stat st;
         if (fstat(fd, &st) < 0) {
-            printf("ERROR: Cannot stat file\n");
+            printf("ERROR: Cannot stat file (errno=%d: %s)\n", errno, strerror(errno));
             close(fd);
             return false;
         }
@@ -656,7 +946,7 @@ public:
 
         void* fileData = mmap(NULL, fileSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
         if (fileData == MAP_FAILED) {
-            printf("ERROR: Cannot mmap file\n");
+            printf("ERROR: Cannot mmap file (errno=%d: %s)\n", errno, strerror(errno));
             close(fd);
             return false;
         }
@@ -668,13 +958,16 @@ public:
         }
 
         printf("\nSyncing patched file to disk...\n");
-        msync(fileData, fileSize, MS_SYNC);
+        if (msync(fileData, fileSize, MS_SYNC) != 0) {
+            printf("WARNING: msync failed (errno=%d: %s) - data may not be fully written\n",
+                   errno, strerror(errno));
+        }
         munmap(fileData, fileSize);
         close(fd);
 
         printf("\n================================================\n");
         printf("  SUCCESS! Patching Complete!\n");
-        printf("  Audio: %dx gain | %dkHz | %dkbps | Stereo\n", AUDIO_GAIN, SAMPLE_RATE/1000, BITRATE);
+        printf("  Audio: %dkHz | %dkbps | Stereo\n", SAMPLE_RATE/1000, BITRATE);
         printf("================================================\n\n");
         return true;
     }
@@ -691,12 +984,8 @@ int main(int argc, char* argv[]) {
 PATCHEOF
 
     # Substitute values into the generated source.
-    # Using OFFSET_VAL_ prefix to avoid substring collisions
-    # (e.g. OFFSET_EmulateBitrateModified matching inside
-    # OFFSET_DuplicateEmulateBitrateModified).
     sed -i "s/SAMPLERATE_VAL/$SAMPLE_RATE/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/BITRATE_VAL/$BITRATE/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/AUDIOGAIN_VAL/$AUDIO_GAIN/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_CreateAudioFrameStereo/${OFFSET_CreateAudioFrameStereo}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_AudioEncoderOpusConfigSetChannels/${OFFSET_AudioEncoderOpusConfigSetChannels}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_MonoDownmixer/${OFFSET_MonoDownmixer}/g" "$TEMP_DIR/patcher.cpp"
@@ -712,7 +1001,6 @@ PATCHEOF
     sed -i "s/OFFSET_VAL_DownmixFunc/${OFFSET_DownmixFunc}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_AudioEncoderOpusConfigIsOk/${OFFSET_AudioEncoderOpusConfigIsOk}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_ThrowError/${OFFSET_ThrowError}/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/OFFSET_VAL_DuplicateEmulateBitrateModified/${OFFSET_DuplicateEmulateBitrateModified}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_EncoderConfigInit1/${OFFSET_EncoderConfigInit1}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_EncoderConfigInit2/${OFFSET_EncoderConfigInit2}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_FileAdjustment/$FILE_OFFSET_ADJUSTMENT/g" "$TEMP_DIR/patcher.cpp"
@@ -749,8 +1037,20 @@ compile_patcher() {
         return 1
     fi
 
+    # Verify the exe was actually created and is non-trivial
+    if [[ ! -f "$exe" ]]; then
+        log_error "Compilation produced no output binary" >&2
+        return 1
+    fi
+    local exe_size
+    exe_size=$(stat -c%s "$exe" 2>/dev/null || echo "0")
+    if (( exe_size < 4096 )); then
+        log_error "Compiled binary is suspiciously small (${exe_size} bytes)" >&2
+        return 1
+    fi
+
     chmod +x "$exe"
-    log_ok "Compilation successful" >&2
+    log_ok "Compilation successful ($(numfmt --to=iec "$exe_size" 2>/dev/null || echo "${exe_size}B"))" >&2
     # Only the exe path goes to stdout (captured by caller)
     echo "$exe"
     return 0
@@ -785,9 +1085,9 @@ select_clients() {
                 SELECTED_CLIENTS="$(( choice - 1 ))"
                 return 0
             fi
-            log_error "Invalid selection"; exit 1
+            log_error "Selection out of range (1-${#CLIENT_NAMES[@]})"; exit 1
             ;;
-        *) SELECTED_CLIENTS="all"; return 0 ;;
+        *) log_error "Invalid selection"; exit 1 ;;
     esac
 }
 
@@ -809,7 +1109,7 @@ patch_client() {
     # Backup (skips if identical backup already exists)
     if ! backup_node "$node_path" "$name"; then
         if ! $SKIP_BACKUP; then
-            log_error "Backup failed, aborting"
+            log_error "Backup failed, aborting patch for safety"
             return 1
         fi
     fi
@@ -823,6 +1123,14 @@ patch_client() {
         }
     fi
 
+    # Check file is not currently open/locked by another process
+    if command -v fuser &>/dev/null; then
+        if fuser "$node_path" &>/dev/null; then
+            log_warn "File is currently open by another process"
+            log_warn "  This is expected if Discord was recently closed. Proceeding..."
+        fi
+    fi
+
     # Generate source
     log_info "Generating source files..."
     generate_amplifier_source
@@ -834,7 +1142,7 @@ patch_client() {
     exe=$(compile_patcher) || return 1
 
     # Run patcher
-    log_info "Applying binary patches (${AUDIO_GAIN}x gain)..."
+    log_info "Applying binary patches..."
     if "$exe" "$node_path"; then
         log_ok "Successfully patched $name!"
         return 0
@@ -853,7 +1161,7 @@ cleanup() {
     # Only clean up source/binary on success - preserve on failure for debugging
     if [[ "$PATCH_SUCCESS" == "true" ]]; then
         rm -f "$TEMP_DIR/patcher.cpp" "$TEMP_DIR/amplifier.cpp" \
-              "$TEMP_DIR/DiscordVoicePatcher" 2>/dev/null
+              "$TEMP_DIR/DiscordVoicePatcher" "$TEMP_DIR/build.log" 2>/dev/null
     else
         # Keep source + build log for debugging, just remove the binary
         rm -f "$TEMP_DIR/DiscordVoicePatcher" 2>/dev/null
@@ -885,12 +1193,8 @@ main() {
         select_clients
     fi
 
-    # Check if Discord is running and warn - no kill needed on Linux,
-    # files aren't locked like on Windows.
-    if pgrep -f "Discord|discord" >/dev/null 2>&1; then
-        log_warn "Discord is currently running. You'll need to restart it after patching."
-        echo ""
-    fi
+    # Handle Discord running - prompt to close (matches Windows behavior)
+    handle_discord_running
 
     local success=0
     local failed=0
