@@ -5,7 +5,23 @@
 ![Linux](https://img.shields.io/badge/Linux-Active-00C853?style=flat-square)
 ![Focus](https://img.shields.io/badge/Focus-True%20Stereo%20Voice-5865F2?style=flat-square)
 
-Part of the [Discord Audio Collective](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux) — unlocking **48kHz**, **400kbps**, and **true stereo** on Linux.
+Part of the [Discord Audio Collective](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux) — unlocking **48 kHz**, **384 kbps**, and **true stereo** on Linux.
+
+---
+
+## 📦 What’s in this repo
+
+This folder is published with **one file**:
+
+| File | Purpose |
+|------|---------|
+| **`Discord_Stereo_Installer_For_Linux.py`** | Standalone GUI + embedded installer & patcher |
+
+The `.py` file **embeds** the full `Stereo-Installer-Linux.sh` and `discord_voice_patcher_linux.sh` payloads. On first run it extracts them to:
+
+`~/.cache/DiscordVoiceFixerStandalone/`
+
+You do **not** need separate `.sh` files in the repo — everything is inside the single script.
 
 ---
 
@@ -20,17 +36,6 @@ Part of the [Discord Audio Collective](https://github.com/ProdHallow/Discord-Ste
 
 ---
 
-## 📦 Two Ways to Patch
-
-| Script | Description |
-|--------|-------------|
-| **discord_voice_patcher_linux.sh** | Compiles and applies patches at runtime. Supports custom gain (1–10x), multi-client detection, backup/restore. Requires a C++ compiler. |
-| **Stereo-Installer-Linux.sh** | Downloads pre-patched voice modules from the repo and installs them. No compiler needed. Easiest option if your build is supported. |
-
-Use the **Installer** for simplicity; use the **Patcher** for custom gain or when pre-patched binaries aren’t available for your Discord build.
-
----
-
 ## 🖥️ Supported Install Types
 
 | Install type | Path (typical) |
@@ -39,93 +44,85 @@ Use the **Installer** for simplicity; use the **Patcher** for custom gain or whe
 | **Flatpak** | `~/.var/app/com.discordapp.Discord/config/discord/` |
 | **Snap** | May be read-only; deb or Flatpak recommended for patching |
 
-The patcher and installer auto-detect Discord Stable, Canary, and PTB in these locations.
+The embedded scripts auto-detect Discord Stable, Canary, and PTB in these locations.
 
 ---
 
 ## ⚙️ Requirements
 
-**Patcher**
-- **Bash** (re-execs as bash if invoked as sh)
+- **Python 3** with **tkinter** (usually `python3-tk` on Debian/Ubuntu)
+- **Bash** (scripts re-exec as bash if needed)
+
+**Install mode (pre-patched download)** — no compiler:
+
+- **curl**, **jq** (installer uses the GitHub API)
+
+**Patch mode (compile & patch in place)**:
+
 - **C++ compiler:** `g++` or `clang++`
 
   ```bash
   # Ubuntu/Debian
-  sudo apt install g++
+  sudo apt install g++ python3-tk
 
   # Fedora/RHEL
-  sudo dnf install gcc-c++
+  sudo dnf install gcc-c++ python3-tkinter
 
   # Arch
-  sudo pacman -S gcc
+  sudo pacman -S gcc tk
   ```
-
-**Installer**
-- **Bash**, **curl**, **jq** (for GitHub API)
-- No compiler required
 
 ---
 
 ## 🚀 Usage
 
-### Patcher
+### Run the GUI (recommended)
 
 ```bash
-chmod +x discord_voice_patcher_linux.sh
-./discord_voice_patcher_linux.sh              # Patch with 1x gain
-./discord_voice_patcher_linux.sh 3            # Patch with 3x gain
-./discord_voice_patcher_linux.sh --restore    # Restore from backup
-./discord_voice_patcher_linux.sh --help       # Full options
+chmod +x Discord_Stereo_Installer_For_Linux.py   # optional
+python3 Discord_Stereo_Installer_For_Linux.py
 ```
 
-### Installer
+In the app:
+
+- **Install pre-patched files** — downloads pre-patched `discord_voice.node` from backup and installs (needs network + curl/jq).
+- **Patch unpatched files** — compiles the patcher and patches your local `.node` (needs g++/clang; close Discord first).
+
+Use **Check** to refresh the client list after opening Discord (and joining a voice channel once if needed). **Restore** reverts from backup.
+
+### CLI / headless
+
+After the first run, the extracted scripts live under `~/.cache/DiscordVoiceFixerStandalone/`. Advanced users can run them directly, e.g.:
 
 ```bash
-chmod +x Stereo-Installer-Linux.sh
-./Stereo-Installer-Linux.sh                   # Interactive mode
-./Stereo-Installer-Linux.sh --silent          # Auto-fix all clients
-./Stereo-Installer-Linux.sh --check           # Check status only
-./Stereo-Installer-Linux.sh --restore         # Restore originals
-./Stereo-Installer-Linux.sh --help            # Full options
+bash ~/.cache/DiscordVoiceFixerStandalone/Stereo-Installer-Linux.sh --help
+bash ~/.cache/DiscordVoiceFixerStandalone/discord_voice_patcher_linux.sh --help
 ```
 
----
+Re-running the **`.py`** is enough for most people — it always uses the embedded copies and refreshes the cache if the payload changes.
 
-## 📂 Repo Layout
+### Optional arguments
 
-| File | Purpose |
-|------|---------|
-| `discord_voice_patcher_linux.sh` | Runtime patcher (offsets + C++ compile + apply) |
-| `Stereo-Installer-Linux.sh` | Download pre-patched modules and install |
-| `README.md` | This file |
-
-Pre-patched files for the installer are served from the main repo’s `Linux Patcher and Installer/discord_voice/` directory.
+| Argument | Effect |
+|----------|--------|
+| `--debug` | Debug / sanity check (useful on Windows without bash) |
+| `--patcher` / `--mode=patch` | Start in patch mode instead of install mode |
+| `--mode=install` | Start in install mode |
 
 ---
 
 ## ❓ FAQ
 
 <details>
-<summary><b>Discord updated and the patcher stopped working</b></summary>
+<summary><b>Discord updated and patching stopped working</b></summary>
 
-Offsets are tied to a specific `discord_voice.node` build. When Discord updates, you need new offsets. Run the [offset finder](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux) on the new binary, copy the "COPY BELOW" block into the patcher script (replace EXPECTED_*, OFFSET_*, and ORIG_*), then re-run the patcher.
+Offsets are tied to a specific `discord_voice.node` build. When Discord updates, you need new offsets. Run the [offset finder](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux) on the new binary, update the patcher script, then rebuild the standalone (or replace the embedded payload if you maintain a fork).
 </details>
 
 <details>
-<summary><b>"No C++ compiler found"</b></summary>
+<summary><b>"No C++ compiler found" (patch mode)</b></summary>
 
-The patcher compiles a small C++ binary at runtime. Install one:
-
-```bash
-# Ubuntu/Debian
-sudo apt install g++
-
-# Fedora/RHEL
-sudo dnf install gcc-c++
-
-# Arch
-sudo pacman -S gcc
-```
+Patch mode compiles a small C++ binary at runtime. Install a compiler (see Requirements), or use **Install pre-patched files** if your build is supported by the backup.
 </details>
 
 <details>
@@ -135,58 +132,41 @@ The patcher needs write access to `discord_voice.node`. For user installs under 
 
 ```bash
 chmod +w /path/to/discord_voice.node
-# or run with sudo (use with care)
-sudo ./discord_voice_patcher_linux.sh
 ```
+
+Use sudo only if you understand the implications.
 </details>
 
 <details>
 <summary><b>"Binary validation failed — unexpected bytes at patch sites"</b></summary>
 
-The binary doesn’t match the offsets in the script (different Discord build). Update the patcher with offsets from the [offset finder](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux) for your current build.
+The binary doesn’t match the offsets in the embedded patcher (different Discord build). Update offsets via the [offset finder](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux), or use installer mode if a pre-patched module exists for your version.
 </details>
 
 <details>
 <summary><b>No Discord installations found</b></summary>
 
-Make sure Discord has been run at least once so the voice module is downloaded. The patcher looks for `discord_voice.node` under:
-
-- `~/.config/discord/`
-- `~/.config/discordcanary/`
-- `~/.config/discordptb/`
-- `~/.var/app/com.discordapp.Discord/config/discord/` (Flatpak)
-
-Join a voice channel briefly if the module folder is missing.
+Run Discord at least once so the voice module is downloaded. Join a voice channel briefly if the module folder is missing. Then use **Check** in the GUI to rescan.
 </details>
 
 <details>
 <summary><b>Flatpak / Snap permission issues</b></summary>
 
-**Flatpak:** Paths under `~/.var/app/` are usually writable. If the script can’t find the node, run:
+**Flatpak:** Paths under `~/.var/app/` are usually writable.
 
-```bash
-find ~/.var/app/com.discordapp.Discord -name "discord_voice.node"
-```
-
-**Snap:** Installations are often read-only. Prefer the deb or Flatpak Discord build for patching.
+**Snap:** Often read-only — prefer deb or Flatpak for patching.
 </details>
 
 <details>
 <summary><b>How do I restore / unpatch?</b></summary>
 
-**Patcher:**
+Use **Restore** in the GUI, or run the extracted installer/patcher with `--restore` (see CLI section above). Letting Discord update also replaces the voice module with a fresh copy.
+</details>
 
-```bash
-./discord_voice_patcher_linux.sh --restore
-```
+<details>
+<summary><b>Why only one file in the repo?</b></summary>
 
-**Installer:**
-
-```bash
-./Stereo-Installer-Linux.sh --restore
-```
-
-You can also let Discord update; it will replace the voice module with a fresh copy.
+A single **`.py`** is easier to download and run, avoids “which script do I use?”, and keeps installer + patcher versions in lockstep. The same logic still runs underneath — it’s just embedded and launched through Python/tkinter.
 </details>
 
 ---
