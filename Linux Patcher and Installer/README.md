@@ -1,4 +1,4 @@
-# Linux Patcher & Installer
+# 🐧 Linux Patcher & Installer
 
 **True stereo and high-bitrate voice for Discord on Linux**
 
@@ -9,7 +9,7 @@ Part of the [Discord Stereo project](https://github.com/ProdHallow/Discord-Stere
 
 ---
 
-## Quick start: use the launcher
+## 🚀 Quick start: use the launcher
 
 **Recommended:** run the launcher once. It fetches the latest installer and patcher files, then opens the GUI.
 
@@ -36,7 +36,7 @@ Without internet, the launcher skips updates and runs whatever is already in **L
 
 ---
 
-## What’s in this repo
+## 📦 What’s in this repo
 
 | File / folder | Purpose |
 |---------------|--------|
@@ -50,7 +50,7 @@ The Python script uses the two `.sh` scripts from the same directory (no embeddi
 
 ---
 
-## What this does
+## 🎯 What this does
 
 | Before | After |
 |--------|--------|
@@ -61,7 +61,7 @@ The Python script uses the two `.sh` scripts from the same directory (no embeddi
 
 ---
 
-## Supported install types
+## 🖥️ Supported install types
 
 | Install type | Typical path |
 |--------------|--------------|
@@ -73,7 +73,7 @@ The scripts auto-detect Stable, Canary, and PTB in these locations.
 
 ---
 
-## Requirements
+## ⚙️ Requirements
 
 - **Bash** (launcher and scripts)
 - **Python 3** with **tkinter** (e.g. `python3-tk` on Debian/Ubuntu)
@@ -96,7 +96,7 @@ sudo pacman -S gcc tk curl jq
 
 ---
 
-## Usage
+## 🚀 Usage
 
 ### Run via launcher (recommended)
 
@@ -135,7 +135,7 @@ python3 Discord_Stereo_Installer_For_Linux.py
 
 ---
 
-## FAQ
+## ❓ FAQ
 
 <details>
 <summary><b>Discord updated and patching stopped working</b></summary>
@@ -187,7 +187,7 @@ You need network access and `curl`. If downloads fail, the launcher will warn an
 
 ---
 
-## Links
+## 🔗 Links
 
 - [Main repo](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux) — Windows/macOS/Linux, offsets, releases
 - [Voice Playground](https://discord-voice.xyz/)
