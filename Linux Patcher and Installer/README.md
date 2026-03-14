@@ -5,7 +5,7 @@
 [![Linux](https://img.shields.io/badge/Linux-Active-00C853?style=flat-square)](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux)
 [![Focus](https://img.shields.io/badge/Focus-True%20Stereo%20Voice-5865F2?style=flat-square)](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux)
 
-Part of the [Discord Stereo project](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux) — **48 kHz**, **up to 400 kbps**, and **true stereo** on Linux.
+Part of the [Discord Stereo project](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux) — **48 kHz**, **up to 384 kbps**, and **true stereo** on Linux.
 ---
 !!! INSTALLER MODE IS A PLACEHOLDER UNTIL SOMEONE PATCHES THE NODE AND SENDS ME ALL THE MODULES !!!
 ---
