@@ -246,4 +246,4 @@ fi
 
 echo -e "${CYAN}Launching GUI...${NC}"
 echo ""
-exec python3 Discord_Stereo_Installer_For_Linux.py
+exec python3 Discord_Stereo_Installer_For_Linux.py "$@"

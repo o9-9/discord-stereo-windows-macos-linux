@@ -241,6 +241,7 @@ class DiscordVoiceFixerGUI:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self._build_ui()
+        self._warn_if_scripts_missing()
         if self.mode == self.MODE_INSTALL and not (IS_WINDOWS and not _which("bash") and not _which("wsl.exe") and not _which("wsl")):
             self._refresh_clients()
         elif IS_WINDOWS and DEBUG_MODE:
@@ -605,7 +606,7 @@ class DiscordVoiceFixerGUI:
             return
 
         self.log_line("$ " + " ".join(argv), "info")
-        self.status_var.set("Running…")
+        self.status_var.set("Running...")
 
         def worker():
             p = None
@@ -688,9 +689,20 @@ class DiscordVoiceFixerGUI:
             self.log_line("Failed to start Discord: %s" % e, "err")
             messagebox.showinfo("Start Discord", "Could not start Discord.\nStart it manually.")
 
+    def _warn_if_scripts_missing(self):
+        """Log a clear message if installer or patcher script is missing (e.g. not run via launcher)."""
+        inst = installer_script()
+        pat = patcher_script()
+        if not os.path.isfile(inst) or not os.path.isfile(pat):
+            self.log_line("Scripts not found in same folder as this .py.", "warn")
+            self.log_line("  Installer: %s" % inst, "info")
+            self.log_line("  Patcher:   %s" % pat, "info")
+            self.log_line("Run discord-stereo-launcher.sh to download and run from the correct folder.", "info")
+
     def _refresh_clients(self):
         script = installer_script()
         if not os.path.isfile(script):
+            self.log_line("Install mode: Stereo-Installer-Linux.sh not found. Run the launcher or place it next to this .py.", "warn")
             return
         argv, reason = _bash_argv(script, ["--list-clients"])
         if argv is None:
