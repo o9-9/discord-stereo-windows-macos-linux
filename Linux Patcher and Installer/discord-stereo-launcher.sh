@@ -14,6 +14,7 @@ set -euo pipefail
 # ------------------------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------------------------
+
 INSTALL_DIR_NAME="Linux Stereo Installer"
 BASE_URL="https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Linux%20Patcher%20and%20Installer/Updates"
 
@@ -113,7 +114,7 @@ download_file() {
     return $ret
 }
 
-# Ensure downloaded file is valid (non-empty, minimum size, not HTML error page)
+# Validate: non-empty, minimum size, not an HTML error page.
 validate_download() {
     local tmp="$1"
     local filename="$2"
@@ -141,6 +142,11 @@ echo -e "${DIM}48 kHz | 384 kbps | Stereo${NC}"
 echo ""
 
 mkdir -p "$INSTALL_DIR"
+if ! [ -w "$INSTALL_DIR" ]; then
+    echo -e "${RED}${BOLD}Error: ${INSTALL_DIR} is not writable.${NC}"
+    echo -e "  Fix permissions or run from a directory you can write to."
+    exit 1
+fi
 
 # ------------------------------------------------------------------------------
 # Update step (unless --no-update)
@@ -219,14 +225,59 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# Launch (must run from install dir so Python finds the .sh scripts)
+# Local fallback: if any required file is missing, try copying from Updates/
+# (makes cloned repo work offline when launcher and Updates/ are side-by-side)
 # ------------------------------------------------------------------------------
+copy_from_local_updates() {
+    local src_dir="${SCRIPT_DIR}/Updates"
+    local copied=0
+    if [ ! -d "$src_dir" ]; then
+        return 1
+    fi
+    for entry in "${FILES[@]}"; do
+        IFS='|' read -r filename _ <<< "$entry"
+        dest="${INSTALL_DIR}/${filename}"
+        src="${src_dir}/${filename}"
+        if [ ! -f "$dest" ] && [ -f "$src" ]; then
+            if cp "$src" "$dest" 2>/dev/null; then
+                case "$filename" in
+                    *.sh) chmod +x "$dest" 2>/dev/null || true ;;
+                esac
+                copied=$(( copied + 1 ))
+                echo -e "${GREEN}  [OK] Copied from Updates: $filename${NC}"
+            fi
+        fi
+    done
+    [ "$copied" -gt 0 ]
+}
+
+MISSING_ANY=false
+for entry in "${FILES[@]}"; do
+    IFS='|' read -r filename _ <<< "$entry"
+    [ -f "${INSTALL_DIR}/${filename}" ] || MISSING_ANY=true
+done
+if [ "$MISSING_ANY" = true ]; then
+    if copy_from_local_updates; then
+        echo -e "${CYAN}  Using local Updates/ (some files were missing).${NC}"
+        echo ""
+    fi
+fi
+
+# ------------------------------------------------------------------------------
+# Launch (run from install dir so Python finds the two .sh scripts)
+# ------------------------------------------------------------------------------
+
 cd "$INSTALL_DIR"
 
 if [ ! -f "Discord_Stereo_Installer_For_Linux.py" ]; then
     echo -e "${RED}${BOLD}Error: Discord_Stereo_Installer_For_Linux.py not found.${NC}"
     echo -e "  Path: ${INSTALL_DIR}"
-    echo -e "  Run without --no-update to download, or check your network."
+    echo -e "  Run without --no-update to download, or put the three files in Updates/ next to the launcher."
+    exit 1
+fi
+if [ ! -f "Stereo-Installer-Linux.sh" ] || [ ! -f "discord_voice_patcher_linux.sh" ]; then
+    echo -e "${RED}${BOLD}Error: Installer or patcher script missing in ${INSTALL_DIR}.${NC}"
+    echo -e "  Run without --no-update to download, or put all three files in Updates/ next to the launcher."
     exit 1
 fi
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 ###############################################################################
 # Discord Voice Quality Patcher - Linux
-# 48kHz | 384kbps | Stereo
+# 48 kHz | 384 kbps | Stereo
 # Made by: Oracle | Shaun | Hallow | Ascend | Sentry | Sikimzo | Cypher
 ###############################################################################
 
-# Re-exec under bash if invoked via sh/dash/zsh
+# Re-exec under bash if invoked via sh/dash/zsh.
 if [ -z "${BASH_VERSION:-}" ]; then
     exec bash "$0" "$@"
 fi
@@ -24,7 +24,7 @@ WHITE='\033[1;37m'; DIM='\033[0;90m'; BOLD='\033[1m'; NC='\033[0m'
 SAMPLE_RATE=48000
 BITRATE=384
 
-# When run with sudo, use invoking user's home so we find their Discord
+# With sudo, use invoking user's home so we find their Discord.
 DETECT_HOME="${HOME:-}"
 if [[ -n "${SUDO_USER:-}" ]] && [[ "$(id -u 2>/dev/null)" -eq 0 ]]; then
     _dh=$(getent passwd "$SUDO_USER" 2>/dev/null | cut -d: -f6)
@@ -39,7 +39,7 @@ TEMP_DIR="$CACHE_DIR/build"
 
 # --- Build fingerprint (update when targeting a new Discord build) ------------
 # Run: python discord_voice_node_offset_finder_v5.py <path/to/discord_voice.node>
-# Copy the "COPY BELOW -> discord_voice_patcher_linux.sh" block into this section.
+# Copy the "COPY BELOW -> discord_voice_patcher_linux.sh" block here.
 EXPECTED_MD5="a0b49c57de51d59bac6253e57266bac7"
 EXPECTED_SIZE=104309664
 
@@ -63,7 +63,7 @@ OFFSET_EncoderConfigInit1=0x762FFF
 OFFSET_EncoderConfigInit2=0x7629D8
 FILE_OFFSET_ADJUSTMENT=0
 
-# Required offset names (same 17 as Windows patcher). Used to validate before build.
+# Required offset names (same 17 as Windows patcher); validate before build.
 REQUIRED_OFFSET_NAMES=(
     CreateAudioFrameStereo AudioEncoderOpusConfigSetChannels MonoDownmixer
     EmulateStereoSuccess1 EmulateStereoSuccess2 EmulateBitrateModified
@@ -77,7 +77,7 @@ REQUIRED_OFFSET_NAMES=(
 ORIG_Emulate48Khz='{0x0F, 0x43, 0xD0}'
 ORIG_AudioEncoderOpusConfigIsOk='{0x55, 0x48, 0x89, 0xE5, 0x8B, 0x0F, 0x31, 0xC0}'
 ORIG_DownmixFunc='{0x55, 0x48, 0x89, 0xE5, 0x41, 0x57, 0x41, 0x56}'
-# Stable 0.0.127 prologues differ after 4th byte; first 4 bytes still 55 48 89 E5
+# Stable 0.0.127 prologues differ after 4th byte; first 4 bytes: 55 48 89 E5
 ORIG_HighPassFilter='{0x55, 0x48, 0x89, 0xE5}'
 ORIG_HighpassCutoffFilter='{0x55, 0x48, 0x89, 0xE5}'
 ORIG_DcReject='{0x55, 0x48, 0x89, 0xE5}'
@@ -96,7 +96,7 @@ log_error() { echo -e "${RED}[XX]${NC} $1"; echo "[ERROR] $1" >> "$LOG_FILE" 2>/
 banner() {
     echo ""
     echo -e "${CYAN}===== Discord Voice Quality Patcher v${SCRIPT_VERSION} =====${NC}"
-    echo -e "${CYAN}      48kHz | 384kbps | Stereo${NC}"
+    echo -e "${CYAN}      48 kHz | 384 kbps | Stereo${NC}"
     echo -e "${CYAN}      Platform: Linux | Multi-Client${NC}"
     echo -e "${CYAN}===============================================${NC}"
     echo ""
@@ -266,7 +266,7 @@ terminate_discord() {
             return 0
         fi
         sleep 0.5
-        (( attempts++ ))
+        attempts=$(( attempts + 1 ))
     done
 
     # If still running, try SIGKILL
@@ -511,7 +511,7 @@ backup_node() {
     # Prune old backups per client (keep 3 - ~225MB for a 75MB node)
     local count
     count=$(ls -1 "$BACKUP_DIR"/discord_voice.node."${sanitized}".*.backup 2>/dev/null | wc -l || true)
-    if (( count > 3 )); then
+    if [[ "${count:-0}" -gt 3 ]]; then
         ls -1t "$BACKUP_DIR"/discord_voice.node."${sanitized}".*.backup | tail -n +4 | xargs rm -f
         log_info "  Pruned old backups (kept latest 3)"
     fi
@@ -1218,7 +1218,7 @@ main() {
         fi
     fi
 
-    if (( failed == 0 )); then
+    if [[ "$failed" -eq 0 ]]; then
         PATCH_SUCCESS=true
     fi
 
@@ -1226,7 +1226,7 @@ main() {
 
     echo ""
     echo -e "${CYAN}===============================================${NC}"
-    if (( failed == 0 )); then
+    if [[ "$failed" -eq 0 ]]; then
         echo -e "${GREEN}  [OK] PATCHING COMPLETE: $success/$total successful${NC}"
     else
         echo -e "${YELLOW}  PATCHING: $success/$total successful, $failed failed${NC}"

@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 ###############################################################################
 # DISCORD VOICE FIXER - Stereo Audio Module Installer (Linux)
-# Downloads and installs pre-patched stereo voice modules
+# Downloads and installs pre-patched stereo voice modules.
 # Usage: ./Stereo-Installer-Linux.sh [--silent] [--check] [--restore] [--help]
 # Made by: Oracle | Shaun | Hallow | Ascend | Sentry | Sikimzo | Cypher
 ###############################################################################
+
 set -euo pipefail
 
 SCRIPT_VERSION="2.0"
 
 # --- Configuration -----------------------------------------------------------
-# When run with sudo, use invoking user's home for config/cache so we find their Discord
+# With sudo, use invoking user's home for config/cache so we find their Discord.
 DETECT_HOME="${HOME:-}"
 if [[ -n "${SUDO_USER:-}" ]] && [[ "$(id -u 2>/dev/null)" -eq 0 ]]; then
     _dh=$(getent passwd "$SUDO_USER" 2>/dev/null | cut -d: -f6)

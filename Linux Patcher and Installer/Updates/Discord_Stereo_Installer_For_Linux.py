@@ -3,9 +3,8 @@
 """
 Discord Stereo Installer For Linux - GUI wrapper for installer and patcher scripts.
 Expects Stereo-Installer-Linux.sh and discord_voice_patcher_linux.sh in the same directory.
-DPI-aware on Windows; run: python3 Discord_Stereo_Installer_For_Linux.py
+DPI-aware on Windows. Run: python3 Discord_Stereo_Installer_For_Linux.py
 """
-
 from __future__ import annotations
 
 import os
@@ -17,7 +16,7 @@ import threading
 import tkinter as tk
 from tkinter import scrolledtext, messagebox
 
-# Script paths are resolved relative to this file (no embedded B64).
+# Script paths: same directory as this file.
 def _script_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
@@ -34,7 +33,7 @@ def patcher_script():
     return os.path.join(_script_dir(), "discord_voice_patcher_linux.sh")
 
 # -----------------------------------------------------------------------------
-# Platform / debug (Windows without Linux: validate only, no bash execution)
+# Platform and debug (Windows: validate only if no bash/WSL)
 # -----------------------------------------------------------------------------
 IS_WINDOWS = sys.platform.startswith("win")
 DEBUG_MODE = (
@@ -690,7 +689,7 @@ class DiscordVoiceFixerGUI:
             messagebox.showinfo("Start Discord", "Could not start Discord.\nStart it manually.")
 
     def _warn_if_scripts_missing(self):
-        """Log a clear message if installer or patcher script is missing (e.g. not run via launcher)."""
+        """Log and alert if installer or patcher script is missing (e.g. not run via launcher)."""
         inst = installer_script()
         pat = patcher_script()
         if not os.path.isfile(inst) or not os.path.isfile(pat):
@@ -698,6 +697,12 @@ class DiscordVoiceFixerGUI:
             self.log_line("  Installer: %s" % inst, "info")
             self.log_line("  Patcher:   %s" % pat, "info")
             self.log_line("Run discord-stereo-launcher.sh to download and run from the correct folder.", "info")
+            messagebox.showwarning(
+                "Scripts missing",
+                "Stereo-Installer-Linux.sh or discord_voice_patcher_linux.sh not found in:\n%s\n\n"
+                "Run discord-stereo-launcher.sh (it will download and run from the correct folder)."
+                % script_dir(),
+            )
 
     def _refresh_clients(self):
         script = installer_script()
