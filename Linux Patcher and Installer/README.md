@@ -6,8 +6,19 @@
 [![Focus](https://img.shields.io/badge/Focus-True%20Stereo%20Voice-5865F2?style=flat-square)](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux)
 
 Part of the [Discord Stereo project](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux) — **48 kHz**, **up to 384 kbps**, and **true stereo** on Linux.
+
 ---
-!!! INSTALLER MODE IS A PLACEHOLDER UNTIL SOMEONE PATCHES THE NODE AND SENDS ME ALL THE MODULES !!!
+
+# ⚠️ IMPORTANT WARNING
+
+> ## 🚧 INSTALLER MODE IS CURRENTLY A PLACEHOLDER
+>
+> **Installer mode does NOT work yet.**
+>
+> It will remain disabled **until someone provides a fully patched Linux `discord_voice.node` along with the complete module files.**
+>
+> Until then, **use PATCH MODE** to build and patch the module locally.
+
 ---
 
 ## 🚀 Quick start: use the launcher
@@ -56,7 +67,7 @@ The Python script uses the two `.sh` scripts from the same directory (no embeddi
 | Before | After |
 |--------|--------|
 | 24 kHz | **48 kHz** |
-| ~64 kbps | **up to 400 kbps** |
+| ~64 kbps | **up to 384 kbps** |
 | Mono downmix | **True stereo** |
 | Built-in filtering | **Filterless passthrough** |
 
@@ -142,48 +153,57 @@ python3 Discord_Stereo_Installer_For_Linux.py
 <summary><b>Discord updated and patching stopped working</b></summary>
 
 Offsets are tied to a specific `discord_voice.node` build. After a Discord update, you need updated offsets. Check the repo for new patcher/installer versions and run the launcher (without `--no-update`) to pull the latest files.
+
 </details>
 
 <details>
 <summary><b>"No C++ compiler found" (patch mode)</b></summary>
 
 Patch mode compiles a small C++ helper at runtime. Install g++/clang++ (see Requirements), or use **Install pre-patched files** in the GUI if your Discord build is supported.
+
 </details>
 
 <details>
 <summary><b>"Cannot open file" / Permission denied</b></summary>
 
 The patcher needs write access to `discord_voice.node`. For installs under `~/.config/` this is usually fine. If not: `chmod +w /path/to/discord_voice.node`. Use sudo only if you understand the implications.
+
 </details>
 
 <details>
 <summary><b>"Binary validation failed — unexpected bytes at patch sites"</b></summary>
 
 The binary does not match the offsets in the current patcher (different Discord build). Run the launcher without `--no-update` to get the latest patcher, or use installer mode if a pre-patched module exists for your version.
+
 </details>
 
 <details>
 <summary><b>No Discord installations found</b></summary>
 
 Run Discord at least once so the voice module exists. Join a voice channel briefly if the module path is missing. Use **Check** in the GUI to rescan.
+
 </details>
 
 <details>
 <summary><b>Flatpak / Snap permission issues</b></summary>
 
-**Flatpak:** Paths under `~/.var/app/` are usually writable. **Snap:** Often read-only — prefer deb or Flatpak for patching.
+**Flatpak:** Paths under `~/.var/app/` are usually writable.  
+**Snap:** Often read-only — prefer deb or Flatpak for patching.
+
 </details>
 
 <details>
 <summary><b>How do I restore / unpatch?</b></summary>
 
 Use **Restore** in the GUI, or run the installer/patcher with `--restore`. Letting Discord update also replaces the voice module with a fresh copy.
+
 </details>
 
 <details>
 <summary><b>Launcher fails to download or says file not found</b></summary>
 
 You need network access and `curl`. If downloads fail, the launcher will warn and still try to run existing files in **Linux Stereo Installer**. Use `--force` to retry overwriting, or run with `--no-update` to skip updates. Ensure the repo URLs are reachable (no firewall blocking raw GitHub).
+
 </details>
 
 ---
