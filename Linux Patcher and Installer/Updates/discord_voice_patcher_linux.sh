@@ -2,7 +2,7 @@
 ###############################################################################
 # Discord Voice Quality Patcher - Linux
 # 48 kHz | 384 kbps | Stereo
-# Made by: Oracle | Shaun | Hallow | Ascend | Sentry | Sikimzo | Cypher
+# Made by: Oracle | Shaun | Hallow | Ascend | Sentry | Sikimzo | Cypher | CRÜE
 ###############################################################################
 
 # Re-exec under bash if invoked via sh/dash/zsh.
