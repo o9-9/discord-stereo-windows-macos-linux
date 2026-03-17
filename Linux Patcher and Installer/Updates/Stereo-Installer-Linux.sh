@@ -3,7 +3,7 @@
 # DISCORD VOICE FIXER - Stereo Audio Module Installer (Linux)
 # Downloads and installs pre-patched stereo voice modules.
 # Usage: ./Stereo-Installer-Linux.sh [--silent] [--check] [--restore] [--help]
-# Made by: Oracle | Shaun | Hallow | Ascend | Sentry | Sikimzo | Cypher
+# Made by: Oracle | Shaun | Hallow | Ascend | Sentry | Sikimzo | Cypher | CRÜE
 ###############################################################################
 
 set -euo pipefail
