@@ -408,7 +408,7 @@ Manual hex editing works for a one-off patch, but breaks the moment Discord upda
 - BluesCat
 - **[Sentry](https://github.com/sentry1000)**
 - **[Sikimzo](https://github.com/sikimzo)**
-- 🍎 **[CRÜE](https://codeberg.org/DiscordStereoPatcher-macOS)**
+- 🍎 and Linux 🐧 **[CRÜE](https://codeberg.org/DiscordStereoPatcher-macOS)**
 - 🍎 **[HorrorPills / Geeko](https://github.com/HorrorPills)** and **[Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS)**
 ---
 
