@@ -77,7 +77,7 @@ The Python script uses the two `.sh` scripts from the same directory (no embeddi
 
 | Install type | Typical path |
 |--------------|--------------|
-| **Deb / native** | `~/.config/discord/`, `~/.config/discordcanary/`, `~/.config/discordptb/` |
+| **Deb / native** | `~/.config/discord/ |
 | **Flatpak** | `~/.var/app/com.discordapp.Discord/...` |
 | **Snap** | Often read-only; deb or Flatpak recommended for patching |
 
