@@ -40,27 +40,27 @@ TEMP_DIR="$CACHE_DIR/build"
 # --- Build fingerprint (update when targeting a new Discord build) ------------
 # Run: python discord_voice_node_offset_finder_v5.py <path/to/discord_voice.node>
 # Copy the "COPY BELOW -> discord_voice_patcher_linux.sh" block here.
-EXPECTED_MD5="a0b49c57de51d59bac6253e57266bac7"
-EXPECTED_SIZE=104309664
+EXPECTED_MD5="3490273d4ad6b339da224057d8e4ceb3"
+EXPECTED_SIZE=104351872
 
 # --- Linux/ELF patch offsets --------------------------------------------------
-OFFSET_CreateAudioFrameStereo=0x389253
-OFFSET_AudioEncoderOpusConfigSetChannels=0x762FF5
-OFFSET_MonoDownmixer=0x357BB6
-OFFSET_EmulateStereoSuccess1=0x396C73
-OFFSET_EmulateStereoSuccess2=0x396CE8
-OFFSET_EmulateBitrateModified=0x95E8F3
-OFFSET_SetsBitrateBitrateValue=0x34E895
-OFFSET_SetsBitrateBitwiseOr=0x34E89D
-OFFSET_Emulate48Khz=0x39587F
-OFFSET_HighPassFilter=0x6FDB80
-OFFSET_HighpassCutoffFilter=0x75BC60
-OFFSET_DcReject=0x75BE10
-OFFSET_DownmixFunc=0x987A20
-OFFSET_AudioEncoderOpusConfigIsOk=0x763190
-OFFSET_ThrowError=0x2CBFC0
-OFFSET_EncoderConfigInit1=0x762FFF
-OFFSET_EncoderConfigInit2=0x7629D8
+OFFSET_CreateAudioFrameStereo=0x38C783
+OFFSET_AudioEncoderOpusConfigSetChannels=0x766335
+OFFSET_MonoDownmixer=0x35B166
+OFFSET_EmulateStereoSuccess1=0x39A103
+OFFSET_EmulateStereoSuccess2=0x39A178
+OFFSET_EmulateBitrateModified=0x38C76C
+OFFSET_SetsBitrateBitrateValue=0x351E45
+OFFSET_SetsBitrateBitwiseOr=0x351E4D
+OFFSET_Emulate48Khz=0x398D0F
+OFFSET_HighPassFilter=0x700EC0
+OFFSET_HighpassCutoffFilter=0x75EFA0
+OFFSET_DcReject=0x75F150
+OFFSET_DownmixFunc=0x98AD60
+OFFSET_AudioEncoderOpusConfigIsOk=0x7664D0
+OFFSET_ThrowError=0x2CF4A0
+OFFSET_EncoderConfigInit1=0x76633F
+OFFSET_EncoderConfigInit2=0x765D18
 FILE_OFFSET_ADJUSTMENT=0
 
 # Required offset names (same 17 as Windows patcher); validate before build.
