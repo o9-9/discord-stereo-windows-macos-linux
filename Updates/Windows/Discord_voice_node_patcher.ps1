@@ -356,7 +356,7 @@ function Check-ForUpdate {
         }
         $remoteVersion = "Unknown"
         if ($remoteContent -match '\$Script:SCRIPT_VERSION\s*=\s*"([^"]+)"') { $remoteVersion = $matches[1] }
-        Write-Log "GitHub copy differs from local file — syncing (v$Script:SCRIPT_VERSION -> v$remoteVersion)." -Level Warning
+        Write-Log "GitHub copy differs from local file - syncing (v$Script:SCRIPT_VERSION -> v$remoteVersion)." -Level Warning
         return @{ UpdateAvailable = $true; TempFile = $tempFile; RemoteVersion = $remoteVersion; LocalVersion = $Script:SCRIPT_VERSION }
     } catch {
         Write-Log "Update check failed: $($_.Exception.Message)" -Level Warning
