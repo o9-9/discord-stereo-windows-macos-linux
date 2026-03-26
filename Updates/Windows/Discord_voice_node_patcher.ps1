@@ -16,7 +16,7 @@ Add-Type -AssemblyName System.Windows.Forms, System.Drawing -ErrorAction Silentl
 
 # Canonical source (same tree as Stereo Hub / Linux bundle)
 $Script:UPDATE_URL_BASE = "https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Windows/Discord_voice_node_patcher.ps1"
-$Script:SCRIPT_VERSION = "6"
+$Script:SCRIPT_VERSION = "7"
 
 # region Offsets (PASTE HERE)
 # Paste output from: python discord_voice_node_offset_finder_v5.py <path\to\discord_voice.node>
@@ -293,6 +293,20 @@ function Get-OffsetsCopyBlock {
 
 # region Auto-Update
 
+function Compare-PatcherScriptVersion {
+    param([string]$Left, [string]$Right)
+    if ([string]::IsNullOrWhiteSpace($Left)) { $Left = '0' } else { $Left = $Left.Trim() }
+    if ([string]::IsNullOrWhiteSpace($Right)) { $Right = '0' } else { $Right = $Right.Trim() }
+    if ($Left -match '^\d+$' -and $Right -match '^\d+$') { return [int]$Left - [int]$Right }
+    try {
+        $lNorm = if ($Left -match '^\d+$') { "$Left.0.0" } else { $Left }
+        $rNorm = if ($Right -match '^\d+$') { "$Right.0.0" } else { $Right }
+        return ([version]$lNorm).CompareTo([version]$rNorm)
+    } catch {
+        return [string]::CompareOrdinal($Left, $Right)
+    }
+}
+
 function Get-PatcherRestartHelperScriptContent {
     param([Parameter(Mandatory)][string]$TargetScriptPath)
     $parts = [System.Collections.Generic.List[string]]::new()
@@ -357,8 +371,25 @@ function Check-ForUpdate {
         }
         $remoteVersion = "Unknown"
         if ($remoteContent -match '\$Script:SCRIPT_VERSION\s*=\s*"([^"]+)"') { $remoteVersion = $matches[1] }
-        Write-Log "GitHub copy differs from local file - syncing (v$Script:SCRIPT_VERSION -> v$remoteVersion)." -Level Warning
-        return @{ UpdateAvailable = $true; TempFile = $tempFile; RemoteVersion = $remoteVersion; LocalVersion = $Script:SCRIPT_VERSION }
+        $localVersion = $Script:SCRIPT_VERSION
+        if ($remoteVersion -eq "Unknown") {
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            Write-Log "Could not read remote `$Script:SCRIPT_VERSION; skipping auto-update (avoid wrong overwrite)." -Level Warning
+            return @{ UpdateAvailable = $false; Reason = "RemoteVersionUnknown" }
+        }
+        $verCmp = Compare-PatcherScriptVersion -Left $remoteVersion -Right $localVersion
+        if ($verCmp -lt 0) {
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            Write-Log "Local script is newer (v$localVersion) than GitHub (v$remoteVersion); not downgrading." -Level Success
+            return @{ UpdateAvailable = $false; Reason = "LocalNewer" }
+        }
+        if ($verCmp -eq 0) {
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            Write-Log "Same version (v$localVersion) as GitHub but file differs; keeping local copy." -Level Info
+            return @{ UpdateAvailable = $false; Reason = "SameVersionDiff" }
+        }
+        Write-Log "Update available: v$localVersion -> v$remoteVersion (GitHub)." -Level Warning
+        return @{ UpdateAvailable = $true; TempFile = $tempFile; RemoteVersion = $remoteVersion; LocalVersion = $localVersion }
     } catch {
         Write-Log "Update check failed: $($_.Exception.Message)" -Level Warning
         if ($tempFile -and (Test-Path $tempFile)) { Remove-Item $tempFile -Force -ErrorAction SilentlyContinue }
@@ -2038,8 +2069,10 @@ function Invoke-Compilation {
         switch ($Compiler.Type) {
             'MSVC' {
                 $src1 = $SourceFiles[0]; $src2 = $SourceFiles[1]; $vcvars = $Compiler.Path
+                $logQ = $log -replace '%', '%%'
                 $batLines = @(
                     '@echo off'
+                    '('
                     ('call "{0}"' -f $vcvars)
                     'if errorlevel 1 ('
                     '    echo ERROR: Failed to initialize Visual Studio environment'
@@ -2050,19 +2083,25 @@ function Invoke-Compilation {
                     ('    "{0}" ^' -f $src2)
                     ('    /Fe"{0}" ^' -f $exe)
                     '    /link Psapi.lib'
+                    (') > "{0}" 2>&1' -f $logQ)
                 )
-                $batContent = $batLines -join "`r`n"
+                $batContent = ($batLines -join "`r`n") + "`r`n"
                 $batPath = "$($Script:Config.TempDir)\build.bat"
                 Set-Content -Path $batPath -Value $batContent -Encoding ASCII -NoNewline
                 $pinfo = New-Object System.Diagnostics.ProcessStartInfo
                 $pinfo.FileName = "cmd.exe"
-                $pinfo.Arguments = ('/c ""{0}"" > ""{1}"" 2>&1' -f $batPath, $log)
+                $pinfo.Arguments = '/c "' + ($batPath.Replace('"', '""')) + '"'
                 $pinfo.UseShellExecute = $false
                 $pinfo.CreateNoWindow = $true
                 $pinfo.WorkingDirectory = $Script:Config.TempDir
                 $proc = New-Object System.Diagnostics.Process
                 $proc.StartInfo = $pinfo
-                $proc.Start() | Out-Null
+                try {
+                    $proc.Start() | Out-Null
+                } catch {
+                    try { "cmd.exe failed to start build.bat: $($_.Exception.Message)" | Out-File -FilePath $log -Encoding ascii -Force } catch { }
+                    throw
+                }
                 $proc.WaitForExit(120000) | Out-Null
                 if (-not $proc.HasExited) { $proc.Kill(); throw "Build timed out after 120 seconds" }
                 if (-not (Test-Path $exe) -and (Test-Path $log)) { Write-Host "=== Build Log ===" -ForegroundColor Yellow; Get-Content $log | Write-Host }
@@ -2273,7 +2312,7 @@ function Start-Patching {
         $updateResult = Check-ForUpdate
         if ($updateResult.UpdateAvailable) {
             Write-Host ""
-            Write-Host "Syncing script from GitHub (v$($updateResult.LocalVersion) -> v$($updateResult.RemoteVersion))..." -ForegroundColor Yellow
+            Write-Host "Updating script from GitHub (v$($updateResult.LocalVersion) -> v$($updateResult.RemoteVersion))..." -ForegroundColor Yellow
             Write-Host ""
             Write-Log "Applying update from GitHub..." -Level Info
             if (Apply-ScriptUpdate -UpdatedScriptPath $updateResult.TempFile -CurrentScriptPath $PSCommandPath -RestartAfter) {

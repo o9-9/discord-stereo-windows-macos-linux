@@ -1,5 +1,5 @@
 @echo off
-REM Fetches from bundle Updates/Windows (same file as hub). Cache-bust each run.
+REM Fetches from bundle Updates/Windows. Or run: powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Discord_voice_node_patcher.ps1"
 
 title Discord Voice Node Patcher
 echo Fetching latest Voice Node Patcher from bundle repo...

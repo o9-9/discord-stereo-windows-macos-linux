@@ -1,9 +1,8 @@
 @echo off
-REM Launcher: fetch + run Discord_voice_node_patcher.ps1 (raw + cache-bust each run).
-REM Browser: https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Discord_voice_node_patcher.ps1
+REM Fetches from bundle Updates/Windows. Or run: powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Discord_voice_node_patcher.ps1"
 
 title Discord Voice Node Patcher
-echo Fetching latest Voice Node Patcher from repo, then starting...
+echo Fetching latest Voice Node Patcher from bundle repo...
 echo.
 
 set "PS1=%TEMP%\discord_voice_node_patcher.ps1"
