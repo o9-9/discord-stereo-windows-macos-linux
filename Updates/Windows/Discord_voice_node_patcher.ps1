@@ -196,6 +196,119 @@ function Get-FileMd5Hex {
         } finally { $fs.Dispose() }
     } finally { $md5.Dispose() }
 }
+
+function Get-PeFileOffsetAdjustment {
+    <#
+    .SYNOPSIS
+        RVA -> on-disk offset uses: fileOffset = rva - (sectionVirtualAddress - sectionRawPointer).
+        Discord's discord_voice.node historically matched 0xC00; linker changes can shift this.
+        Must match offset finder logic (parse_pe .text vaddr - raw_offset).
+    #>
+    param([Parameter(Mandatory)][string]$Path)
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($Path)
+    } catch {
+        return $null
+    }
+    if ($bytes.Length -lt 0x200) { return $null }
+    if ($bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) { return $null }
+    $peOff = [BitConverter]::ToInt32($bytes, 0x3C)
+    if ($peOff -lt 0 -or ($peOff + 24) -gt $bytes.Length) { return $null }
+    if ($bytes[$peOff] -ne 0x50 -or $bytes[$peOff + 1] -ne 0x45) { return $null }
+    $coff = $peOff + 4
+    $numSections = [BitConverter]::ToUInt16($bytes, $coff + 2)
+    $optHeaderSize = [BitConverter]::ToUInt16($bytes, $coff + 16)
+    $opt = $coff + 20
+    $secOffset = $opt + $optHeaderSize
+    if ($secOffset -lt 0 -or ($secOffset + [int]$numSections * 40) -gt $bytes.Length) { return $null }
+
+    for ($i = 0; $i -lt $numSections; $i++) {
+        $s = $secOffset + $i * 40
+        $name = ([System.Text.Encoding]::ASCII.GetString($bytes, $s, 8)).TrimEnd([char]0)
+        $vaddr = [BitConverter]::ToUInt32($bytes, $s + 12)
+        $rawOffset = [BitConverter]::ToUInt32($bytes, $s + 20)
+        if ($name -eq '.text' -and $vaddr -gt 0) {
+            $adj = [int64]$vaddr - [int64]$rawOffset
+            if ($adj -ge 0 -and $adj -le 0x7FFFFFFF) { return [int]$adj }
+            return $null
+        }
+    }
+    for ($i = 0; $i -lt $numSections; $i++) {
+        $s = $secOffset + $i * 40
+        $vaddr = [BitConverter]::ToUInt32($bytes, $s + 12)
+        $rawOffset = [BitConverter]::ToUInt32($bytes, $s + 20)
+        if ($vaddr -gt 0 -and $rawOffset -gt 0) {
+            $adj = [int64]$vaddr - [int64]$rawOffset
+            if ($adj -ge 0 -and $adj -le 0x7FFFFFFF) { return [int]$adj }
+            break
+        }
+    }
+    return 0xC00
+}
+
+function Test-DiscordVoiceNodeOffsetAnchors {
+    <#
+    Same gate as the native patcher CheckBytes for Emulate48Khz / ConfigIsOk / DownmixFunc.
+    Catches stale $Script:Offsets vs on-disk node (e.g. MD5 meta updated but RVA block not).
+    #>
+    param(
+        [Parameter(Mandatory)][string]$NodePath,
+        [Parameter(Mandatory)][hashtable]$Offsets,
+        [int]$FileOffsetAdjustment
+    )
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($NodePath)
+    } catch {
+        Write-Log "Anchor check: could not read node: $_" -Level Error
+        return $false
+    }
+    $sz = $bytes.Length
+    $slice = {
+        param([int]$Rva, [int]$Len)
+        $fo = $Rva - $FileOffsetAdjustment
+        if ($fo -lt 0 -or ($fo + $Len) -gt $sz) { return $null }
+        $out = New-Object byte[] $Len
+        [Array]::Copy($bytes, $fo, $out, 0, $Len)
+        return ,$out
+    }
+    $hex = {
+        param([byte[]]$B, [int]$Len)
+        (($B[0..([Math]::Min($Len, $B.Length) - 1)] | ForEach-Object { $_.ToString('X2') }) -join ' ')
+    }
+
+    $r48 = [int]$Offsets.Emulate48Khz
+    $rCfg = [int]$Offsets.AudioEncoderOpusConfigIsOk
+    $rDm = [int]$Offsets.DownmixFunc
+    $b48 = & $slice $r48 3
+    $bCfg = & $slice $rCfg 4
+    $bDm = & $slice $rDm 4
+    if (-not $b48 -or -not $bCfg -or -not $bDm) {
+        Write-Log "Anchor check: RVA->file offset out of range (FILE_OFFSET_ADJUSTMENT=0x$('{0:X}' -f $FileOffsetAdjustment))." -Level Error
+        return $false
+    }
+
+    $ok48 = (
+        ($b48[0] -eq 0x0F -and $b48[1] -eq 0x42 -and $b48[2] -eq 0xC1) -or
+        ($b48[0] -eq 0x90 -and $b48[1] -eq 0x90 -and $b48[2] -eq 0x90)
+    )
+    $okCfg = (
+        ($bCfg[0] -eq 0x8B -and $bCfg[1] -eq 0x11 -and $bCfg[2] -eq 0x31 -and $bCfg[3] -eq 0xC0) -or
+        ($bCfg[0] -eq 0x48 -and $bCfg[1] -eq 0xC7 -and $bCfg[2] -eq 0xC0 -and $bCfg[3] -eq 0x01)
+    )
+    $okDm = (
+        ($bDm[0] -eq 0x41 -and $bDm[1] -eq 0x57 -and $bDm[2] -eq 0x41 -and $bDm[3] -eq 0x56) -or
+        ($bDm[0] -eq 0xC3)
+    )
+
+    if ($ok48 -and $okCfg -and $okDm) { return $true }
+
+    Write-Log "Pre-patch anchor check failed (offsets do not match this discord_voice.node file)." -Level Error
+    Write-Log ("  FILE_OFFSET_ADJUSTMENT=0x{0:X} (from PE .text); re-paste the full '# region Offsets' block from the offset finder." -f $FileOffsetAdjustment) -Level Error
+    Write-Log ("  Emulate48Khz @0x{0:X} file 0x{1:X}: {2} (expected 0F 42 C1 or 90 90 90)" -f $r48, ($r48 - $FileOffsetAdjustment), (& $hex $b48 3)) -Level Error
+    Write-Log ("  ConfigIsOk   @0x{0:X} file 0x{1:X}: {2} (expected 8B 11 31 C0 or 48 C7 C0 01)" -f $rCfg, ($rCfg - $FileOffsetAdjustment), (& $hex $bCfg 4)) -Level Error
+    Write-Log ("  DownmixFunc  @0x{0:X} file 0x{1:X}: {2} (expected 41 57 41 56 or C3)" -f $rDm, ($rDm - $FileOffsetAdjustment), (& $hex $bDm 4)) -Level Error
+    return $false
+}
 # endregion Voice Node Helpers
 
 # region Logging
@@ -1498,7 +1611,14 @@ extern "C" void __cdecl dc_reject(const float* in, float* out, int* hp_mem, int 
 }
 
 function Get-PatcherSourceCode {
-    param([string]$ProcessName = "Discord.exe", [string]$ModuleName = "discord_voice.node")
+    param(
+        [string]$ProcessName = "Discord.exe",
+        [string]$ModuleName = "discord_voice.node",
+        [int]$FileOffsetAdjustment = 0xC00
+    )
+    if ($FileOffsetAdjustment -lt 0 -or $FileOffsetAdjustment -gt 0x10000000) {
+        throw "Invalid FileOffsetAdjustment: $FileOffsetAdjustment (expected PE .text vaddr - raw_offset)"
+    }
     $offsets = $Script:Config.Offsets
     $c = $Script:Config
 
@@ -1551,7 +1671,7 @@ namespace Offsets {
     constexpr uint32_t ThrowError = $('0x{0:X}' -f $offsets.ThrowError);
     constexpr uint32_t EncoderConfigInit1 = $('0x{0:X}' -f $offsets.EncoderConfigInit1);
     constexpr uint32_t EncoderConfigInit2 = $('0x{0:X}' -f $offsets.EncoderConfigInit2);
-    constexpr uint32_t FILE_OFFSET_ADJUSTMENT = 0xC00;
+    constexpr uint32_t FILE_OFFSET_ADJUSTMENT = $('0x{0:X}' -f $FileOffsetAdjustment);
 };
 
 class DiscordPatcher {
@@ -1970,13 +2090,23 @@ int main(int argc, char* argv[]) {
 }
 
 function New-SourceFiles {
-    param([string]$ProcessName = "Discord.exe")
+    param([string]$ProcessName = "Discord.exe", [string]$VoiceNodePath = $null)
     Write-Log "Generating source files..." -Level Info
     try {
         EnsureDir $Script:Config.TempDir
         $patcher = "$($Script:Config.TempDir)\patcher.cpp"
         $amp = "$($Script:Config.TempDir)\amplifier.cpp"
-        $patcherCode = Get-PatcherSourceCode -ProcessName $ProcessName
+        $fileAdj = 0xC00
+        if ($VoiceNodePath -and (Test-Path -LiteralPath $VoiceNodePath)) {
+            $computed = Get-PeFileOffsetAdjustment -Path $VoiceNodePath
+            if ($null -ne $computed) {
+                $fileAdj = $computed
+                Write-Log ("PE FILE_OFFSET_ADJUSTMENT from voice node: 0x{0:X}" -f $fileAdj) -Level Info
+            } else {
+                Write-Log "Could not parse PE headers on voice node; using default FILE_OFFSET_ADJUSTMENT 0xC00" -Level Warning
+            }
+        }
+        $patcherCode = Get-PatcherSourceCode -ProcessName $ProcessName -FileOffsetAdjustment $fileAdj
         if ([string]::IsNullOrWhiteSpace($patcherCode)) { throw "Patcher source code generation returned empty" }
         $ampCode = Get-AmplifierSourceCode
         if ([string]::IsNullOrWhiteSpace($ampCode)) { throw "Amplifier source code generation returned empty" }
@@ -2270,7 +2400,16 @@ function Invoke-PatchClients {
             Write-Log "Voice node: $voiceNodePath" -Level Info
             Write-Log "File size: $([Math]::Round((Get-Item $voiceNodePath).Length / 1MB, 2)) MB" -Level Info
 
-            $src = New-SourceFiles -ProcessName $ci.Client.Exe
+            $peAdj = Get-PeFileOffsetAdjustment -Path $voiceNodePath
+            if ($null -eq $peAdj) {
+                Write-Log "Could not determine PE FILE_OFFSET_ADJUSTMENT; using 0xC00 for anchor check." -Level Warning
+                $peAdj = 0xC00
+            }
+            if (-not (Test-DiscordVoiceNodeOffsetAnchors -NodePath $voiceNodePath -Offsets $Script:Config.Offsets -FileOffsetAdjustment $peAdj)) {
+                throw "discord_voice.node does not match embedded offsets (see anchor log above). Re-run offset finder on this file or refresh the patcher offset block."
+            }
+
+            $src = New-SourceFiles -ProcessName $ci.Client.Exe -VoiceNodePath $voiceNodePath
             if (-not $src) {
                 throw "Source generation failed"
             }
