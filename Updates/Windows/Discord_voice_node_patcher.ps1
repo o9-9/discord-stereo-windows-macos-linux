@@ -23,7 +23,7 @@ $Script:SCRIPT_VERSION = "7"
 # Required: exactly these 17 offsets (RVA hex). Copy the "COPY BELOW -> Discord_voice_node_patcher.ps1" block.
 
 $Script:OffsetsMeta = @{
-    FinderVersion = "discord_voice_node_offset_finder.py v5.1"
+    FinderVersion = "discord_voice_node_offset_finder.py v5.1.1"
     Build         = "Mar 23 2026"
     Size          = 14395320
     MD5           = "1550d7ceeef04e81435ad87e7409f0f3"
@@ -158,7 +158,7 @@ $Script:Config = @{
     TempDir = "$env:TEMP\DiscordVoicePatcher"; BackupDir = "$env:TEMP\DiscordVoicePatcher\Backups"
     LogFile = "$env:TEMP\DiscordVoicePatcher\patcher.log"; ConfigFile = "$env:TEMP\DiscordVoicePatcher\config.json"
     MaxBackupCount = 10
-    # Browser: https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes/Unpatched%20Nodes%20(For%20Patcher)/Windows
+    # Browser (same folder as VoiceBackupAPI): https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes/Unpatched%20Nodes%20(For%20Patcher)/Windows
     VoiceBackupAPI = "https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/Updates%2FNodes%2FUnpatched%20Nodes%20%28For%20Patcher%29%2FWindows"
     OffsetsMeta = $Script:OffsetsMeta
     Offsets     = $Script:Offsets
