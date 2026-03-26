@@ -1,6 +1,6 @@
 @echo off
-REM Launcher only: downloads the latest Discord_voice_node_patcher.ps1 from main, then runs it.
-REM Each run uses a cache-busted URL so you get the current script, not a stale CDN copy.
+REM Launcher: fetch + run Discord_voice_node_patcher.ps1 (raw + cache-bust each run).
+REM Browser: https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Discord_voice_node_patcher.ps1
 
 title Discord Voice Node Patcher
 echo Fetching latest Voice Node Patcher from repo, then starting...

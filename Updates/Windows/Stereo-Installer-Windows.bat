@@ -1,6 +1,7 @@
 @echo off
-REM Launcher only: downloads the latest DiscordVoiceFixer.ps1 from main and runs it via Invoke-Expression.
-REM Each run uses a cache-busted URL so you always get the current installer script.
+REM Launcher: fetch + run DiscordVoiceFixer.ps1 (raw + cache-bust each run).
+REM Browser: https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/DiscordVoiceFixer.ps1
+REM Linux payloads folder: https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates
 
 title Stereo Installer
 echo Fetching latest Stereo Installer from repo, then starting...
