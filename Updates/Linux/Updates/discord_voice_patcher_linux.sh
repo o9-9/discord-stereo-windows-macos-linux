@@ -451,16 +451,17 @@ verify_binary() {
         return 1
     fi
 
-    if [[ "$actual_md5" != "$EXPECTED_MD5" ]]; then
-        log_error "Binary hash mismatch for $name"
-        log_error "  Expected: $EXPECTED_MD5"
-        log_error "  Got:      $actual_md5"
-        log_error "  These offsets are not valid for your version of discord_voice.node."
-        log_error "  You need updated offsets for your build."
-        return 1
+    if [[ "$actual_md5" == "$EXPECTED_MD5" ]]; then
+        log_ok "Binary verified (stock build: size + MD5 match)"
+        return 0
     fi
 
-    log_ok "Binary verified (size + MD5 match)"
+    # Patched nodes keep the same file size but change MD5. Allow re-runs; the
+    # compiled patcher still validates bytes at each patch site.
+    log_warn "Binary MD5 differs from stock (normal if this node is already patched)."
+    log_warn "  Stock fingerprint: $EXPECTED_MD5"
+    log_warn "  Current file:      $actual_md5"
+    log_warn "Proceeding — patcher will reject unknown/corrupt binaries at patch sites."
     return 0
 }
 
@@ -792,46 +793,53 @@ private:
         const unsigned char orig_encconf1[]   = ORIG_VAL_EncoderConfigInit1;
         const unsigned char orig_encconf2[]   = ORIG_VAL_EncoderConfigInit2;
 
-        // Check for already-patched state
+        // Each site must match stock *or* our patched form (safe re-patch / resume).
         const unsigned char patched_48khz[]    = {0x90, 0x90, 0x90};
-        const unsigned char patched_configok[] = {0x48, 0xC7, 0xC0, 0x01};
+        const unsigned char patched_configok[] = {0x48, 0xC7, 0xC0, 0x01, 0x00, 0x00, 0x00, 0xC3};
         const unsigned char patched_downmix[]  = {0xC3};
+        const unsigned char patched_hp_ret[]   = {0xC3};
+        const unsigned char patched_enc384[]   = {0x00, 0xDC, 0x05, 0x00};
+        constexpr size_t injProbe = 24;
 
-        bool p1 = CheckBytes(Offsets::Emulate48Khz, patched_48khz, 3);
-        bool p2 = CheckBytes(Offsets::AudioEncoderOpusConfigIsOk, patched_configok, 4);
-        bool p3 = CheckBytes(Offsets::DownmixFunc, patched_downmix, 1);
+        auto OrigOrAlt = [&](uint32_t off,
+                             const unsigned char* orig, size_t origLen,
+                             const unsigned char* alt, size_t altLen) -> bool {
+            return CheckBytes(off, orig, origLen) || CheckBytes(off, alt, altLen);
+        };
 
-        if (p1 && p2 && p3) {
-            printf("  NOTE: Binary appears to be already patched.\n");
-            printf("  Re-patching to ensure all patches are applied...\n\n");
-        } else {
-            // Validate original bytes at multiple sites
-            bool o1 = CheckBytes(Offsets::Emulate48Khz, orig_emulate48, sizeof(orig_emulate48));
-            bool o2 = CheckBytes(Offsets::AudioEncoderOpusConfigIsOk, orig_configisok, sizeof(orig_configisok));
-            bool o3 = CheckBytes(Offsets::DownmixFunc, orig_downmix, sizeof(orig_downmix));
-            bool o4 = CheckBytes(Offsets::HighPassFilter, orig_hpfilter, sizeof(orig_hpfilter));
-            bool o5 = CheckBytes(Offsets::HighpassCutoffFilter, orig_hpcutoff, sizeof(orig_hpcutoff));
-            bool o6 = CheckBytes(Offsets::DcReject, orig_dcreject, sizeof(orig_dcreject));
-            bool o7 = CheckBytes(Offsets::EncoderConfigInit1, orig_encconf1, sizeof(orig_encconf1));
-            bool o8 = CheckBytes(Offsets::EncoderConfigInit2, orig_encconf2, sizeof(orig_encconf2));
+        bool o1 = OrigOrAlt(Offsets::Emulate48Khz, orig_emulate48, sizeof(orig_emulate48),
+                             patched_48khz, sizeof(patched_48khz));
+        bool o2 = OrigOrAlt(Offsets::AudioEncoderOpusConfigIsOk, orig_configisok, sizeof(orig_configisok),
+                             patched_configok, sizeof(patched_configok));
+        bool o3 = OrigOrAlt(Offsets::DownmixFunc, orig_downmix, sizeof(orig_downmix),
+                             patched_downmix, sizeof(patched_downmix));
+        bool o4 = OrigOrAlt(Offsets::HighPassFilter, orig_hpfilter, sizeof(orig_hpfilter),
+                             patched_hp_ret, sizeof(patched_hp_ret));
+        bool o5 = CheckBytes(Offsets::HighpassCutoffFilter, orig_hpcutoff, sizeof(orig_hpcutoff))
+               || CheckBytes(Offsets::HighpassCutoffFilter, (const unsigned char*)hp_cutoff, injProbe);
+        bool o6 = CheckBytes(Offsets::DcReject, orig_dcreject, sizeof(orig_dcreject))
+               || CheckBytes(Offsets::DcReject, (const unsigned char*)dc_reject, injProbe);
+        bool o7 = OrigOrAlt(Offsets::EncoderConfigInit1, orig_encconf1, sizeof(orig_encconf1),
+                             patched_enc384, sizeof(patched_enc384));
+        bool o8 = OrigOrAlt(Offsets::EncoderConfigInit2, orig_encconf2, sizeof(orig_encconf2),
+                             patched_enc384, sizeof(patched_enc384));
 
-            printf("  Emulate48Khz           (0x%06X): %s\n", Offsets::Emulate48Khz, o1 ? "OK" : "MISMATCH");
-            printf("  AudioEncoderConfigIsOk (0x%06X): %s\n", Offsets::AudioEncoderOpusConfigIsOk, o2 ? "OK" : "MISMATCH");
-            printf("  DownmixFunc            (0x%06X): %s\n", Offsets::DownmixFunc, o3 ? "OK" : "MISMATCH");
-            printf("  HighPassFilter         (0x%06X): %s\n", Offsets::HighPassFilter, o4 ? "OK" : "MISMATCH");
-            printf("  HighpassCutoffFilter   (0x%06X): %s\n", Offsets::HighpassCutoffFilter, o5 ? "OK" : "MISMATCH");
-            printf("  DcReject               (0x%06X): %s\n", Offsets::DcReject, o6 ? "OK" : "MISMATCH");
-            printf("  EncoderConfigInit1     (0x%06X): %s\n", Offsets::EncoderConfigInit1, o7 ? "OK" : "MISMATCH");
-            printf("  EncoderConfigInit2     (0x%06X): %s\n", Offsets::EncoderConfigInit2, o8 ? "OK" : "MISMATCH");
+        printf("  Emulate48Khz           (0x%06X): %s\n", Offsets::Emulate48Khz, o1 ? "OK" : "MISMATCH");
+        printf("  AudioEncoderConfigIsOk (0x%06X): %s\n", Offsets::AudioEncoderOpusConfigIsOk, o2 ? "OK" : "MISMATCH");
+        printf("  DownmixFunc            (0x%06X): %s\n", Offsets::DownmixFunc, o3 ? "OK" : "MISMATCH");
+        printf("  HighPassFilter         (0x%06X): %s\n", Offsets::HighPassFilter, o4 ? "OK" : "MISMATCH");
+        printf("  HighpassCutoffFilter   (0x%06X): %s\n", Offsets::HighpassCutoffFilter, o5 ? "OK" : "MISMATCH");
+        printf("  DcReject               (0x%06X): %s\n", Offsets::DcReject, o6 ? "OK" : "MISMATCH");
+        printf("  EncoderConfigInit1     (0x%06X): %s\n", Offsets::EncoderConfigInit1, o7 ? "OK" : "MISMATCH");
+        printf("  EncoderConfigInit2     (0x%06X): %s\n", Offsets::EncoderConfigInit2, o8 ? "OK" : "MISMATCH");
 
-            if (!o1 || !o2 || !o3 || !o4 || !o5 || !o6 || !o7 || !o8) {
-                printf("\nERROR: Binary validation FAILED - unexpected bytes at patch sites.\n");
-                printf("This discord_voice.node does not match the expected build.\n");
-                printf("These offsets cannot be safely applied to a different version.\n");
-                return false;
-            }
-            printf("  All validation checks PASSED.\n\n");
+        if (!o1 || !o2 || !o3 || !o4 || !o5 || !o6 || !o7 || !o8) {
+            printf("\nERROR: Binary validation FAILED - unexpected bytes at patch sites.\n");
+            printf("This discord_voice.node does not match the expected build.\n");
+            printf("These offsets cannot be safely applied to a different version.\n");
+            return false;
         }
+        printf("  All validation checks PASSED (stock or already patched).\n\n");
 
         int patchCount = 0;
         printf("Applying patches...\n");

@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-SCRIPT_VERSION="2.0"
+SCRIPT_VERSION="2.1"
 
 # --- Configuration -----------------------------------------------------------
 # With sudo, use invoking user's home for config/cache so we find their Discord.
@@ -20,7 +20,8 @@ fi
 [[ -z "${DETECT_HOME:-}" ]] && DETECT_HOME="${HOME:-}"
 
 VOICE_BACKUP_API="https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/Linux%20Patcher%20and%20Installer/discord_voice"
-UPDATE_URL="https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Linux%20Patcher%20and%20Installer/Stereo-Installer-Linux.sh"
+# Same path as Stereo Hub embedded URL (single canonical copy on main)
+UPDATE_URL="https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Linux/Updates/Stereo-Installer-Linux.sh"
 
 APP_DATA_ROOT="$DETECT_HOME/.cache/DiscordVoiceFixer"
 BACKUP_ROOT="$APP_DATA_ROOT/backups"
@@ -48,6 +49,7 @@ AUTO_RESTART_DISCORD=true
 GUI_MODE=true
 LIST_CLIENTS_ONLY=false
 START_DISCORD_ONLY=false
+SKIP_SELF_UPDATE=false
 
 for arg in "$@"; do
     case "$arg" in
@@ -61,6 +63,7 @@ for arg in "$@"; do
         --no-gui)       GUI_MODE=false ;;
         --list-clients) LIST_CLIENTS_ONLY=true; GUI_MODE=false; SILENT_MODE=true ;;
         --start-discord) START_DISCORD_ONLY=true; GUI_MODE=false ;;
+        --skip-self-update) SKIP_SELF_UPDATE=true ;;
         --help|-h)
             echo "Discord Voice Fixer - Linux Installer v${SCRIPT_VERSION}"
             echo ""
@@ -77,6 +80,7 @@ for arg in "$@"; do
             echo "  --no-gui            Use terminal menu (default: launch Python GUI if available)"
             echo "  --list-clients      Print detected client index and name (for Python GUI)"
             echo "  --start-discord     Start Discord and exit (for use by Python GUI after fix/restore)"
+            echo "  --skip-self-update  Do not fetch/re-exec latest installer from GitHub on startup"
             echo "  --help, -h          Show this help"
             echo ""
             echo "Examples:"
@@ -90,6 +94,8 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+ORIGINAL_ARGS=("$@")
 
 # --- Logging -----------------------------------------------------------------
 ensure_dir() { [[ -d "$1" ]] || mkdir -p "$1" 2>/dev/null || true; }
@@ -1108,34 +1114,86 @@ verify_fix() {
     echo "UNKNOWN|No original backup to compare - run fix first|$current_hash|$current_size"
 }
 
-# --- Script Self-Update Check ------------------------------------------------
-check_script_update() {
-    status "Checking for script updates..." blue
-    local tmp_script
-    tmp_script=$(mktemp)
-    trap 'rm -f "$tmp_script" 2>/dev/null; trap - RETURN' RETURN
+# --- Script self-update (GitHub main; cache-busted; optional re-exec) ---------
+# Set INSTALLER_SYNC_DRY_RUN=1 to only report differences (menu item 8).
+sync_self_from_github() {
+    if [[ "$SKIP_SELF_UPDATE" == true ]]; then
+        return 0
+    fi
+    command -v curl &>/dev/null || return 0
 
-    if curl -sS --fail -L -o "$tmp_script" "$UPDATE_URL" 2>/dev/null; then
-        local remote_version
-        remote_version=$(grep '^SCRIPT_VERSION=' "$tmp_script" 2>/dev/null | head -1 | cut -d'"' -f2 || true)
-
-        if [[ -n "$remote_version" ]] && [[ "$remote_version" != "$SCRIPT_VERSION" ]]; then
-            status "[!] Script update available: v$SCRIPT_VERSION -> v$remote_version" yellow
-            echo ""
-            echo -e "  Download from:"
-            echo -e "  ${CYAN}${UNDERLINE}${UPDATE_URL}${NC}"
-            echo ""
-            rm -f "$tmp_script"
-            return 0
-        else
-            status "[OK] Script is up to date (v$SCRIPT_VERSION)" green
-        fi
+    local self_path="${BASH_SOURCE[0]}"
+    [[ -f "$self_path" ]] || return 0
+    if command -v realpath &>/dev/null; then
+        self_path=$(realpath "$self_path")
     else
-        status "  [!] Could not check for updates" orange
+        self_path="$(cd "$(dirname "$self_path")" && pwd)/$(basename "$self_path")"
     fi
 
-    rm -f "$tmp_script"
-    return 1
+    local bust url tmp remote_v newf
+    bust="$(date +%s 2>/dev/null || echo 0)_${RANDOM}"
+    if [[ "$UPDATE_URL" == *\?* ]]; then
+        url="${UPDATE_URL}&_=${bust}"
+    else
+        url="${UPDATE_URL}?_=${bust}"
+    fi
+
+    tmp=$(mktemp)
+    if ! curl -sSfL --connect-timeout 15 --max-time 120 \
+        -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' \
+        -o "$tmp" "$url" 2>/dev/null; then
+        rm -f "$tmp"
+        return 0
+    fi
+    if [[ ! -s "$tmp" ]]; then
+        rm -f "$tmp"
+        return 0
+    fi
+    if head -1 "$tmp" 2>/dev/null | grep -qi '<html\|<!doctype'; then
+        rm -f "$tmp"
+        return 0
+    fi
+    if ! head -1 "$tmp" 2>/dev/null | grep -q '^#!'; then
+        rm -f "$tmp"
+        return 0
+    fi
+
+    if cmp -s "$tmp" "$self_path" 2>/dev/null; then
+        rm -f "$tmp"
+        if [[ "${INSTALLER_SYNC_DRY_RUN:-0}" == "1" ]]; then
+            status "[OK] Installer matches GitHub (v$SCRIPT_VERSION)" green
+        fi
+        return 0
+    fi
+
+    remote_v=$(grep '^SCRIPT_VERSION=' "$tmp" 2>/dev/null | head -1 | cut -d'"' -f2 || echo "?")
+
+    if [[ "${INSTALLER_SYNC_DRY_RUN:-0}" == "1" ]]; then
+        status "[!] GitHub has newer content (remote SCRIPT_VERSION=$remote_v, local v$SCRIPT_VERSION)" yellow
+        status "    Restart this script to apply (auto-sync runs each launch)." cyan
+        rm -f "$tmp"
+        return 0
+    fi
+
+    status "Syncing installer from GitHub (v$SCRIPT_VERSION -> v$remote_v)..." yellow
+    newf="${self_path}.new.$$"
+    if ! cp "$tmp" "$newf" 2>/dev/null; then
+        rm -f "$tmp" "$newf"
+        return 0
+    fi
+    rm -f "$tmp"
+    if ! mv -f "$newf" "$self_path" 2>/dev/null; then
+        rm -f "$newf"
+        status "[!] Could not replace script file (permissions?)" red
+        return 0
+    fi
+    chmod +x "$self_path" 2>/dev/null || true
+    log_file "INFO" "Self-update: re-exec $self_path (${#ORIGINAL_ARGS[@]} args)"
+    exec bash "$self_path" "${ORIGINAL_ARGS[@]}"
+}
+
+check_script_update() {
+    INSTALLER_SYNC_DRY_RUN=1 sync_self_from_github
 }
 
 # --- Fix a Single Client -----------------------------------------------------
@@ -1234,6 +1292,7 @@ fix_client() {
 #  DIAGNOSTICS
 # ==============================================================================
 run_diagnostics() {
+    sync_self_from_github || true
     banner
     check_dependencies
     ensure_app_dirs
@@ -1613,6 +1672,7 @@ run_restore() {
 #  INTERACTIVE MODE
 # ==============================================================================
 run_interactive() {
+    sync_self_from_github || true
     banner
     check_dependencies
     ensure_app_dirs
@@ -1972,6 +2032,7 @@ menu_check_updates() {
 # ==============================================================================
 
 run_gui() {
+    sync_self_from_github || true
     local _script_dir
     _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     if [[ -n "${DISPLAY:-}" ]] || [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
@@ -1998,6 +2059,7 @@ run_gui() {
 #  ENTRY POINT
 # ==============================================================================
 if $LIST_CLIENTS_ONLY; then
+    sync_self_from_github || true
     ensure_app_dirs
     rotate_log
     find_discord_clients
@@ -2011,16 +2073,19 @@ elif $START_DISCORD_ONLY; then
 elif $DIAG_MODE; then
     run_diagnostics
 elif $CLEANUP_MODE; then
+    sync_self_from_github || true
     banner
     ensure_app_dirs
     cleanup_invalid_backups
 elif $GUI_MODE; then
     run_gui
 elif $SILENT_MODE || $CHECK_ONLY; then
+    sync_self_from_github || true
     check_dependencies
     ensure_app_dirs
     run_silent
 elif $RESTORE_MODE; then
+    sync_self_from_github || true
     check_dependencies
     run_restore
 else

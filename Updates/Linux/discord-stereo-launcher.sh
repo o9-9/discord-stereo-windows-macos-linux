@@ -104,6 +104,7 @@ download_file() {
     local i=1
     while [ "$i" -le "$CURL_RETRIES" ]; do
         if curl -sSfL --connect-timeout "$CURL_CONNECT_TIMEOUT" --max-time "$CURL_MAX_TIME" \
+            -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' \
             -o "$tmp" "$url" 2>/dev/null; then
             ret=0
             break
@@ -162,6 +163,11 @@ else
     for entry in "${FILES[@]}"; do
         IFS='|' read -r filename url_path <<< "$entry"
         url="${BASE_URL}/${url_path}"
+        if [[ "$url" == *\?* ]]; then
+            url="${url}&_t=$(date +%s)_${RANDOM}"
+        else
+            url="${url}?_t=$(date +%s)_${RANDOM}"
+        fi
         dest="${INSTALL_DIR}/${filename}"
 
         # Portable temp file (Linux: mktemp; fallback for older systems)
