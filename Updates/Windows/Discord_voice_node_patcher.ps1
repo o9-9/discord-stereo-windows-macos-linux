@@ -173,19 +173,40 @@ if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adm
             if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
             Set-Content -LiteralPath $Script:HubHeadlessElevateMarker -Value '1' -Encoding ascii -Force
         }
-        $arguments = @("-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"")
-        if ($PSBoundParameters.ContainsKey('AudioGainMultiplier')) { $arguments += "-AudioGainMultiplier", $AudioGainMultiplier }
-        if ($SkipBackup) { $arguments += "-SkipBackup" }
-        if ($Restore) { $arguments += "-Restore" }
-        if ($ListBackups) { $arguments += "-ListBackups" }
-        if ($FixAll) { $arguments += "-FixAll" }
-        if ($FixClient) { $arguments += "-FixClient", "`"$FixClient`"" }
-        if ($SkipUpdateCheck) { $arguments += "-SkipUpdateCheck" }
-        # Do not use -WindowStyle Hidden here: it can prevent the UAC prompt from appearing.
-        Start-Process powershell.exe -ArgumentList $arguments -Verb RunAs
+        # RunAs uses ShellExecute: a single lpParameters string is reliable; an -ArgumentList array often breaks elevation.
+        function _ElevCmdLineArg([string]$t) {
+            if ($null -eq $t) { return '""' }
+            if ($t -match '[\s"]') { return '"' + ($t -replace '"', '""') + '"' }
+            return $t
+        }
+        $elevParts = [System.Collections.Generic.List[string]]::new()
+        $elevParts.Add('-NoProfile')
+        $elevParts.Add('-WindowStyle')
+        $elevParts.Add('Hidden')
+        $elevParts.Add('-ExecutionPolicy')
+        $elevParts.Add('Bypass')
+        $elevParts.Add('-File')
+        $elevParts.Add($PSCommandPath)
+        if ($PSBoundParameters.ContainsKey('AudioGainMultiplier')) {
+            $elevParts.Add('-AudioGainMultiplier')
+            $elevParts.Add([string]$AudioGainMultiplier)
+        }
+        if ($SkipBackup) { $elevParts.Add('-SkipBackup') }
+        if ($Restore) { $elevParts.Add('-Restore') }
+        if ($ListBackups) { $elevParts.Add('-ListBackups') }
+        if ($FixAll) { $elevParts.Add('-FixAll') }
+        if ($FixClient) {
+            $elevParts.Add('-FixClient')
+            $elevParts.Add($FixClient)
+        }
+        if ($SkipUpdateCheck) { $elevParts.Add('-SkipUpdateCheck') }
+        $elevArgLine = ($elevParts | ForEach-Object { _ElevCmdLineArg $_ }) -join ' '
+        # Do not use -WindowStyle Hidden on this Start-Process — it can block the UAC prompt.
+        Start-Process -FilePath 'powershell.exe' -ArgumentList $elevArgLine -Verb RunAs
         exit 0
     } catch {
-        $errMsg = "ERROR: Failed to elevate. Please run as Administrator manually."
+        $detail = $_.Exception.Message
+        $errMsg = "ERROR: Failed to elevate. Please run as Administrator manually. ($detail)"
         if ($Script:PatcherHeadlessHub) {
             Write-PatcherEarlyLog $errMsg -Level Error
         } else {
