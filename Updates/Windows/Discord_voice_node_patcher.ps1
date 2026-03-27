@@ -12,39 +12,6 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = 'SilentlyContinue'
 
-# Stereo Hub runs the patcher with DISCORD_STEREO_PATCHER_HEADLESS=1 (no console spam). UAC re-launch does not inherit
-# that env, so we pass intent through a tiny marker file the elevated process reads on startup.
-$Script:HubHeadlessElevateMarker = Join-Path $env:TEMP "DiscordVoicePatcher\.stereo_hub_headless_elevate"
-if (Test-Path -LiteralPath $Script:HubHeadlessElevateMarker) {
-    $env:DISCORD_STEREO_PATCHER_HEADLESS = '1'
-    Remove-Item -LiteralPath $Script:HubHeadlessElevateMarker -Force -ErrorAction SilentlyContinue
-}
-$Script:PatcherHeadlessHub = ($env:DISCORD_STEREO_PATCHER_HEADLESS -eq '1')
-if ($Script:PatcherHeadlessHub) {
-    function Write-Host {
-        [CmdletBinding()]
-        param(
-            [Parameter(Position = 0, ValueFromPipeline = $true)]
-            [object] $Object,
-            [switch] $NoNewline,
-            [object] $Separator = ' ',
-            [object] $ForegroundColor,
-            [object] $BackgroundColor
-        )
-        begin { } process { } end { }
-    }
-}
-
-function Write-PatcherEarlyLog {
-    param([Parameter(Mandatory)][string]$Message, [ValidateSet('Info', 'Error')][string]$Level = 'Info')
-    try {
-        $dir = Join-Path $env:TEMP 'DiscordVoicePatcher'
-        if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-        $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-        Add-Content -LiteralPath (Join-Path $dir 'patcher.log') -Value "[$ts] [$Level] $Message" -Encoding utf8
-    } catch { }
-}
-
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing -ErrorAction SilentlyContinue
 
 # Canonical source (same tree as Stereo Hub / Linux bundle)
@@ -139,7 +106,6 @@ foreach ($k in $Script:AllPatchKeys) { $Script:SelectedPatches[$k] = $true }
 # region Console
 function Wait-EnterOrTimeout {
     param([int]$Seconds = 60)
-    if ($Script:PatcherHeadlessHub) { return }
     $msg = "Press Enter to exit (auto-close in ${Seconds}s)..."
     try {
         Write-Host $msg
@@ -162,58 +128,21 @@ function Wait-EnterOrTimeout {
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    if ($Script:PatcherHeadlessHub) {
-        Write-PatcherEarlyLog "Requesting administrator privileges (UAC)..." -Level Info
-    } else {
-        Write-Host "Requesting administrator privileges..." -ForegroundColor Yellow
-    }
+    Write-Host "Requesting administrator privileges..." -ForegroundColor Yellow
     try {
-        if ($env:DISCORD_STEREO_PATCHER_HEADLESS -eq '1') {
-            $dir = Split-Path -LiteralPath $Script:HubHeadlessElevateMarker -Parent
-            if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-            Set-Content -LiteralPath $Script:HubHeadlessElevateMarker -Value '1' -Encoding ascii -Force
-        }
-        # RunAs uses ShellExecute: a single lpParameters string is reliable; an -ArgumentList array often breaks elevation.
-        function _ElevCmdLineArg([string]$t) {
-            if ($null -eq $t) { return '""' }
-            if ($t -match '[\s"]') { return '"' + ($t -replace '"', '""') + '"' }
-            return $t
-        }
-        $elevParts = [System.Collections.Generic.List[string]]::new()
-        $elevParts.Add('-NoProfile')
-        $elevParts.Add('-WindowStyle')
-        $elevParts.Add('Hidden')
-        $elevParts.Add('-ExecutionPolicy')
-        $elevParts.Add('Bypass')
-        $elevParts.Add('-File')
-        $elevParts.Add($PSCommandPath)
-        if ($PSBoundParameters.ContainsKey('AudioGainMultiplier')) {
-            $elevParts.Add('-AudioGainMultiplier')
-            $elevParts.Add([string]$AudioGainMultiplier)
-        }
-        if ($SkipBackup) { $elevParts.Add('-SkipBackup') }
-        if ($Restore) { $elevParts.Add('-Restore') }
-        if ($ListBackups) { $elevParts.Add('-ListBackups') }
-        if ($FixAll) { $elevParts.Add('-FixAll') }
-        if ($FixClient) {
-            $elevParts.Add('-FixClient')
-            $elevParts.Add($FixClient)
-        }
-        if ($SkipUpdateCheck) { $elevParts.Add('-SkipUpdateCheck') }
-        $elevArgLine = ($elevParts | ForEach-Object { _ElevCmdLineArg $_ }) -join ' '
-        # Do not use -WindowStyle Hidden on this Start-Process — it can block the UAC prompt.
-        Start-Process -FilePath 'powershell.exe' -ArgumentList $elevArgLine -Verb RunAs
+        $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"")
+        if ($PSBoundParameters.ContainsKey('AudioGainMultiplier')) { $arguments += "-AudioGainMultiplier", $AudioGainMultiplier }
+        if ($SkipBackup) { $arguments += "-SkipBackup" }
+        if ($Restore) { $arguments += "-Restore" }
+        if ($ListBackups) { $arguments += "-ListBackups" }
+        if ($FixAll) { $arguments += "-FixAll" }
+        if ($FixClient) { $arguments += "-FixClient", "`"$FixClient`"" }
+        if ($SkipUpdateCheck) { $arguments += "-SkipUpdateCheck" }
+        Start-Process powershell.exe -ArgumentList $arguments -Verb RunAs
         exit 0
     } catch {
-        $detail = $_.Exception.Message
-        $errMsg = "ERROR: Failed to elevate. Please run as Administrator manually. ($detail)"
-        if ($Script:PatcherHeadlessHub) {
-            Write-PatcherEarlyLog $errMsg -Level Error
-        } else {
-            Write-Host $errMsg -ForegroundColor Red
-        }
-        if (-not $Script:PatcherHeadlessHub) { Wait-EnterOrTimeout }
-        exit 1
+        Write-Host "ERROR: Failed to elevate. Please run as Administrator manually." -ForegroundColor Red
+        Wait-EnterOrTimeout; exit 1
     }
 }
 
@@ -386,18 +315,15 @@ function Test-DiscordVoiceNodeOffsetAnchors {
 
 function Write-Log {
     param([Parameter(Mandatory)][AllowEmptyString()][AllowNull()][string]$Message, [ValidateSet('Info','Success','Warning','Error')][string]$Level = 'Info')
-    if ([string]::IsNullOrEmpty($Message)) { if (-not $Script:PatcherHeadlessHub) { Write-Host "" }; return }
+    if ([string]::IsNullOrEmpty($Message)) { Write-Host ""; return }
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Add-Content -Path $Script:Config.LogFile -Value "[$timestamp] [$Level] $Message" -Encoding utf8 -ErrorAction SilentlyContinue
-    if (-not $Script:PatcherHeadlessHub) {
-        $colors = @{ Success = 'Green'; Warning = 'Yellow'; Error = 'Red'; Info = 'White' }
-        $prefixes = @{ Success = '[OK]'; Warning = '[!!]'; Error = '[XX]'; Info = '[--]' }
-        Write-Host "$($prefixes[$Level]) $Message" -ForegroundColor $colors[$Level]
-    }
+    Add-Content -Path $Script:Config.LogFile -Value "[$timestamp] [$Level] $Message" -ErrorAction SilentlyContinue
+    $colors = @{ Success = 'Green'; Warning = 'Yellow'; Error = 'Red'; Info = 'White' }
+    $prefixes = @{ Success = '[OK]'; Warning = '[!!]'; Error = '[XX]'; Info = '[--]' }
+    Write-Host "$($prefixes[$Level]) $Message" -ForegroundColor $colors[$Level]
 }
 
 function Write-Banner {
-    if ($Script:PatcherHeadlessHub) { return }
     Write-Host "`n===== Discord Voice Quality Patcher v$Script:SCRIPT_VERSION =====" -ForegroundColor Cyan
     Write-Host "      48kHz | 384kbps | Stereo | Gain Config" -ForegroundColor Cyan
     Write-Host "         Multi-Client Detection Enabled" -ForegroundColor Cyan
@@ -406,7 +332,6 @@ function Write-Banner {
 }
 
 function Show-Settings {
-    if ($Script:PatcherHeadlessHub) { return }
     $gainColor = if ($Script:Config.AudioGainMultiplier -le 2) { 'Green' } elseif ($Script:Config.AudioGainMultiplier -le 5) { 'Yellow' } else { 'Red' }
     Write-Host "Config: $($Script:Config.SampleRate)Hz, $($Script:Config.Bitrate)kbps, $($Script:Config.Channels), " -NoNewline
     Write-Host "$($Script:Config.AudioGainMultiplier)x gain" -ForegroundColor $gainColor
@@ -499,8 +424,6 @@ function Get-PatcherRestartHelperScriptContent {
     param([Parameter(Mandatory)][string]$TargetScriptPath)
     $parts = [System.Collections.Generic.List[string]]::new()
     $parts.Add('-NoProfile')
-    $parts.Add('-WindowStyle')
-    $parts.Add('Hidden')
     $parts.Add('-ExecutionPolicy')
     $parts.Add('Bypass')
     $parts.Add('-File')
@@ -518,12 +441,6 @@ function Get-PatcherRestartHelperScriptContent {
     }
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine('$ErrorActionPreference = "Stop"')
-    if ($env:DISCORD_STEREO_PATCHER_HEADLESS -eq '1') {
-        $mEsc = $Script:HubHeadlessElevateMarker -replace "'", "''"
-        [void]$sb.AppendLine('$m = ''' + $mEsc + '''')
-        [void]$sb.AppendLine('$null = New-Item -ItemType Directory -Path (Split-Path -LiteralPath $m -Parent) -Force -ErrorAction SilentlyContinue')
-        [void]$sb.AppendLine('Set-Content -LiteralPath $m -Value ''1'' -Encoding ascii -Force')
-    }
     [void]$sb.Append('$p = @(')
     for ($i = 0; $i -lt $parts.Count; $i++) {
         if ($i -gt 0) { [void]$sb.Append(',') }
@@ -531,7 +448,7 @@ function Get-PatcherRestartHelperScriptContent {
         [void]$sb.Append("'$esc'")
     }
     [void]$sb.AppendLine(')')
-    [void]$sb.AppendLine('Start-Process -FilePath "powershell.exe" -ArgumentList $p -WindowStyle Hidden')
+    [void]$sb.AppendLine('Start-Process -FilePath "powershell.exe" -ArgumentList $p -WindowStyle Normal')
     return $sb.ToString()
 }
 
@@ -621,7 +538,7 @@ function Apply-ScriptUpdate {
         } catch {
             Write-Log "Could not write restart helper; launching script without extra args." -Level Warning
             [void]$bl.Add('echo Restarting script...')
-            [void]$bl.Add(('powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}"' -f $CurrentScriptPath))
+            [void]$bl.Add(('powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{0}"' -f $CurrentScriptPath))
         }
     }
     [void]$bl.Add(('del "{0}" >nul 2>&1' -f $UpdatedScriptPath))
@@ -1414,7 +1331,7 @@ function Initialize-Environment {
         if ($_ -and -not (Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
     }
     Cleanup-TempFiles
-    "=== Discord Voice Patcher Log ===`nStarted: $(Get-Date)`nGain: $($Script:Config.AudioGainMultiplier)x`n" | Out-File $Script:Config.LogFile -Encoding utf8 -Force -ErrorAction SilentlyContinue
+    "=== Discord Voice Patcher Log ===`nStarted: $(Get-Date)`nGain: $($Script:Config.AudioGainMultiplier)x`n" | Out-File $Script:Config.LogFile -Force -ErrorAction SilentlyContinue
 }
 
 function Show-CompilerMissingDialog {
