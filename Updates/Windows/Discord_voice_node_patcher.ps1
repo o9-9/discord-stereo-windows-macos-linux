@@ -366,7 +366,7 @@ function Write-Log {
     param([Parameter(Mandatory)][AllowEmptyString()][AllowNull()][string]$Message, [ValidateSet('Info','Success','Warning','Error')][string]$Level = 'Info')
     if ([string]::IsNullOrEmpty($Message)) { if (-not $Script:PatcherHeadlessHub) { Write-Host "" }; return }
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Add-Content -Path $Script:Config.LogFile -Value "[$timestamp] [$Level] $Message" -ErrorAction SilentlyContinue
+    Add-Content -Path $Script:Config.LogFile -Value "[$timestamp] [$Level] $Message" -Encoding utf8 -ErrorAction SilentlyContinue
     if (-not $Script:PatcherHeadlessHub) {
         $colors = @{ Success = 'Green'; Warning = 'Yellow'; Error = 'Red'; Info = 'White' }
         $prefixes = @{ Success = '[OK]'; Warning = '[!!]'; Error = '[XX]'; Info = '[--]' }
@@ -1392,7 +1392,7 @@ function Initialize-Environment {
         if ($_ -and -not (Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
     }
     Cleanup-TempFiles
-    "=== Discord Voice Patcher Log ===`nStarted: $(Get-Date)`nGain: $($Script:Config.AudioGainMultiplier)x`n" | Out-File $Script:Config.LogFile -Force -ErrorAction SilentlyContinue
+    "=== Discord Voice Patcher Log ===`nStarted: $(Get-Date)`nGain: $($Script:Config.AudioGainMultiplier)x`n" | Out-File $Script:Config.LogFile -Encoding utf8 -Force -ErrorAction SilentlyContinue
 }
 
 function Show-CompilerMissingDialog {
