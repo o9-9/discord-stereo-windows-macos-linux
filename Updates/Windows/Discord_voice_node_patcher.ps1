@@ -181,7 +181,8 @@ if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adm
         if ($FixAll) { $arguments += "-FixAll" }
         if ($FixClient) { $arguments += "-FixClient", "`"$FixClient`"" }
         if ($SkipUpdateCheck) { $arguments += "-SkipUpdateCheck" }
-        Start-Process powershell.exe -ArgumentList $arguments -Verb RunAs -WindowStyle Hidden
+        # Do not use -WindowStyle Hidden here: it can prevent the UAC prompt from appearing.
+        Start-Process powershell.exe -ArgumentList $arguments -Verb RunAs
         exit 0
     } catch {
         $errMsg = "ERROR: Failed to elevate. Please run as Administrator manually."
