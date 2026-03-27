@@ -1,0 +1,1048 @@
+[2025-05-19 10:44:27.629] [29480] (engine.cpp:528): Created native engine, time: Mon May 19 10:44:27 2025 CDT, logPath: /home/space/.config/discord/0.0.94/modules/discord_voice/, logLevel: 2
+[2025-05-19 10:44:27.631] [29480] (input_volume_stats_reporter.cc:98): Will not log any `WebRTC.Audio.Apm.AppliedInputVolume.*` histogram stats.
+[2025-05-19 10:44:27.631] [29480] (input_volume_stats_reporter.cc:98): Will not log any `WebRTC.Audio.Apm.RecommendedInputVolume.*` histogram stats.
+[2025-05-19 10:44:27.631] [29480] (audio_processing_impl.cc:461): Injected APM submodules:
+Echo control factory: 1
+Echo detector: 0
+Capture analyzer: 0
+Capture post processor: 0
+Render pre processor: 0
+[2025-05-19 10:44:27.633] [29480] (audio_processing_impl.cc:474): AudioProcessing: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 0 }, echo_canceller: { enabled: 0, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 0, level: Moderate }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 0, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:44:27.640] [29480] (transparent_mode.cc:240): AEC3 Transparent Mode: Legacy
+[2025-05-19 10:44:27.640] [29480] (echo_canceller3.cc:792): AEC3 created with sample rate: 16000 Hz, num render channels: 1, num capture channels: 1
+[2025-05-19 10:44:27.640] [29480] (audio_processing_impl.cc:673): AudioProcessing::ApplyConfig: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 1 }, echo_canceller: { enabled: 0, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 0, level: Moderate }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 0, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:44:27.641] [29480] (audio_device_buffer.cc:66): AudioDeviceBuffer::ctor
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:153): current platform is Linux
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:175): CreatePlatformSpecificObjects
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:945): PlatformAudioLayer
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:253): PulseAudio support is enabled.
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:258): Linux PulseAudio APIs will be utilized
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:300): AttachAudioBuffer
+[2025-05-19 10:44:27.641] [29480] (audio_device_buffer.cc:197): SetRecordingSampleRate(0)
+[2025-05-19 10:44:27.641] [29480] (audio_device_buffer.cc:203): SetPlayoutSampleRate(0)
+[2025-05-19 10:44:27.641] [29480] (audio_device_buffer.cc:217): SetRecordingChannels(0)
+[2025-05-19 10:44:27.641] [29480] (audio_device_buffer.cc:223): SetPlayoutChannels(0)
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:310): ActiveAudioLayer
+[2025-05-19 10:44:27.641] [29480] (audio_device_buffer.cc:66): AudioDeviceBuffer::ctor
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:153): current platform is Linux
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:175): CreatePlatformSpecificObjects
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:945): PlatformAudioLayer
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:253): PulseAudio support is enabled.
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:258): Linux PulseAudio APIs will be utilized
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:300): AttachAudioBuffer
+[2025-05-19 10:44:27.641] [29480] (audio_device_buffer.cc:197): SetRecordingSampleRate(0)
+[2025-05-19 10:44:27.641] [29480] (audio_device_buffer.cc:203): SetPlayoutSampleRate(0)
+[2025-05-19 10:44:27.641] [29480] (audio_device_buffer.cc:217): SetRecordingChannels(0)
+[2025-05-19 10:44:27.641] [29480] (audio_device_buffer.cc:223): SetPlayoutChannels(0)
+[2025-05-19 10:44:27.641] [29480] (input_volume_stats_reporter.cc:98): Will not log any `WebRTC.Audio.Apm.AppliedInputVolume.*` histogram stats.
+[2025-05-19 10:44:27.641] [29480] (input_volume_stats_reporter.cc:98): Will not log any `WebRTC.Audio.Apm.RecommendedInputVolume.*` histogram stats.
+[2025-05-19 10:44:27.641] [29480] (audio_processing_impl.cc:461): Injected APM submodules:
+Echo control factory: 0
+Echo detector: 0
+Capture analyzer: 0
+Capture post processor: 0
+Render pre processor: 0
+[2025-05-19 10:44:27.641] [29480] (audio_processing_impl.cc:474): AudioProcessing: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 0 }, echo_canceller: { enabled: 0, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 0, level: Moderate }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 0, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:44:27.641] [29480] (audio_engine.cpp:564): Creating audio engine: standard
+[2025-05-19 10:44:27.641] [29480] (audio_device_impl.cc:320): Init
+[2025-05-19 10:44:27.647] [29480] (audio_device_impl.cc:320): Init
+[2025-05-19 10:44:27.653] [29480] (audio_coding.cpp:158): Using software Opus decoder
+[2025-05-19 10:44:27.653] [29480] (audio_coding.cpp:175): Using software Opus encoder
+[2025-05-19 10:44:27.653] [29480] (audio_device_impl.cc:851): RegisterAudioCallback
+[2025-05-19 10:44:27.653] [29480] (audio_device_impl.cc:503): SetMicrophoneVolume(100)
+[2025-05-19 10:44:27.653] [29480] (audio_mixer_manager_pulse_linux.cc:575): input device index has not been set
+[2025-05-19 10:44:27.653] [29480] (audio_device_impl.cc:851): RegisterAudioCallback
+[2025-05-19 10:44:27.653] [29480] (audio_engine.cpp:209): Setting audio input device: 'default'
+[2025-05-19 10:44:27.653] [29480] (audio_device_impl.cc:534): SetStereoRecording(1)
+[2025-05-19 10:44:27.653] [29480] (audio_device_buffer.cc:217): SetRecordingChannels(2)
+[2025-05-19 10:44:27.653] [29480] (audio_device_impl.cc:732): SetRecordingDevice(0)
+[2025-05-19 10:44:27.654] [29480] (audio_device_impl.cc:522): StereoRecordingIsAvailable
+[2025-05-19 10:44:27.655] [29480] (audio_device_impl.cc:529): output: 0
+[2025-05-19 10:44:27.655] [29480] (audio_device_impl.cc:534): SetStereoRecording(0)
+[2025-05-19 10:44:27.655] [29480] (audio_device_buffer.cc:217): SetRecordingChannels(1)
+[2025-05-19 10:44:27.655] [29480] (audio_mixer_manager_pulse_linux.cc:669): input device index has not been set
+[2025-05-19 10:44:27.655] [29480] (audio_device_impl.cc:503): SetMicrophoneVolume(255)
+[2025-05-19 10:44:27.655] [29480] (audio_mixer_manager_pulse_linux.cc:575): input device index has not been set
+[2025-05-19 10:44:27.655] [29480] (audio_engine.cpp:226): Setting audio output device: 'default'
+[2025-05-19 10:44:27.655] [29480] (audio_device_impl.cc:664): SetPlayoutDevice(0)
+[2025-05-19 10:44:27.655] [29480] (audio_device_impl.cc:568): StereoPlayoutIsAvailable
+[2025-05-19 10:44:27.656] [29480] (audio_device_impl.cc:575): output: 0
+[2025-05-19 10:44:27.656] [29480] (audio_device_impl.cc:580): SetStereoPlayout(0)
+[2025-05-19 10:44:27.656] [29480] (audio_device_buffer.cc:223): SetPlayoutChannels(1)
+[2025-05-19 10:44:27.656] [29480] (audio_device_impl.cc:867): BuiltInAECIsAvailable
+[2025-05-19 10:44:27.656] [29480] (audio_device_generic.cc:32): BuiltInAECIsAvailable: Not supported on this platform
+[2025-05-19 10:44:27.656] [29480] (audio_device_impl.cc:870): output: 0
+[2025-05-19 10:44:27.656] [29480] (audio_processing_impl.cc:673): AudioProcessing::ApplyConfig: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 1 }, echo_canceller: { enabled: 1, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 0, level: Moderate }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 0, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:44:27.656] [29480] (transparent_mode.cc:240): AEC3 Transparent Mode: Legacy
+[2025-05-19 10:44:27.656] [29480] (echo_canceller3.cc:792): AEC3 created with sample rate: 16000 Hz, num render channels: 1, num capture channels: 1
+[2025-05-19 10:44:27.657] [29480] (audio_processing_impl.cc:673): AudioProcessing::ApplyConfig: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 1 }, echo_canceller: { enabled: 1, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 0, level: Moderate }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 1, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:44:27.657] [29480] (clipping_predictor.cc:358): [AGC2] Clipping prediction disabled.
+[2025-05-19 10:44:27.657] [29480] (agc_manager_direct.cc:481): [agc] analog controller enabled: yes
+[2025-05-19 10:44:27.657] [29480] (agc_manager_direct.cc:484): [agc] Min mic level: 12 (overridden: no)
+[2025-05-19 10:44:27.657] [29480] (captured_audio_processor.cpp:157): SetNoiseCancellation: 0
+[2025-05-19 10:44:27.657] [29480] (audio_processing_impl.cc:673): AudioProcessing::ApplyConfig: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 1 }, echo_canceller: { enabled: 1, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 1, level: High }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 1, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:44:27.657] [29480] (field_trial.cc:164): Setting field trial string:WebRTC-Audio-NetEqDecisionLogicConfig/reinit_after_expands:100/
+[2025-05-19 10:44:27.659] [29480] (engine.cpp:730): Setting audio input device id: 'default'
+[2025-05-19 10:44:27.659] [29480] (audio_engine.cpp:209): Setting audio input device: 'default'
+[2025-05-19 10:44:27.659] [29480] (audio_device_impl.cc:782): RecordingIsInitialized
+[2025-05-19 10:44:27.659] [29480] (audio_device_impl.cc:534): SetStereoRecording(1)
+[2025-05-19 10:44:27.659] [29480] (audio_device_buffer.cc:217): SetRecordingChannels(2)
+[2025-05-19 10:44:27.659] [29480] (audio_device_impl.cc:732): SetRecordingDevice(0)
+[2025-05-19 10:44:27.659] [29480] (audio_device_impl.cc:522): StereoRecordingIsAvailable
+[2025-05-19 10:44:27.660] [29480] (audio_device_impl.cc:529): output: 0
+[2025-05-19 10:44:27.660] [29480] (audio_device_impl.cc:534): SetStereoRecording(0)
+[2025-05-19 10:44:27.660] [29480] (audio_device_buffer.cc:217): SetRecordingChannels(1)
+[2025-05-19 10:44:27.660] [29480] (audio_mixer_manager_pulse_linux.cc:669): input device index has not been set
+[2025-05-19 10:44:27.660] [29480] (audio_device_impl.cc:503): SetMicrophoneVolume(255)
+[2025-05-19 10:44:27.660] [29480] (audio_mixer_manager_pulse_linux.cc:575): input device index has not been set
+[2025-05-19 10:44:27.660] [29480] (audio_engine.cpp:226): Setting audio output device: 'default'
+[2025-05-19 10:44:27.660] [29480] (audio_device_impl.cc:776): PlayoutIsInitialized
+[2025-05-19 10:44:27.660] [29480] (audio_device_impl.cc:664): SetPlayoutDevice(0)
+[2025-05-19 10:44:27.660] [29480] (audio_device_impl.cc:568): StereoPlayoutIsAvailable
+[2025-05-19 10:44:27.660] [29480] (audio_device_impl.cc:575): output: 0
+[2025-05-19 10:44:27.660] [29480] (audio_device_impl.cc:580): SetStereoPlayout(0)
+[2025-05-19 10:44:27.660] [29480] (audio_device_buffer.cc:223): SetPlayoutChannels(1)
+[2025-05-19 10:44:27.660] [29480] (engine.cpp:229): *** OnDevicesChanged:
+[2025-05-19 10:44:27.660] [29480] (engine.cpp:230): * audioInput:
+[2025-05-19 10:44:27.661] [29480] (engine.cpp:233): - default: Vocaster One USB Multichannel ()
+[2025-05-19 10:44:27.661] [29480] (engine.cpp:233): - Vocaster One USB Multichannel ()
+[2025-05-19 10:44:27.661] [29480] (engine.cpp:235): * audioOutput:
+[2025-05-19 10:44:27.661] [29480] (engine.cpp:238): - default: Vocaster One USB Analog Surround 4.0 ()
+[2025-05-19 10:44:27.661] [29480] (engine.cpp:238): - Vocaster One USB Analog Surround 4.0 ()
+[2025-05-19 10:44:28.003] [29480] (engine.cpp:730): Setting audio input device id: 'NullMic'
+[2025-05-19 10:44:28.003] [29480] (audio_engine.cpp:209): Setting audio input device: 'NullMic'
+[2025-05-19 10:44:28.003] [29480] (audio_device_impl.cc:782): RecordingIsInitialized
+[2025-05-19 10:44:28.003] [29480] (audio_device_impl.cc:534): SetStereoRecording(1)
+[2025-05-19 10:44:28.003] [29480] (audio_device_buffer.cc:217): SetRecordingChannels(2)
+[2025-05-19 10:44:28.003] [29480] (audio_device_impl.cc:744): SetRecordingDevice
+[2025-05-19 10:44:28.003] [29480] (audio_device_generic.cc:67): SetRecordingDevice: Not supported on this platform
+[2025-05-19 10:44:28.005] [29480] (audio_device_impl.cc:522): StereoRecordingIsAvailable
+[2025-05-19 10:44:28.005] [29480] (audio_device_impl.cc:529): output: 0
+[2025-05-19 10:44:28.005] [29480] (audio_device_impl.cc:534): SetStereoRecording(0)
+[2025-05-19 10:44:28.005] [29480] (audio_device_buffer.cc:217): SetRecordingChannels(1)
+[2025-05-19 10:44:28.005] [29480] (audio_mixer_manager_pulse_linux.cc:669): input device index has not been set
+[2025-05-19 10:44:28.005] [29480] (audio_device_impl.cc:503): SetMicrophoneVolume(255)
+[2025-05-19 10:44:28.005] [29480] (audio_mixer_manager_pulse_linux.cc:575): input device index has not been set
+[2025-05-19 10:44:28.005] [29480] (audio_engine.cpp:226): Setting audio output device: 'Discord_Output Audio/Sink sink'
+[2025-05-19 10:44:28.005] [29480] (audio_device_impl.cc:776): PlayoutIsInitialized
+[2025-05-19 10:44:28.005] [29480] (audio_device_impl.cc:676): SetPlayoutDevice
+[2025-05-19 10:44:28.005] [29480] (audio_device_generic.cc:62): SetPlayoutDevice: Not supported on this platform
+[2025-05-19 10:44:28.006] [29480] (audio_device_impl.cc:568): StereoPlayoutIsAvailable
+[2025-05-19 10:44:28.007] [29480] (audio_device_impl.cc:575): output: 0
+[2025-05-19 10:44:28.007] [29480] (audio_device_impl.cc:580): SetStereoPlayout(0)
+[2025-05-19 10:44:28.007] [29480] (audio_device_buffer.cc:223): SetPlayoutChannels(1)
+[2025-05-19 10:44:28.007] [29480] (audio_mixer_manager_pulse_linux.cc:669): input device index has not been set
+[2025-05-19 10:44:28.007] [29480] (audio_device_impl.cc:503): SetMicrophoneVolume(255)
+[2025-05-19 10:44:28.007] [29480] (audio_mixer_manager_pulse_linux.cc:575): input device index has not been set
+[2025-05-19 10:44:28.007] [29480] (engine_audio_transport.cpp:589): EngineAudioTransport::SetSidechainCompression 1
+[2025-05-19 10:44:28.007] [29480] (engine_audio_transport.cpp:600): EngineAudioTransport::ApplySidechainCompressionSettings  threshold: -32.5 ratio: 0.433333
+[2025-05-19 10:44:28.728] [29480] (engine.cpp:730): Setting audio input device id: 'default'
+[2025-05-19 10:44:28.728] [29480] (audio_engine.cpp:209): Setting audio input device: 'default'
+[2025-05-19 10:44:28.728] [29480] (audio_device_impl.cc:782): RecordingIsInitialized
+[2025-05-19 10:44:28.728] [29480] (audio_device_impl.cc:534): SetStereoRecording(1)
+[2025-05-19 10:44:28.728] [29480] (audio_device_buffer.cc:217): SetRecordingChannels(2)
+[2025-05-19 10:44:28.728] [29480] (audio_device_impl.cc:732): SetRecordingDevice(0)
+[2025-05-19 10:44:28.728] [29480] (audio_device_impl.cc:522): StereoRecordingIsAvailable
+[2025-05-19 10:44:28.728] [29480] (audio_device_impl.cc:529): output: 0
+[2025-05-19 10:44:28.728] [29480] (audio_device_impl.cc:534): SetStereoRecording(0)
+[2025-05-19 10:44:28.728] [29480] (audio_device_buffer.cc:217): SetRecordingChannels(1)
+[2025-05-19 10:44:28.728] [29480] (audio_mixer_manager_pulse_linux.cc:669): input device index has not been set
+[2025-05-19 10:44:28.729] [29480] (audio_device_impl.cc:503): SetMicrophoneVolume(255)
+[2025-05-19 10:44:28.729] [29480] (audio_mixer_manager_pulse_linux.cc:575): input device index has not been set
+[2025-05-19 10:44:28.729] [29480] (audio_engine.cpp:226): Setting audio output device: 'default'
+[2025-05-19 10:44:28.729] [29480] (audio_device_impl.cc:776): PlayoutIsInitialized
+[2025-05-19 10:44:28.729] [29480] (audio_device_impl.cc:664): SetPlayoutDevice(0)
+[2025-05-19 10:44:28.729] [29480] (audio_device_impl.cc:568): StereoPlayoutIsAvailable
+[2025-05-19 10:44:28.729] [29480] (audio_device_impl.cc:575): output: 0
+[2025-05-19 10:44:28.729] [29480] (audio_device_impl.cc:580): SetStereoPlayout(0)
+[2025-05-19 10:44:28.729] [29480] (audio_device_buffer.cc:223): SetPlayoutChannels(1)
+[2025-05-19 10:44:31.158] [29451] JS console: [GatewaySocket] [CONNECTED] wss://gateway.discord.gg/?encoding=json&v=9&compress=zstd-stream in 171 ms
+[2025-05-19 10:44:34.478] [29451] JS console: [GatewaySocket] [READY] took 3492ms, as e73a3f0f4c1480aa08b6647cc2d237f4
+[2025-05-19 10:44:36.417] [29451] JS console: [GatewaySocket] [READY_SUPPLEMENTAL] took 5431ms
+[2025-05-19 10:44:54.667] [29772] (region_latency_tester.cpp:73): Sending 5 latency test pings to region us-south
+[2025-05-19 10:44:54.667] [29772] (region_latency_tester.cpp:73): Sending 5 latency test pings to region atlanta
+[2025-05-19 10:44:54.667] [29772] (region_latency_tester.cpp:73): Sending 5 latency test pings to region us-central
+[2025-05-19 10:44:54.667] [29772] (region_latency_tester.cpp:73): Sending 5 latency test pings to region us-east
+[2025-05-19 10:44:54.667] [29772] (region_latency_tester.cpp:73): Sending 5 latency test pings to region newark
+[2025-05-19 10:44:59.667] [29772] (region_latency_tester.cpp:181): Timing out 5 remaining latency test pings
+[2025-05-19 10:44:59.667] [29772] (region_latency_tester.cpp:288): Average RTT for region us-south is 22.75
+[2025-05-19 10:44:59.667] [29772] (region_latency_tester.cpp:288): Average RTT for region atlanta is 29.25
+[2025-05-19 10:44:59.667] [29772] (region_latency_tester.cpp:288): Average RTT for region us-central is 5000
+[2025-05-19 10:44:59.667] [29772] (region_latency_tester.cpp:288): Average RTT for region us-east is 46
+[2025-05-19 10:44:59.667] [29772] (region_latency_tester.cpp:288): Average RTT for region newark is 50.75
+[2025-05-19 10:45:09.602] [29451] JS console: [RTCControlSocket(default)] [CONNECT] wss://us-south2969.discord.media:443/
+[2025-05-19 10:45:09.602] [29451] JS console: [RTCConnection(1370165205610532965, default)] Connecting to RTC server wss://us-south2969.discord.media:443/, rtc-connection-id: b0048e24-e950-4377-a199-072bd02dde05, channel: 1370352844099682375(2)
+[2025-05-19 10:45:09.602] [29451] JS console: [RTCConnection(1370165205610532965, default)] RTC connection state: AWAITING_ENDPOINT => CONNECTING
+[2025-05-19 10:45:09.835] [29451] JS console: [RTCConnection(1370165205610532965, default)] Connected to RTC server.
+[2025-05-19 10:45:09.835] [29451] JS console: [RTCConnection(1370165205610532965, default)] RTC connection state: CONNECTING => AUTHENTICATING
+[2025-05-19 10:45:09.837] [29451] JS console: [RTCControlSocket(default)] [CONNECTED] wss://us-south2969.discord.media:443/ in 235 ms
+[2025-05-19 10:45:09.837] [29451] JS console: [RTCControlSocket(default)] [HELLO] heartbeat interval: 13750, version: 8, took 235 ms
+[2025-05-19 10:45:09.837] [29451] JS console: [RTCControlSocket(default)] Starting heartbeat with interval: 13750
+[2025-05-19 10:45:09.891] [29451] JS console: [RTCControlSocket(default)] [READY] took 289 ms
+[2025-05-19 10:45:09.891] [29451] JS console: [RTCConnection(1370165205610532965, default)] RTC connection state: AUTHENTICATING => RTC_CONNECTING
+[2025-05-19 10:45:09.895] [29451] JS console: [Connection(default)] Creating connection to 66.22.225.40:50002 with audio ssrc: 49506
+[2025-05-19 10:45:09.896] [29480] (voice_connection.cpp:680): Create connection to 66.22.225.40:50002 with ssrc: 49506
+[2025-05-19 10:45:09.902] [29480] (socket_client.cpp:32): Using UdpSocket 
+[2025-05-19 10:45:09.903] [29480] (captured_audio_processor.cpp:164): SetNoiseCancellationOverride: none
+[2025-05-19 10:45:09.903] [29480] (audio_processing_impl.cc:673): AudioProcessing::ApplyConfig: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 1 }, echo_canceller: { enabled: 1, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 1, level: High }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 1, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:45:09.903] [29480] (audio_coding.cpp:158): Using software Opus decoder
+[2025-05-19 10:45:09.903] [29480] (audio_coding.cpp:175): Using software Opus encoder
+[2025-05-19 10:45:09.906] [29480] (bitrate_prober.cc:54): Bandwidth probing enabled, set to inactive
+[2025-05-19 10:45:09.907] [29480] (cpu_info.cc:53): Available number of cores: 4
+[2025-05-19 10:45:09.907] [29480] (transport_sequence_number_feedback_generator.cc:69): Maximum interval between transport feedback RTCP messages: 250 ms
+[2025-05-19 10:45:09.907] [29480] (aimd_rate_control.cc:87): Using aimd rate control with back off factor 0.85
+[2025-05-19 10:45:09.907] [29480] (remote_bitrate_estimator_single_stream.cc:53): RemoteBitrateEstimatorSingleStream: Instantiating.
+[2025-05-19 10:45:09.907] [29480] (pacing_controller.cc:125): PacedSender paused.
+[2025-05-19 10:45:09.907] [29480] (audio_device_impl.cc:395): SpeakerIsInitialized
+[2025-05-19 10:45:09.907] [29480] (audio_device_impl.cc:398): output: 0
+[2025-05-19 10:45:09.907] [29480] (audio_device_impl.cc:353): InitSpeaker
+[2025-05-19 10:45:09.907] [29480] (audio_device_impl.cc:813): Playing
+[2025-05-19 10:45:09.907] [29480] (audio_device_impl.cc:776): PlayoutIsInitialized
+[2025-05-19 10:45:09.907] [29480] (audio_device_impl.cc:750): InitPlayout
+[2025-05-19 10:45:09.907] [29480] (audio_device_impl.cc:776): PlayoutIsInitialized
+[2025-05-19 10:45:09.908] [29480] (audio_device_buffer.cc:203): SetPlayoutSampleRate(48000)
+[2025-05-19 10:45:09.908] [29480] (audio_device_buffer.cc:223): SetPlayoutChannels(1)
+[2025-05-19 10:45:09.908] [29480] (audio_device_impl.cc:756): output: 0
+[2025-05-19 10:45:09.908] [29480] (audio_device_impl.cc:776): PlayoutIsInitialized
+[2025-05-19 10:45:09.908] [29480] (audio_device_impl.cc:788): StartPlayout
+[2025-05-19 10:45:09.908] [29480] (audio_device_impl.cc:813): Playing
+[2025-05-19 10:45:10.048] [29489] (audio_device_pulse_linux.cc:1865): Can't query latency
+[2025-05-19 10:45:10.048] [29489] (audio_device_buffer.cc:338): Size of playout buffer: 480
+[2025-05-19 10:45:10.048] [29489] (audio_device_pulse_linux.cc:1865): Can't query latency
+[2025-05-19 10:45:10.048] [29480] (audio_device_impl.cc:795): output: 0
+[2025-05-19 10:45:10.048] [29480] (session.cpp:42): Creating a new MLS session
+[2025-05-19 10:45:10.048] [29480] (audio_device_impl.cc:403): MicrophoneIsInitialized
+[2025-05-19 10:45:10.048] [29480] (audio_device_impl.cc:406): output: 0
+[2025-05-19 10:45:10.048] [29480] (audio_device_impl.cc:359): InitMicrophone
+[2025-05-19 10:45:10.049] [29480] (audio_device_impl.cc:844): Recording
+[2025-05-19 10:45:10.049] [29480] (audio_device_impl.cc:782): RecordingIsInitialized
+[2025-05-19 10:45:10.049] [29480] (audio_device_impl.cc:763): InitRecording
+[2025-05-19 10:45:10.049] [29480] (audio_device_impl.cc:782): RecordingIsInitialized
+[2025-05-19 10:45:10.049] [29480] (audio_device_buffer.cc:197): SetRecordingSampleRate(48000)
+[2025-05-19 10:45:10.049] [29480] (audio_device_buffer.cc:217): SetRecordingChannels(1)
+[2025-05-19 10:45:10.049] [29480] (audio_device_impl.cc:769): output: 0
+[2025-05-19 10:45:10.049] [29480] (audio_device_impl.cc:782): RecordingIsInitialized
+[2025-05-19 10:45:10.049] [29480] (audio_device_impl.cc:819): StartRecording
+[2025-05-19 10:45:10.049] [29480] (audio_device_impl.cc:844): Recording
+[2025-05-19 10:45:10.100] [29480] (audio_device_impl.cc:826): output: 0
+[2025-05-19 10:45:10.100] [29480] (engine.cpp:1077): Audio input device (id: default) initialized in 52 [ms]
+[2025-05-19 10:45:10.101] [29480] (audio_coding_module.cc:196): Created
+[2025-05-19 10:45:10.101] [29480] (audio_send_stream.cc:152): AudioSendStream: 49506
+[2025-05-19 10:45:10.101] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.109] [29480] (audio_encoder_opus.cc:682): Set Opus bitrate to 32000 bps.
+[2025-05-19 10:45:10.109] [29480] (call.cc:1265): UpdateAggregateNetworkState: aggregate_state change to up
+[2025-05-19 10:45:10.109] [29480] (pacing_controller.cc:132): PacedSender resumed.
+[2025-05-19 10:45:10.109] [29480] (rtp_transport_controller_send.cc:673): Creating fallback congestion controller
+[2025-05-19 10:45:10.109] [29480] (engine.cpp:298): DiscordFieldTrials::Lookup(WebRTC-Bwe-LossBasedBweV2) 0
+[2025-05-19 10:45:10.109] [29480] (alr_experiment.cc:69): Using ALR experiment settings: pacing factor: 1, max pacer queue length: 2875, ALR bandwidth usage percent: 80, ALR start budget level percent: 40, ALR end budget level percent: -60, ALR experiment group ID: 3
+[2025-05-19 10:45:10.109] [29480] (engine.cpp:315): DiscordFieldTrials::Lookup(WebRTC-BweWindowSizeInPackets) 0
+[2025-05-19 10:45:10.109] [29480] (engine.cpp:325): DiscordFieldTrials::Lookup(WebRTC-BWE-TrendlineEstimatorSettings) 3750ms
+[2025-05-19 10:45:10.109] [29480] (trendline_estimator.cc:204): Using Trendline filter for delay change estimation with settings sort:false,cap:false,beginning_packets:7,end_packets:7,cap_uncertainty:0,window_size:1000,min_window_size:50,max_window_duration_ms:3750 and no network state predictor
+[2025-05-19 10:45:10.109] [29480] (engine.cpp:315): DiscordFieldTrials::Lookup(WebRTC-BweWindowSizeInPackets) 0
+[2025-05-19 10:45:10.109] [29480] (engine.cpp:325): DiscordFieldTrials::Lookup(WebRTC-BWE-TrendlineEstimatorSettings) 3750ms
+[2025-05-19 10:45:10.109] [29480] (trendline_estimator.cc:204): Using Trendline filter for delay change estimation with settings sort:false,cap:false,beginning_packets:7,end_packets:7,cap_uncertainty:0,window_size:1000,min_window_size:50,max_window_duration_ms:3750 and no network state predictor
+[2025-05-19 10:45:10.109] [29480] (aimd_rate_control.cc:87): Using aimd rate control with back off factor 0.85
+[2025-05-19 10:45:10.109] [29480] (delay_based_bwe.cc:92): Initialized DelayBasedBwe with separate audio overuse detectionenabled:false,packet_threshold:10,time_threshold:1 s
+[2025-05-19 10:45:10.109] [29480] (delay_based_bwe.cc:307): BWE Setting start bitrate to: 700 kbps
+[2025-05-19 10:45:10.109] [29480] (bitrate_allocator.cc:504): Current BWE 700000
+[2025-05-19 10:45:10.109] [29480] (bitrate_prober.cc:130): Probe cluster (bitrate_bps:min bytes:min packets): (2100 kbps:3938:5, Inactive)
+[2025-05-19 10:45:10.109] [29480] (bitrate_prober.cc:130): Probe cluster (bitrate_bps:min bytes:min packets): (4200 kbps:7875:5, Inactive)
+[2025-05-19 10:45:10.109] [29480] (audio_send_stream.cc:339): AudioSendStream::Start: 49506
+[2025-05-19 10:45:10.109] [29480] (audio_device_impl.cc:844): Recording
+[2025-05-19 10:45:10.109] [29480] (rtp_transport_controller_send.cc:365): Network route changed on transport transport: new_route = [ connected: 1 local: [ 0/0 Unknown turn: 0 ] remote: [ 0/0 Unknown turn: 0 ] packet_overhead_bytes: 0 ]
+[2025-05-19 10:45:10.109] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.109] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.109] [29480] (audio_encoder_opus.cc:757): Set Opus bitrate to 64000 bps.
+[2025-05-19 10:45:10.109] [29480] (socket_client.cpp:65): TryConnect: 66.22.225.40:50002 with ssrc: 49506
+[2025-05-19 10:45:10.109] [29480] (instrumented_task.cpp:22): Long Execution Time: Task 'Create' executed for 213.473ms
+[2025-05-19 10:45:10.109] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetDesktopSourceStatusCallback' queued for 212.924ms
+[2025-05-19 10:45:10.109] [29791] (udp_socket.cpp:67): TryConnect: 66.22.225.40:50002 with ssrc: 49506
+[2025-05-19 10:45:10.109] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.109] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.109] [29480] (connection.cpp:957): Changing audio input mode from: 0 to: 1
+[2025-05-19 10:45:10.110] [29791] (udp_socket.cpp:520): Sending echo
+[2025-05-19 10:45:10.110] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetTransportOptions' queued for 212.146ms
+[2025-05-19 10:45:10.110] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetSelfMute' queued for 212.985ms
+[2025-05-19 10:45:10.110] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.110] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.110] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetTransportOptions' queued for 211.901ms
+[2025-05-19 10:45:10.110] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetSelfDeafen' queued for 211.9ms
+[2025-05-19 10:45:10.110] [29480] (audio_processing_impl.cc:673): AudioProcessing::ApplyConfig: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 1 }, echo_canceller: { enabled: 0, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 1, level: High }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 1, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetEchoCancellation' queued for 211.761ms
+[2025-05-19 10:45:10.111] [29480] (audio_processing_impl.cc:673): AudioProcessing::ApplyConfig: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 1 }, echo_canceller: { enabled: 0, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 0, level: High }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 1, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetNoiseSuppression' queued for 212.025ms
+[2025-05-19 10:45:10.111] [29480] (audio_processing_impl.cc:673): AudioProcessing::ApplyConfig: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 1 }, echo_canceller: { enabled: 0, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 0, level: High }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 0, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetAutomaticGainControl' queued for 211.992ms
+[2025-05-19 10:45:10.111] [29480] (captured_audio_processor.cpp:157): SetNoiseCancellation: 0
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetNoiseCancellation' queued for 211.975ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetVoiceFiltersEnabled' queued for 211.937ms
+[2025-05-19 10:45:10.111] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.111] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetTransportOptions' queued for 211.801ms
+[2025-05-19 10:45:10.111] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.111] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetTransportOptions' queued for 211.751ms
+[2025-05-19 10:45:10.111] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.111] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetTransportOptions' queued for 211.708ms
+[2025-05-19 10:45:10.111] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.111] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetTransportOptions' queued for 211.667ms
+[2025-05-19 10:45:10.111] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.111] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetTransportOptions' queued for 211.628ms
+[2025-05-19 10:45:10.111] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.111] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetTransportOptions' queued for 211.401ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.308ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.302ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.299ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.298ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.296ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.294ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.293ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.291ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.289ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.271ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.264ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.262ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.249ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.246ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.244ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.243ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.241ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.239ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.237ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.237ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.237ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.236ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.236ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.235ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.234ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.234ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.233ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.233ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.233ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.232ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.232ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.231ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.231ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.231ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.225ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.225ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.225ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.224ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.224ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.223ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.222ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.222ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.222ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.22ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.22ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.219ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.219ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.223ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.222ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.222ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.221ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.221ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.22ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.22ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.221ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.221ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.22ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.22ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.219ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.219ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.219ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.219ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.219ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.218ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.218ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.218ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.214ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.212ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.212ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.212ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.211ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.211ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.21ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.21ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.21ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.209ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.209ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.209ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.208ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.208ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.207ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.207ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.207ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.206ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.206ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.204ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.203ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.203ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.201ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.206ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.206ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.205ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.205ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.204ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.204ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.204ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.203ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.203ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.198ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.198ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.198ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.197ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.197ms
+[2025-05-19 10:45:10.111] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.196ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.195ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.194ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.194ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.193ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.193ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.193ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.192ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.192ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.191ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.191ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.19ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.19ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.19ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.189ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.189ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.188ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.187ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.186ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.186ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.185ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.185ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.186ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.186ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.186ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.185ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.185ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.184ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.184ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.183ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.183ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.182ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.182ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.181ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.18ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.18ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.179ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.179ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.179ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.178ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.178ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.177ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.177ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.176ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.161ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.16ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.16ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.16ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.159ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.158ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.157ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.157ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.157ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.156ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.156ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.155ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.155ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.156ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.156ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.156ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.155ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.155ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.258ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.259ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.258ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.257ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.257ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.256ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.253ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.252ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.252ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.251ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.251ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.251ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.25ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.25ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.25ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.242ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.241ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.241ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.241ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.24ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.24ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.239ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.239ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.239ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.238ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.238ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.237ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.237ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.237ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.237ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.24ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.239ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.239ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.238ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.238ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.236ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.236ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.235ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.235ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.235ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.234ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.234ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.233ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.233ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.233ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.232ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.232ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.228ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.227ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.227ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.226ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.226ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.225ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.225ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.224ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.224ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.224ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.223ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.223ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.224ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.223ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.223ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.222ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.224ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.225ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.225ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.227ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.226ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.225ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.225ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.224ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.224ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.224ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.223ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.223ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.222ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.221ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.221ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.22ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.216ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'MuteUser' queued for 211.214ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.11ms
+[2025-05-19 10:45:10.112] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.092ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.07ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.068ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.067ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.066ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.065ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.064ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.061ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.053ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.049ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.048ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.047ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.036ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.03ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.028ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.026ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.025ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.021ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.019ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.019ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.019ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.019ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.02ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.02ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.02ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.021ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.021ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.022ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.022ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.022ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.023ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.023ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.023ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.023ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.023ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.024ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.024ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.024ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.021ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.015ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.015ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.016ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.015ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.016ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.016ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.016ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.002ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.002ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.003ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.004ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.005ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.006ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.007ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.008ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.008ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.008ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.009ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.009ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.01ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.01ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.01ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.011ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.011ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.012ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.012ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.012ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.012ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.013ms
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetUserPlayoutVolume' queued for 211.014ms
+[2025-05-19 10:45:10.113] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.113] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetTransportOptions' queued for 210.45ms
+[2025-05-19 10:45:10.113] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.113] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetTransportOptions' queued for 210.369ms
+[2025-05-19 10:45:10.113] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.113] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetTransportOptions' queued for 210.317ms
+[2025-05-19 10:45:10.113] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.113] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.113] [29480] (instrumented_task.cpp:16): Long Queue Time: Task 'SetTransportOptions' queued for 209.877ms
+[2025-05-19 10:45:10.131] [29791] (udp_socket.cpp:282): ConnectionAttemptFinished: succeeded, local address: 98.185.151.181:57266
+[2025-05-19 10:45:10.131] [29480] (socket_client.cpp:328): OnConnectionComplete, succeeded: 1
+[2025-05-19 10:45:10.142] [29451] JS console: [Connection(default)] Connected with local address 98.185.151.181:57266 and protocol: udp
+[2025-05-19 10:45:10.146] [29480] (engine.cpp:1934): Supported encoders: H264, VP8, 
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: VP8, parameters: { }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: VP9, parameters: { profile-id=0 }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: VP9, parameters: { profile-id=2 }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: VP9, parameters: { profile-id=1 }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: VP9, parameters: { profile-id=3 }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: H264, parameters: { level-asymmetry-allowed=1 packetization-mode=1 profile-level-id=42001f }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: H264, parameters: { level-asymmetry-allowed=1 packetization-mode=0 profile-level-id=42001f }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: H264, parameters: { level-asymmetry-allowed=1 packetization-mode=1 profile-level-id=42e01f }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: H264, parameters: { level-asymmetry-allowed=1 packetization-mode=0 profile-level-id=42e01f }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: H264, parameters: { level-asymmetry-allowed=1 packetization-mode=1 profile-level-id=4d001f }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: H264, parameters: { level-asymmetry-allowed=1 packetization-mode=0 profile-level-id=4d001f }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: H264, parameters: { level-asymmetry-allowed=1 packetization-mode=1 profile-level-id=f4001f }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: H264, parameters: { level-asymmetry-allowed=1 packetization-mode=0 profile-level-id=f4001f }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: AV1, parameters: { level-idx=5 profile=0 tier=0 }
+[2025-05-19 10:45:10.146] [29480] (webrtc_decoder_factory.cpp:34): Webrtc supports format: Codec name: AV1, parameters: { level-idx=5 profile=1 tier=0 }
+[2025-05-19 10:45:10.146] [29480] (engine.cpp:1949): Supported decoders: AV1, H264, VP8, VP9, 
+[2025-05-19 10:45:10.146] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: -1, target bitrate: 64000
+[2025-05-19 10:45:10.146] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 0 [ms], available bitrate: 700000 [bps], outbound estimate: 700000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 0, bytes sent: 0, received: 0
+[2025-05-19 10:45:10.146] [29480] (connection.cpp:1314): [default] Memory usage: 952 MB, CPU usage: N/A
+[2025-05-19 10:45:10.147] [29488] (audio_device_buffer.cc:262): Size of recording buffer: 480
+[2025-05-19 10:45:10.148] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 0, noise canceller process time: 0 [ms], measured sample rate: 0 [Hz], sample rate diff: 0%
+[2025-05-19 10:45:10.148] [29488] (captured_audio_processor.cpp:133): Audio frame: 0, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:45:10.159] [29451] JS console: [Connection(default)] Available codecs: "[{\"codec\":\"AV1\",\"decode\":true,\"encode\":false},{\"codec\":\"H264\",\"decode\":true,\"encode\":true},{\"codec\":\"VP8\",\"decode\":true,\"encode\":true},{\"codec\":\"VP9\",\"decode\":true,\"encode\":false}]\n"
+[2025-05-19 10:45:10.159] [29451] JS console: [Connection(default)] Experimental codecs: [{"name":"AV1","encode":false,"decode":true}]
+[2025-05-19 10:45:10.160] [29451] JS console: [Connection(default)] Audio codecs: opus
+[2025-05-19 10:45:10.160] [29451] JS console: [Connection(default)] Video codecs: AV1[encode: false, decode: true],H264[encode: true, decode: true],VP8[encode: true, decode: true],VP9[encode: false, decode: true]
+[2025-05-19 10:45:10.175] [29451] JS console: [Connection(default)] Encryption modes: aead_aes256_gcm_rtpsize,aead_aes256_gcm,aead_xchacha20_poly1305_rtpsize,xsalsa20_poly1305_lite_rtpsize,xsalsa20_poly1305_lite,xsalsa20_poly1305_suffix,xsalsa20_poly1305
+[2025-05-19 10:45:10.175] [29480] (local_user.cpp:1084): Setting voice encode bitrate to: 64000 [bps]
+[2025-05-19 10:45:10.175] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 0, stereo: 0, usedtx: 0, useinbandfec: 0}}}}
+[2025-05-19 10:45:10.175] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 30, stereo: 0, usedtx: 0, useinbandfec: 1}}}}
+[2025-05-19 10:45:10.175] [29480] (audio_encoder_opus.cc:682): Set Opus bitrate to 32000 bps.
+[2025-05-19 10:45:10.175] [29480] (audio_device_impl.cc:844): Recording
+[2025-05-19 10:45:10.175] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 30, stereo: 0, usedtx: 0, useinbandfec: 1}}}}
+[2025-05-19 10:45:10.175] [29480] (audio_encoder_opus.cc:757): Set Opus bitrate to 64000 bps.
+[2025-05-19 10:45:10.175] [29480] (delay_based_bwe.cc:307): BWE Setting start bitrate to: 600 kbps
+[2025-05-19 10:45:10.175] [29480] (probe_controller.cc:355): Measured bitrate: 600 kbps Minimum to probe further: 2940 kbps upper limit: +inf bps
+[2025-05-19 10:45:10.175] [29480] (audio_processing_impl.cc:673): AudioProcessing::ApplyConfig: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 1 }, echo_canceller: { enabled: 0, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 0, level: High }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 0, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:45:10.175] [29480] (audio_processing_impl.cc:673): AudioProcessing::ApplyConfig: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 1 }, echo_canceller: { enabled: 0, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 0, level: High }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 0, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:45:10.175] [29480] (audio_processing_impl.cc:673): AudioProcessing::ApplyConfig: AudioProcessing::Config{ pipeline: { maximum_internal_processing_rate: 48000, multi_channel_render: 0, multi_channel_capture: 0 }, pre_amplifier: { enabled: 0, fixed_gain_factor: 1 },capture_level_adjustment: { enabled: 0, pre_gain_factor: 1, post_gain_factor: 1, analog_mic_gain_emulation: { enabled: 0, initial_level: 255 }}, high_pass_filter: { enabled: 1 }, echo_canceller: { enabled: 0, mobile_mode: 0, enforce_high_pass_filtering: 1 }, noise_suppression: { enabled: 0, level: High }, transient_suppression: { enabled: 0 }, gain_controller1: { enabled: 0, mode: AdaptiveAnalog, target_level_dbfs: 3, compression_gain_db: 9, enable_limiter: 1, analog_gain_controller { enabled: 1, startup_min_volume: 0, clipped_level_min: 70, enable_digital_adaptive: 1, clipped_level_step: 15, clipped_ratio_threshold: 0.1, clipped_wait_frames: 300, clipping_predictor:  { enabled: 0, mode: 0, window_length: 5, reference_window_length: 5, reference_window_delay: 5, clipping_threshold: -1, crest_factor_margin: 3, use_predicted_step: 1 }}}, gain_controller2: { enabled: 0, fixed_digital: { gain_db: 0 }, adaptive_digital: { enabled: 0, headroom_db: 5, max_gain_db: 50, initial_gain_db: 15, max_gain_change_db_per_second: 6, max_output_noise_level_dbfs: -50 }, input_volume_control : { enabled 0}}
+[2025-05-19 10:45:10.175] [29480] (captured_audio_processor.cpp:157): SetNoiseCancellation: 0
+[2025-05-19 10:45:10.175] [29480] (audio_device_impl.cc:867): BuiltInAECIsAvailable
+[2025-05-19 10:45:10.175] [29480] (audio_device_generic.cc:32): BuiltInAECIsAvailable: Not supported on this platform
+[2025-05-19 10:45:10.175] [29480] (audio_device_impl.cc:870): output: 0
+[2025-05-19 10:45:10.176] [29451] JS console: [Connection(default)] Connection state change: CONNECTING => CONNECTED
+[2025-05-19 10:45:10.176] [29451] JS console: [RTCConnection(1370165205610532965, default)] RTC media connection state change: RTC_CONNECTING => CONNECTED
+[2025-05-19 10:45:10.176] [29451] JS console: [RTCConnection(1370165205610532965, default)] RTC connection state: RTC_CONNECTING => RTC_CONNECTED
+[2025-05-19 10:45:10.179] [29451] JS console: [RTCConnection(1370165205610532965, default)] RTC connected to media server: 66.22.225.40:50002
+[2025-05-19 10:45:10.181] [29451] JS console: [RTCConnection(1370165205610532965, default)] Sending UDP info to RTC server.
+[2025-05-19 10:45:10.230] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 1
+[2025-05-19 10:45:10.258] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 1, rtt: 27
+[2025-05-19 10:45:10.275] [29480] (socket_client.cpp:279): Decryption error, dropping RTCP packet (RTCP) with ssrc: 49506, length: 36
+[2025-05-19 10:45:10.276] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 30, stereo: 0, usedtx: 0, useinbandfec: 1}}}}
+[2025-05-19 10:45:10.276] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 30, stereo: 0, usedtx: 0, useinbandfec: 1}}}}
+[2025-05-19 10:45:10.276] [29451] JS console: [RTCConnection(1370165205610532965, default)] Setting media-session-id: 0a4847bc0d78a9825dca637eb083e9ca for rtc-connection-id: b0048e24-e950-4377-a199-072bd02dde05
+[2025-05-19 10:45:10.278] [29451] JS console: [Connection(default)] Selected encryption mode: aead_aes256_gcm_rtpsize
+[2025-05-19 10:45:10.278] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 30, stereo: 0, usedtx: 0, useinbandfec: 1}}}}
+[2025-05-19 10:45:10.278] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 30, stereo: 0, usedtx: 0, useinbandfec: 1}}}}
+[2025-05-19 10:45:10.278] [29451] JS console: [RTCConnection(1370165205610532965, default)] DAVE protocol init with protocol version: 1
+[2025-05-19 10:45:10.278] [29480] (connection.cpp:504): Preparing secure frames epoch: 1, protocol version: 1, group ID: 1370352844099682375
+[2025-05-19 10:45:10.278] [29480] (session.cpp:68): Resetting MLS session
+[2025-05-19 10:45:10.278] [29480] (session.cpp:56): Initializing MLS session with protocol version 1 and group ID 1370352844099682375
+[2025-05-19 10:45:10.285] [29480] (session.cpp:603): Created MLS leaf node
+[2025-05-19 10:45:10.285] [29480] (session.cpp:645): Cannot create MLS group without ExternalSender
+[2025-05-19 10:45:10.285] [29480] (session.cpp:92): Cannot get epoch authenticator without an established MLS group
+[2025-05-19 10:45:10.286] [29480] (session.cpp:629): Generated key package: 0001000240410436d17a0fcc0a9a2c1a7d4067fe5338a7276932dae9b2883d32cae46b95251e4a47c638317267765f412e65c17827f844418603c305f6de6f67f4c5506885598f404104d970c590cdeb03426e3c1f9ca57bd872ead66bf1c2a1b85bf7661a4df5db7641c36cab7160c79e191431deeb3420c6d3804c9753c1b9ccc08274503e41b8b4fb404104c6cb30e794837456b9e3fb2e76d7931e2909b18c657e11ae98e2df7ec2c57b5e941f64f57c90d24390c50e55d4be803ea15f77949d03c39149a9899572dd22c100010807335d26fb00000d0200010200020000020001010000000000000000ffffffffffffffff0040473045022100b172b5e0b1a235ed01bfcef6d1ebc2e56357f1b135d1a0d2fb48a5926d0344cb02207fd0d369e928fa02e921c997ed547c3d28b74611b4766c9ffdc40f3511a5260e0040473045022100bd26e3cee2b24c87758e718b8f0930e2b7e129d6e13d7673b77b03eb7b32ed1e022077e408bdd200c00d84f1f5582521910a7807253a831555335e1f82545342a9ce
+[2025-05-19 10:45:10.300] [29451] JS console: [RTCConnection(1370165205610532965, default)] Remote media sink wants: {"any":100}
+[2025-05-19 10:45:10.301] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 30, stereo: 0, usedtx: 0, useinbandfec: 1}}}}
+[2025-05-19 10:45:10.301] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 30, stereo: 0, usedtx: 0, useinbandfec: 1}}}}
+[2025-05-19 10:45:10.301] [29451] JS console: [RTCConnection(1370165205610532965, default)] Received MLS external sender package
+[2025-05-19 10:45:10.301] [29480] (session.cpp:106): Unmarshalling MLS external sender
+[2025-05-19 10:45:10.301] [29480] (session.cpp:108): Sender: 4041049d677b53b3a9871c74cc3210968476031cc48efe16e09d4f48d06380d9c2a0794a097dfc549a9f5f833d9ef740a1dff149b537c1e8e9f1d5822f17738a0ce70b00010100
+[2025-05-19 10:45:10.301] [29480] (session.cpp:654): Creating a pending MLS group
+[2025-05-19 10:45:10.301] [29451] JS console: [Connection(default)] DAVE protocol state update: {"version":1,"epochAuthenticator":""}
+[2025-05-19 10:45:10.302] [29451] JS console: [RTCConnection(1370165205610532965, default)] Got MLS key package, sending to RTC server
+[2025-05-19 10:45:10.302] [29451] JS console: [RTCControlSocket(default)] Sending MLS key package
+[2025-05-19 10:45:10.303] [29480] (session.cpp:666): Created a pending MLS group
+[2025-05-19 10:45:11.111] [29480] (probe_controller.cc:504): kWaitingForProbingResult: timeout
+[2025-05-19 10:45:12.229] [29488] (timestamp_accumulator.cpp:24): TimestampAccumulator id LocalUser_518860804078960653_voice accumulated desync 191ms. Resetting to wall clock time.
+[2025-05-19 10:45:12.230] [29488] (timestamp_accumulator.cpp:24): TimestampAccumulator id LocalUser_518860804078960653_voice accumulated desync -159ms. Resetting to wall clock time.
+[2025-05-19 10:45:15.230] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 2
+[2025-05-19 10:45:15.250] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 2, rtt: 19
+[2025-05-19 10:45:15.730] [29451] (screenshare_helper.cpp:144): Screenshare: GetOrCreate helper with type: 0
+[2025-05-19 10:45:15.736] [29451] (screenshare_helper.cpp:161): Screenshare: Pipewire enabled: 1 running in wayland: 1
+[2025-05-19 10:45:15.736] [29451] (screenshare_helper.cpp:229): Screenshare: Staring helper (running: 0)
+[2025-05-19 10:45:15.738] [29798] (screen_capture_portal_interface.cc:28): Failed to get a proxy for the portal: Unknown or unsupported transport “disabled” for address “disabled:”
+[2025-05-19 10:45:15.738] [29798] (base_capturer_pipewire.cc:81): ScreenCastPortal failed: 3
+[2025-05-19 10:45:15.738] [29480] (screenshare_helper.cpp:202): Screenshare: Reset helper
+[2025-05-19 10:45:19.168] [29451] (screenshare_helper.cpp:144): Screenshare: GetOrCreate helper with type: 0
+[2025-05-19 10:45:19.168] [29451] (screenshare_helper.cpp:161): Screenshare: Pipewire enabled: 1 running in wayland: 1
+[2025-05-19 10:45:19.168] [29451] (screenshare_helper.cpp:229): Screenshare: Staring helper (running: 0)
+[2025-05-19 10:45:19.168] [29803] (screen_capture_portal_interface.cc:28): Failed to get a proxy for the portal: Unknown or unsupported transport “disabled” for address “disabled:”
+[2025-05-19 10:45:19.168] [29803] (base_capturer_pipewire.cc:81): ScreenCastPortal failed: 3
+[2025-05-19 10:45:19.168] [29480] (screenshare_helper.cpp:202): Screenshare: Reset helper
+[2025-05-19 10:45:20.184] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 1002, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:45:20.184] [29488] (captured_audio_processor.cpp:133): Audio frame: 1002, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:45:20.230] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 3
+[2025-05-19 10:45:20.251] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 3, rtt: 21
+[2025-05-19 10:45:20.275] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:45:20.275] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 21 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 11, bytes sent: 0, received: 572
+[2025-05-19 10:45:20.275] [29480] (connection.cpp:1314): [default] Memory usage: 1031 MB, CPU usage: 33%
+[2025-05-19 10:45:20.362] [29451] (screenshare_helper.cpp:144): Screenshare: GetOrCreate helper with type: 0
+[2025-05-19 10:45:20.363] [29451] (screenshare_helper.cpp:161): Screenshare: Pipewire enabled: 1 running in wayland: 1
+[2025-05-19 10:45:20.363] [29451] (screenshare_helper.cpp:229): Screenshare: Staring helper (running: 0)
+[2025-05-19 10:45:20.363] [29804] (screen_capture_portal_interface.cc:28): Failed to get a proxy for the portal: Unknown or unsupported transport “disabled” for address “disabled:”
+[2025-05-19 10:45:20.363] [29804] (base_capturer_pipewire.cc:81): ScreenCastPortal failed: 3
+[2025-05-19 10:45:20.363] [29480] (screenshare_helper.cpp:202): Screenshare: Reset helper
+[2025-05-19 10:45:22.122] [29451] (screenshare_helper.cpp:144): Screenshare: GetOrCreate helper with type: 0
+[2025-05-19 10:45:22.122] [29451] (screenshare_helper.cpp:161): Screenshare: Pipewire enabled: 1 running in wayland: 1
+[2025-05-19 10:45:22.122] [29451] (screenshare_helper.cpp:229): Screenshare: Staring helper (running: 0)
+[2025-05-19 10:45:22.125] [29807] (screen_capture_portal_interface.cc:28): Failed to get a proxy for the portal: Unknown or unsupported transport “disabled” for address “disabled:”
+[2025-05-19 10:45:22.125] [29807] (base_capturer_pipewire.cc:81): ScreenCastPortal failed: 3
+[2025-05-19 10:45:22.125] [29480] (screenshare_helper.cpp:202): Screenshare: Reset helper
+[2025-05-19 10:45:22.618] [29451] (screenshare_helper.cpp:144): Screenshare: GetOrCreate helper with type: 0
+[2025-05-19 10:45:22.618] [29451] (screenshare_helper.cpp:161): Screenshare: Pipewire enabled: 1 running in wayland: 1
+[2025-05-19 10:45:22.618] [29451] (screenshare_helper.cpp:229): Screenshare: Staring helper (running: 0)
+[2025-05-19 10:45:22.618] [29809] (screen_capture_portal_interface.cc:28): Failed to get a proxy for the portal: Unknown or unsupported transport “disabled” for address “disabled:”
+[2025-05-19 10:45:22.618] [29809] (base_capturer_pipewire.cc:81): ScreenCastPortal failed: 3
+[2025-05-19 10:45:22.618] [29480] (screenshare_helper.cpp:202): Screenshare: Reset helper
+[2025-05-19 10:45:23.033] [29451] (screenshare_helper.cpp:144): Screenshare: GetOrCreate helper with type: 0
+[2025-05-19 10:45:23.034] [29451] (screenshare_helper.cpp:161): Screenshare: Pipewire enabled: 1 running in wayland: 1
+[2025-05-19 10:45:23.034] [29451] (screenshare_helper.cpp:229): Screenshare: Staring helper (running: 0)
+[2025-05-19 10:45:23.034] [29810] (screen_capture_portal_interface.cc:28): Failed to get a proxy for the portal: Unknown or unsupported transport “disabled” for address “disabled:”
+[2025-05-19 10:45:23.034] [29810] (base_capturer_pipewire.cc:81): ScreenCastPortal failed: 3
+[2025-05-19 10:45:23.034] [29480] (screenshare_helper.cpp:202): Screenshare: Reset helper
+[2025-05-19 10:45:23.588] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:45:23.646] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:45:25.205] [29451] JS console: [ConnectionEventFramerateReducer] BaseConnection.userSpeakingChange: Reduced framerate after 15000 ms.
+[2025-05-19 10:45:25.206] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 30, stereo: 0, usedtx: 0, useinbandfec: 1}}}}
+[2025-05-19 10:45:25.206] [29480] (audio_send_stream.cc:214): AudioSendStream::ConfigureStream: {rtp: {ssrc: 49506, extmap-allow-mixed: false, extensions: [{uri: urn:ietf:params:rtp-hdrext:ssrc-audio-level, id: 1}, {uri: http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time, id: 3}, {uri: https://discord.com/#rtp-hdrext/2018-07-29/speaker, id: 9}, {uri: urn:ietf:params:rtp-hdrext:sdes:mid, id: 10}, {uri: urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id, id: 11}, {uri: urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id, id: 12}], c_name: }, rtcp_report_interval_ms: 5000, send_transport: (Transport), min_bitrate_bps: 32000, max_bitrate_bps: 64000, has audio_network_adaptor_config: false, has_dscp: false, send_codec_spec: {nack_enabled: false, transport_cc_enabled: false, enable_non_sender_rtt: false, cng_payload_type: <unset>, red_payload_type: <unset>, payload_type: 120, format: {name: opus, clockrate_hz: 48000, num_channels: 2, parameters: {minplr: 30, stereo: 0, usedtx: 0, useinbandfec: 1}}}}
+[2025-05-19 10:45:25.230] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 4
+[2025-05-19 10:45:25.256] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 4, rtt: 25
+[2025-05-19 10:45:29.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 999, samples: 479520, rate: 47952, rate diff: 0%, level: 0
+[2025-05-19 10:45:29.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 998, samples: 479040, rate: 47904, rate diff: 0%, level: 0
+[2025-05-19 10:45:30.189] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 2004, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:45:30.189] [29488] (captured_audio_processor.cpp:133): Audio frame: 2004, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:45:30.230] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 5
+[2025-05-19 10:45:30.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 5, rtt: 24
+[2025-05-19 10:45:30.320] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:45:30.320] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 24 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 21, bytes sent: 0, received: 1092
+[2025-05-19 10:45:30.320] [29480] (connection.cpp:1314): [default] Memory usage: 690 MB, CPU usage: 8%
+[2025-05-19 10:45:35.230] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 6
+[2025-05-19 10:45:35.250] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 6, rtt: 19
+[2025-05-19 10:45:37.337] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:45:37.393] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:45:39.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 999, samples: 479520, rate: 47952, rate diff: 0%, level: 0
+[2025-05-19 10:45:39.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1001, samples: 480480, rate: 48048, rate diff: 0%, level: 0
+[2025-05-19 10:45:40.195] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 3003, noise canceller process time: 0 [ms], measured sample rate: 47952 [Hz], sample rate diff: 0%
+[2025-05-19 10:45:40.195] [29488] (captured_audio_processor.cpp:133): Audio frame: 3003, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:45:40.230] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 7
+[2025-05-19 10:45:40.261] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 7, rtt: 30
+[2025-05-19 10:45:40.345] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:45:40.345] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 30 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 31, bytes sent: 0, received: 1612
+[2025-05-19 10:45:40.345] [29480] (connection.cpp:1314): [default] Memory usage: 676 MB, CPU usage: 8%
+[2025-05-19 10:45:45.231] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 8
+[2025-05-19 10:45:45.253] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 8, rtt: 22
+[2025-05-19 10:45:49.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 1002, samples: 480960, rate: 48096, rate diff: 0%, level: 0
+[2025-05-19 10:45:49.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1000, samples: 480000, rate: 48000, rate diff: 0%, level: 0
+[2025-05-19 10:45:50.200] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 4005, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:45:50.200] [29488] (captured_audio_processor.cpp:133): Audio frame: 4005, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:45:50.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 9
+[2025-05-19 10:45:50.272] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 9, rtt: 39
+[2025-05-19 10:45:50.369] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:45:50.369] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 39 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 41, bytes sent: 0, received: 2132
+[2025-05-19 10:45:50.369] [29480] (connection.cpp:1314): [default] Memory usage: 674 MB, CPU usage: 7%
+[2025-05-19 10:45:51.087] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:45:51.154] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:45:55.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 10
+[2025-05-19 10:45:55.265] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 10, rtt: 32
+[2025-05-19 10:45:59.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 999, samples: 479520, rate: 47952, rate diff: 0%, level: 0
+[2025-05-19 10:45:59.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1001, samples: 480480, rate: 48048, rate diff: 0%, level: 0
+[2025-05-19 10:46:00.205] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 5004, noise canceller process time: 0 [ms], measured sample rate: 47952 [Hz], sample rate diff: 0%
+[2025-05-19 10:46:00.205] [29488] (captured_audio_processor.cpp:133): Audio frame: 5004, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:46:00.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 11
+[2025-05-19 10:46:00.251] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 11, rtt: 18
+[2025-05-19 10:46:00.395] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:46:00.395] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 18 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 51, bytes sent: 0, received: 2652
+[2025-05-19 10:46:00.395] [29480] (connection.cpp:1314): [default] Memory usage: 673 MB, CPU usage: 7%
+[2025-05-19 10:46:04.837] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:46:04.893] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:46:05.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 12
+[2025-05-19 10:46:05.251] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 12, rtt: 18
+[2025-05-19 10:46:09.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 999, samples: 479520, rate: 47952, rate diff: 0%, level: 0
+[2025-05-19 10:46:09.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 998, samples: 479040, rate: 47904, rate diff: 0%, level: 0
+[2025-05-19 10:46:10.130] [29791] (udp_socket.cpp:628): Reconnection started, sending echo
+[2025-05-19 10:46:10.186] [29791] (udp_socket.cpp:204): ReconnectionAttemptFinished: succeeded, local address: 98.185.151.181:58359
+[2025-05-19 10:46:10.210] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 6006, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:46:10.210] [29488] (captured_audio_processor.cpp:133): Audio frame: 6006, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:46:10.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 13
+[2025-05-19 10:46:10.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 13, rtt: 21
+[2025-05-19 10:46:10.418] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:46:10.418] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 21 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 61, bytes sent: 0, received: 3172
+[2025-05-19 10:46:10.418] [29480] (connection.cpp:1314): [default] Memory usage: 673 MB, CPU usage: 9%
+[2025-05-19 10:46:15.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 14
+[2025-05-19 10:46:15.252] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 14, rtt: 20
+[2025-05-19 10:46:18.587] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:46:18.648] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:46:19.910] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 1002, samples: 480960, rate: 48096, rate diff: 0%, level: 0
+[2025-05-19 10:46:19.910] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1001, samples: 480480, rate: 48048, rate diff: 0%, level: 0
+[2025-05-19 10:46:20.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 15
+[2025-05-19 10:46:20.237] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 7008, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:46:20.237] [29488] (captured_audio_processor.cpp:133): Audio frame: 7008, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:46:20.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 15, rtt: 21
+[2025-05-19 10:46:20.441] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:46:20.441] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 21 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 71, bytes sent: 0, received: 3692
+[2025-05-19 10:46:20.441] [29480] (connection.cpp:1314): [default] Memory usage: 674 MB, CPU usage: 9%
+[2025-05-19 10:46:25.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 16
+[2025-05-19 10:46:25.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 16, rtt: 21
+[2025-05-19 10:46:29.910] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 999, samples: 479520, rate: 47952, rate diff: 0%, level: 0
+[2025-05-19 10:46:29.910] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1000, samples: 480000, rate: 48000, rate diff: 0%, level: 0
+[2025-05-19 10:46:30.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 17
+[2025-05-19 10:46:30.255] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 17, rtt: 22
+[2025-05-19 10:46:30.264] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 8010, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:46:30.264] [29488] (captured_audio_processor.cpp:133): Audio frame: 8010, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:46:30.463] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:46:30.464] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 22 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 81, bytes sent: 0, received: 4212
+[2025-05-19 10:46:30.464] [29480] (connection.cpp:1314): [default] Memory usage: 674 MB, CPU usage: 8%
+[2025-05-19 10:46:32.337] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:46:32.391] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:46:35.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 18
+[2025-05-19 10:46:35.261] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 18, rtt: 28
+[2025-05-19 10:46:39.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 1002, samples: 480960, rate: 48096, rate diff: 0%, level: 0
+[2025-05-19 10:46:39.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 998, samples: 479040, rate: 47904, rate diff: 0%, level: 0
+[2025-05-19 10:46:40.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 19
+[2025-05-19 10:46:40.256] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 19, rtt: 23
+[2025-05-19 10:46:40.269] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 9012, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:46:40.269] [29488] (captured_audio_processor.cpp:133): Audio frame: 9012, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:46:40.490] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:46:40.490] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 23 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 91, bytes sent: 0, received: 4732
+[2025-05-19 10:46:40.490] [29480] (connection.cpp:1314): [default] Memory usage: 675 MB, CPU usage: 9%
+[2025-05-19 10:46:45.233] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 20
+[2025-05-19 10:46:45.256] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 20, rtt: 23
+[2025-05-19 10:46:46.087] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:46:46.141] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:46:49.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 996, samples: 478080, rate: 47808, rate diff: 0%, level: 0
+[2025-05-19 10:46:49.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1001, samples: 480480, rate: 48048, rate diff: 0%, level: 0
+[2025-05-19 10:46:50.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 21
+[2025-05-19 10:46:50.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 21, rtt: 22
+[2025-05-19 10:46:50.275] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 10011, noise canceller process time: 0 [ms], measured sample rate: 47952 [Hz], sample rate diff: 0%
+[2025-05-19 10:46:50.275] [29488] (captured_audio_processor.cpp:133): Audio frame: 10011, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:46:50.514] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:46:50.514] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 22 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 101, bytes sent: 0, received: 5252
+[2025-05-19 10:46:50.514] [29480] (connection.cpp:1314): [default] Memory usage: 675 MB, CPU usage: 9%
+[2025-05-19 10:46:55.233] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 22
+[2025-05-19 10:46:55.253] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 22, rtt: 20
+[2025-05-19 10:46:59.837] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:46:59.895] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:46:59.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 1002, samples: 480960, rate: 48096, rate diff: 0%, level: 0
+[2025-05-19 10:46:59.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1001, samples: 480480, rate: 48048, rate diff: 0%, level: 0
+[2025-05-19 10:47:00.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 23
+[2025-05-19 10:47:00.252] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 23, rtt: 19
+[2025-05-19 10:47:00.280] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 11013, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:47:00.280] [29488] (captured_audio_processor.cpp:133): Audio frame: 11013, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:47:00.537] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:47:00.537] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 19 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 111, bytes sent: 0, received: 5772
+[2025-05-19 10:47:00.537] [29480] (connection.cpp:1314): [default] Memory usage: 675 MB, CPU usage: 8%
+[2025-05-19 10:47:05.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 24
+[2025-05-19 10:47:05.253] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 24, rtt: 20
+[2025-05-19 10:47:09.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 999, samples: 479520, rate: 47952, rate diff: 0%, level: 0
+[2025-05-19 10:47:09.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1000, samples: 480000, rate: 48000, rate diff: 0%, level: 0
+[2025-05-19 10:47:10.130] [29791] (udp_socket.cpp:628): Reconnection started, sending echo
+[2025-05-19 10:47:10.163] [29791] (udp_socket.cpp:204): ReconnectionAttemptFinished: succeeded, local address: 98.185.151.181:55672
+[2025-05-19 10:47:10.163] [29791] (udp_socket.cpp:209): ReconnectionAttemptFinished: previousSocket_ was never closed
+[2025-05-19 10:47:10.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 25
+[2025-05-19 10:47:10.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 25, rtt: 21
+[2025-05-19 10:47:10.285] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 12012, noise canceller process time: 0 [ms], measured sample rate: 47952 [Hz], sample rate diff: 0%
+[2025-05-19 10:47:10.285] [29488] (captured_audio_processor.cpp:133): Audio frame: 12012, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:47:10.560] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:47:10.560] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 21 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 120, bytes sent: 0, received: 6240
+[2025-05-19 10:47:10.560] [29480] (connection.cpp:1314): [default] Memory usage: 674 MB, CPU usage: 10%
+[2025-05-19 10:47:13.587] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:47:13.701] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:47:15.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 26
+[2025-05-19 10:47:15.256] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 26, rtt: 23
+[2025-05-19 10:47:19.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 1002, samples: 480960, rate: 48096, rate diff: 0%, level: 0
+[2025-05-19 10:47:19.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 998, samples: 479040, rate: 47904, rate diff: 0%, level: 0
+[2025-05-19 10:47:20.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 27
+[2025-05-19 10:47:20.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 27, rtt: 22
+[2025-05-19 10:47:20.291] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 13014, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:47:20.291] [29488] (captured_audio_processor.cpp:133): Audio frame: 13014, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:47:20.582] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:47:20.582] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 22 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 120, bytes sent: 0, received: 6240
+[2025-05-19 10:47:20.582] [29480] (connection.cpp:1314): [default] Memory usage: 675 MB, CPU usage: 9%
+[2025-05-19 10:47:25.103] [29480] (rtcp_receiver.cc:345): OnPeriodicRttUpdate: Timeout: No RTCP RR received.
+[2025-05-19 10:47:25.233] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 28
+[2025-05-19 10:47:25.283] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 28, rtt: 50
+[2025-05-19 10:47:27.337] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:47:27.393] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:47:29.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 999, samples: 479520, rate: 47952, rate diff: 0%, level: 0
+[2025-05-19 10:47:29.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1001, samples: 480480, rate: 48048, rate diff: 0%, level: 0
+[2025-05-19 10:47:30.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 29
+[2025-05-19 10:47:30.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 29, rtt: 21
+[2025-05-19 10:47:30.317] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 14016, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:47:30.317] [29488] (captured_audio_processor.cpp:133): Audio frame: 14016, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:47:31.069] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:47:31.069] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 21 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 120, bytes sent: 0, received: 6240
+[2025-05-19 10:47:31.069] [29480] (connection.cpp:1314): [default] Memory usage: 696 MB, CPU usage: 12%
+[2025-05-19 10:47:35.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 30
+[2025-05-19 10:47:35.255] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 30, rtt: 22
+[2025-05-19 10:47:39.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 999, samples: 479520, rate: 47952, rate diff: 0%, level: 0
+[2025-05-19 10:47:39.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1001, samples: 480480, rate: 48048, rate diff: 0%, level: 0
+[2025-05-19 10:47:40.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 31
+[2025-05-19 10:47:40.255] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 31, rtt: 22
+[2025-05-19 10:47:40.344] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 15018, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:47:40.344] [29488] (captured_audio_processor.cpp:133): Audio frame: 15018, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:47:41.087] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:47:41.092] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:47:41.092] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 22 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 120, bytes sent: 0, received: 6240
+[2025-05-19 10:47:41.093] [29480] (connection.cpp:1314): [default] Memory usage: 699 MB, CPU usage: 7%
+[2025-05-19 10:47:41.170] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:47:45.233] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 32
+[2025-05-19 10:47:45.259] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 32, rtt: 26
+[2025-05-19 10:47:49.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 1002, samples: 480960, rate: 48096, rate diff: 0%, level: 0
+[2025-05-19 10:47:49.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1000, samples: 480000, rate: 48000, rate diff: 0%, level: 0
+[2025-05-19 10:47:50.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 33
+[2025-05-19 10:47:50.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 33, rtt: 22
+[2025-05-19 10:47:50.349] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 16020, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:47:50.349] [29488] (captured_audio_processor.cpp:133): Audio frame: 16020, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:47:51.114] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:47:51.114] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 22 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 120, bytes sent: 0, received: 6240
+[2025-05-19 10:47:51.114] [29480] (connection.cpp:1314): [default] Memory usage: 691 MB, CPU usage: 9%
+[2025-05-19 10:47:54.837] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:47:54.912] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:47:55.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 34
+[2025-05-19 10:47:55.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 34, rtt: 21
+[2025-05-19 10:47:59.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 999, samples: 479520, rate: 47952, rate diff: 0%, level: 0
+[2025-05-19 10:47:59.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1001, samples: 480480, rate: 48048, rate diff: 0%, level: 0
+[2025-05-19 10:48:00.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 35
+[2025-05-19 10:48:00.256] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 35, rtt: 23
+[2025-05-19 10:48:00.355] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 17019, noise canceller process time: 0 [ms], measured sample rate: 47952 [Hz], sample rate diff: 0%
+[2025-05-19 10:48:00.355] [29488] (captured_audio_processor.cpp:133): Audio frame: 17019, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:48:01.136] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:48:01.136] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 23 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 120, bytes sent: 0, received: 6240
+[2025-05-19 10:48:01.136] [29480] (connection.cpp:1314): [default] Memory usage: 691 MB, CPU usage: 8%
+[2025-05-19 10:48:05.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 36
+[2025-05-19 10:48:05.252] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 36, rtt: 19
+[2025-05-19 10:48:08.590] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:48:08.643] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:48:09.910] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 999, samples: 479520, rate: 47952, rate diff: 0%, level: 0
+[2025-05-19 10:48:09.910] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 998, samples: 479040, rate: 47904, rate diff: 0%, level: 0
+[2025-05-19 10:48:10.130] [29791] (udp_socket.cpp:628): Reconnection started, sending echo
+[2025-05-19 10:48:10.151] [29791] (udp_socket.cpp:204): ReconnectionAttemptFinished: succeeded, local address: 98.185.151.181:55804
+[2025-05-19 10:48:10.151] [29791] (udp_socket.cpp:209): ReconnectionAttemptFinished: previousSocket_ was never closed
+[2025-05-19 10:48:10.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 37
+[2025-05-19 10:48:10.270] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 37, rtt: 37
+[2025-05-19 10:48:10.360] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 18021, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:48:10.360] [29488] (captured_audio_processor.cpp:133): Audio frame: 18021, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:48:11.157] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:48:11.157] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 37 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 120, bytes sent: 0, received: 6240
+[2025-05-19 10:48:11.157] [29480] (connection.cpp:1314): [default] Memory usage: 691 MB, CPU usage: 8%
+[2025-05-19 10:48:15.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 38
+[2025-05-19 10:48:15.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 38, rtt: 22
+[2025-05-19 10:48:19.910] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 1002, samples: 480960, rate: 48096, rate diff: 0%, level: 0
+[2025-05-19 10:48:19.910] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1001, samples: 480480, rate: 48048, rate diff: 0%, level: 0
+[2025-05-19 10:48:20.233] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 39
+[2025-05-19 10:48:20.272] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 39, rtt: 39
+[2025-05-19 10:48:20.365] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 19020, noise canceller process time: 0 [ms], measured sample rate: 47952 [Hz], sample rate diff: 0%
+[2025-05-19 10:48:20.365] [29488] (captured_audio_processor.cpp:133): Audio frame: 19020, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:48:21.178] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:48:21.178] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 39 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 120, bytes sent: 0, received: 6240
+[2025-05-19 10:48:21.178] [29480] (connection.cpp:1314): [default] Memory usage: 691 MB, CPU usage: 8%
+[2025-05-19 10:48:22.337] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:48:22.392] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:48:25.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 40
+[2025-05-19 10:48:25.258] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 40, rtt: 25
+[2025-05-19 10:48:29.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 999, samples: 479520, rate: 47952, rate diff: 0%, level: 0
+[2025-05-19 10:48:29.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 1000, samples: 480000, rate: 48000, rate diff: 0%, level: 0
+[2025-05-19 10:48:30.233] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 41
+[2025-05-19 10:48:30.257] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 41, rtt: 24
+[2025-05-19 10:48:30.371] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 20022, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:48:30.371] [29488] (captured_audio_processor.cpp:133): Audio frame: 20022, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:48:31.354] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:48:31.354] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 24 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 120, bytes sent: 0, received: 6240
+[2025-05-19 10:48:31.354] [29480] (connection.cpp:1314): [default] Memory usage: 702 MB, CPU usage: 8%
+[2025-05-19 10:48:35.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 42
+[2025-05-19 10:48:35.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 42, rtt: 21
+[2025-05-19 10:48:36.087] [29451] JS console: [RTCControlSocket(default)] Sending heartbeat with last received sequence number: 1
+[2025-05-19 10:48:36.151] [29451] JS console: [RTCControlSocket(default)] Heartbeat ACK received
+[2025-05-19 10:48:39.909] [29485] (audio_device_buffer.cc:462): [REC : 10000msec, 48kHz] callbacks: 1002, samples: 480960, rate: 48096, rate diff: 0%, level: 0
+[2025-05-19 10:48:39.909] [29485] (audio_device_buffer.cc:488): [PLAY: 10000msec, 48kHz] callbacks: 998, samples: 479040, rate: 47904, rate diff: 0%, level: 0
+[2025-05-19 10:48:40.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 43
+[2025-05-19 10:48:40.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 43, rtt: 21
+[2025-05-19 10:48:40.397] [29488] (captured_audio_processor.cpp:120): Audio frames processed: 21024, noise canceller process time: 0 [ms], measured sample rate: 48096 [Hz], sample rate diff: 0%
+[2025-05-19 10:48:40.397] [29488] (captured_audio_processor.cpp:133): Audio frame: 21024, samples: 480, channels: 1, rate: 48000 [Hz], bytes: 2, level: 0
+[2025-05-19 10:48:41.375] [29480] (connection.cpp:1131): [default] Outbound audio stats for user: 518860804078960653, audio ssrc: 49506, packets sent: 0, packets lost: 0, target bitrate: 64000
+[2025-05-19 10:48:41.376] [29480] (connection.cpp:1282): [default] Transport stats for user: 518860804078960653, rtt: 21 [ms], available bitrate: 600000 [bps], outbound estimate: 600000 [bps], remb: 0 [bps], inbound estimate: 0 [bps], ssrcs:  packets sent: 0, received: 120, bytes sent: 0, received: 6240
+[2025-05-19 10:48:41.376] [29480] (connection.cpp:1314): [default] Memory usage: 700 MB, CPU usage: 10%
+[2025-05-19 10:48:45.232] [29791] (udp_socket.cpp:898): Sending ping to 66.22.225.40:50002, seq: 44
+[2025-05-19 10:48:45.254] [29480] (socket_client.cpp:297): Ping received from 66.22.225.40:50002, seq: 44, rtt: 21
+[2025-05-19 10:48:45.619] [29451] JS console: [RTCConnection(1370165205610532965, default)] Destroy RTCConnection
+[2025-05-19 10:48:45.619] [29451] JS console: [RTCControlSocket(default)] CLOSE
+[2025-05-19 10:48:45.620] [29451] JS console: [RTCConnection(1370165205610532965, default)] Disconnected from RTC server, clean: true, code: 1000, reason: Force Close, state: RTC_CONNECTED
+[2025-05-19 10:48:45.620] [29480] (engine.cpp:1988): obtained codec survey:null
+
+[2025-05-19 10:48:45.624] [29480] (audio_device_impl.cc:844): Recording
+[2025-05-19 10:48:45.624] [29480] (audio_device_impl.cc:833): StopRecording
+[2025-05-19 10:48:45.624] [29451] JS console: [Connection(default)] Connection state change: CONNECTED => DISCONNECTED
+[2025-05-19 10:48:45.624] [29480] (audio_device_buffer.cc:190): HISTOGRAM(WebRTC.Audio.RecordedOnlyZeros): 1
+[2025-05-19 10:48:45.624] [29480] (audio_device_buffer.cc:193): total recording time: 215575
+[2025-05-19 10:48:45.624] [29480] (audio_device_impl.cc:837): output: 0
+[2025-05-19 10:48:45.624] [29480] (audio_send_stream.cc:361): AudioSendStream::Stop: 49506
+[2025-05-19 10:48:45.624] [29792] (audio_encoder_opus.cc:682): Set Opus bitrate to 64000 bps.
+[2025-05-19 10:48:45.624] [29480] (audio_device_impl.cc:833): StopRecording
+[2025-05-19 10:48:45.624] [29480] (audio_device_impl.cc:837): output: 0
+[2025-05-19 10:48:45.624] [29480] (call.cc:1265): UpdateAggregateNetworkState: aggregate_state change to down
+[2025-05-19 10:48:45.624] [29480] (pacing_controller.cc:125): PacedSender paused.
+[2025-05-19 10:48:45.624] [29480] (control_handler.cc:64): Bitrate estimate state changed, BWE: 600 kbps.
+[2025-05-19 10:48:45.624] [29480] (audio_send_stream.cc:166): ~AudioSendStream: 49506
+[2025-05-19 10:48:45.624] [29451] JS console: [RTCConnection(1370165205610532965, default)] RTC media connection state change: RTC_CONNECTED => DISCONNECTED
+[2025-05-19 10:48:45.624] [29480] (engine.cpp:705): Stopping audio output device
+[2025-05-19 10:48:45.624] [29480] (audio_device_impl.cc:813): Playing
+[2025-05-19 10:48:45.624] [29480] (audio_device_impl.cc:802): StopPlayout
+[2025-05-19 10:48:45.624] [29480] (audio_device_buffer.cc:161): total playout time: 215716
+[2025-05-19 10:48:45.624] [29480] (audio_device_impl.cc:806): output: 0
+[2025-05-19 10:48:45.624] [29451] JS console: [RTCConnection(1370165205610532965, default)] RTC connection state: RTC_CONNECTED => RTC_DISCONNECTED
+[2025-05-19 10:48:45.624] [29791] (udp_socket.cpp:392): Disconnect
+[2025-05-19 10:48:45.624] [29451] JS console: [Connection(default)] Connection state change: DISCONNECTED => DISCONNECTED
+[2025-05-19 10:48:45.624] [29451] JS console: [RTCConnection(1370165205610532965, default)] RTC media connection state change: RTC_DISCONNECTED => DISCONNECTED
+[2025-05-19 10:48:45.624] [29451] JS console: [RTCConnection(1370165205610532965, default)] RTC connection state: RTC_DISCONNECTED => RTC_DISCONNECTED
+[2025-05-19 10:48:45.625] [29451] JS console: [RTCConnection(1370165205610532965, default)] RTC connection state: RTC_DISCONNECTED => DISCONNECTED
+[2025-05-19 10:48:45.962] [29451] JS console: [RTCConnection(1370165205610532965, default)] Error: codec survey is not available
