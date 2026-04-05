@@ -49,18 +49,7 @@ We analyze and improve stereo voice handling across Windows, macOS, and Linux �
 | **Sample Rate Restoration** | Bypassing 24kHz limits → native 48kHz |
 | **Filter Bypassing** | Disabling high-pass filters, DC rejection, gain processing |
 | **Signal Integrity** | Clean passthrough without Discord's audio "enhancements" |
-
----
-
-## ✨ What We Unlock
-
-| Before | After |
-|:------:|:-----:|
-| 24 kHz | **48 kHz** |
-| ~64 kbps | **400 kbps** |
-| Mono downmix | **True Stereo** |
-| Aggressive filtering | **Filterless passthrough** |
-
+
 ---
 
 ## 📂 Repository layout
