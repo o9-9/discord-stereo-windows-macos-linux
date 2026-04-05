@@ -22,32 +22,14 @@ The **macOS patcher** is officially active. Huge thanks to **[Crüe](https://cod
 👉 **[Get the macOS Patcher](https://codeberg.org/DiscordStereoPatcher-macOS)**
 
 ---
-
-# ⚠️ Can't be heard? Disable your VPN.
-
-VPNs, aggressive firewalls, and antivirus software interfere with Discord's voice packets. Stereo requires higher bandwidth and is especially affected. **This is not a module issue.**
-
-If you must use a VPN, split-tunnel Discord so it bypasses it.
-
----
-
+
 ## 🚀 Releases
 
 Bundled **Windows + Linux** patchers and installers ship on GitHub Releases (e.g. **[v0.5](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v0.5)**).  
 **macOS** tooling lives on **[Codeberg — Discord Stereo Patcher (macOS)](https://codeberg.org/DiscordStereoPatcher-macOS)**.
 
 This repo’s **`Updates/`** tree is the **canonical source** for raw scripts the patchers download or that advanced users run directly from `main`.
-
----
-
-## 🙌 Special Thanks
-
-> Massive shoutout to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills/Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)** for their insane dedication and work on macOS.
->
-> The macOS build exists entirely because of their efforts and six months of relentless grinding.
->
-> As a two-person team, they put in immense time, energy, and commitment to make it happen. Absolute respect.
-
+
 ---
 
 ## 🎯 Our Mission
@@ -67,17 +49,7 @@ We analyze and improve stereo voice handling across Windows, macOS, and Linux �
 | **Sample Rate Restoration** | Bypassing 24kHz limits → native 48kHz |
 | **Filter Bypassing** | Disabling high-pass filters, DC rejection, gain processing |
 | **Signal Integrity** | Clean passthrough without Discord's audio "enhancements" |
-
----
-
-## 🖥️ Platform Status
-
-| Platform | Status | Notes |
-|----------|:------:|-------|
-| **Windows** | ✅ Active | PowerShell patcher with multi-client detection, GUI, backups, auto-update |
-| **macOS** | ✅ Active | Bash patcher with auto-detection, code signing handling, Apple Silicon support |
-| **Linux** | ✅ Active | Bash patcher with auto-detection — deb, Flatpak, Snap supported |
-
+
 ---
 
 ## ✨ What We Unlock
