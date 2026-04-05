@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎙️ Discord Stereo Patcher
+# 🎙️ Discord Audio Collective
 
 **Filterless true stereo · High-bitrate Opus · Windows · macOS · Linux**
 
