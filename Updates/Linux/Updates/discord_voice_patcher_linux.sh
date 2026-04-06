@@ -12,7 +12,7 @@ fi
 
 set -euo pipefail
 
-SCRIPT_VERSION="7.0"
+SCRIPT_VERSION="7.2"
 SKIP_BACKUP=false
 RESTORE_MODE=false
 
@@ -40,27 +40,27 @@ TEMP_DIR="$CACHE_DIR/build"
 # --- Build fingerprint (update when targeting a new Discord build) ------------
 # Run: python discord_voice_node_offset_finder_v5.py <path/to/discord_voice.node>
 # Copy the "COPY BELOW -> discord_voice_patcher_linux.sh" block here.
-EXPECTED_MD5="3490273d4ad6b339da224057d8e4ceb3"
-EXPECTED_SIZE=104351872
+EXPECTED_MD5="0d4f726ab33af9d6505c802295e2574c"
+EXPECTED_SIZE=104347656
 
-# --- Linux/ELF patch offsets --------------------------------------------------
-OFFSET_CreateAudioFrameStereo=0x38C783
-OFFSET_AudioEncoderOpusConfigSetChannels=0x766335
-OFFSET_MonoDownmixer=0x35B166
-OFFSET_EmulateStereoSuccess1=0x39A103
-OFFSET_EmulateStereoSuccess2=0x39A178
-OFFSET_EmulateBitrateModified=0x38C76C
-OFFSET_SetsBitrateBitrateValue=0x351E45
-OFFSET_SetsBitrateBitwiseOr=0x351E4D
-OFFSET_Emulate48Khz=0x398D0F
-OFFSET_HighPassFilter=0x700EC0
-OFFSET_HighpassCutoffFilter=0x75EFA0
-OFFSET_DcReject=0x75F150
-OFFSET_DownmixFunc=0x98AD60
-OFFSET_AudioEncoderOpusConfigIsOk=0x7664D0
-OFFSET_ThrowError=0x2CF4A0
-OFFSET_EncoderConfigInit1=0x76633F
-OFFSET_EncoderConfigInit2=0x765D18
+# --- Linux/ELF patch offsets (Stable 0.0.130) ---------------------------------
+OFFSET_CreateAudioFrameStereo=0x3913B3
+OFFSET_AudioEncoderOpusConfigSetChannels=0x769675
+OFFSET_MonoDownmixer=0x35FB76
+OFFSET_EmulateStereoSuccess1=0x39EE53
+OFFSET_EmulateStereoSuccess2=0x39EEC8
+OFFSET_EmulateBitrateModified=0x39139C
+OFFSET_SetsBitrateBitrateValue=0x356815
+OFFSET_SetsBitrateBitwiseOr=0x35681D
+OFFSET_Emulate48Khz=0x39DA5F
+OFFSET_HighPassFilter=0x704200
+OFFSET_HighpassCutoffFilter=0x7622E0
+OFFSET_DcReject=0x762490
+OFFSET_DownmixFunc=0x98E0A0
+OFFSET_AudioEncoderOpusConfigIsOk=0x769810
+OFFSET_ThrowError=0x2D3E60
+OFFSET_EncoderConfigInit1=0x76967F
+OFFSET_EncoderConfigInit2=0x769058
 FILE_OFFSET_ADJUSTMENT=0
 
 # Required offset names (same 17 as Windows patcher); validate before build.
@@ -74,10 +74,11 @@ REQUIRED_OFFSET_NAMES=(
 )
 
 # --- Original bytes at validation sites (must match offsets above) ------------
-ORIG_Emulate48Khz='{0x0F, 0x43, 0xD0}'
+# Emulate48Khz: Clang x86_64 uses REX.W + CMOVNB (4 bytes). Do not use 3 NOPs (MSVC cmovb).
+ORIG_Emulate48Khz='{0x48, 0x0F, 0x43, 0xD0}'
 ORIG_AudioEncoderOpusConfigIsOk='{0x55, 0x48, 0x89, 0xE5, 0x8B, 0x0F, 0x31, 0xC0}'
 ORIG_DownmixFunc='{0x55, 0x48, 0x89, 0xE5, 0x41, 0x57, 0x41, 0x56}'
-# Stable 0.0.127 prologues differ after 4th byte; first 4 bytes: 55 48 89 E5
+# Clang prologues: first 4 bytes 55 48 89 E5 (match longer ORIG_* where used)
 ORIG_HighPassFilter='{0x55, 0x48, 0x89, 0xE5}'
 ORIG_HighpassCutoffFilter='{0x55, 0x48, 0x89, 0xE5}'
 ORIG_DcReject='{0x55, 0x48, 0x89, 0xE5}'
@@ -452,16 +453,12 @@ verify_binary() {
     fi
 
     if [[ "$actual_md5" == "$EXPECTED_MD5" ]]; then
-        log_ok "Binary verified (stock build: size + MD5 match)"
+        log_ok "Binary verified (stock MD5)"
         return 0
     fi
 
-    # Patched nodes keep the same file size but change MD5. Allow re-runs; the
-    # compiled patcher still validates bytes at each patch site.
-    log_warn "Binary MD5 differs from stock (normal if this node is already patched)."
-    log_warn "  Stock fingerprint: $EXPECTED_MD5"
-    log_warn "  Current file:      $actual_md5"
-    log_warn "Proceeding — patcher will reject unknown/corrupt binaries at patch sites."
+    # Patched node: same size, different MD5 — patcher validates bytes at sites.
+    log_warn "MD5 != stock (often already patched). Continuing; patcher validates sites."
     return 0
 }
 
@@ -783,7 +780,7 @@ private:
             return true;
         };
 
-        // --- Pre-patch validation: check original bytes at key sites ---
+        // Pre-patch validation
         const unsigned char orig_emulate48[]  = ORIG_VAL_Emulate48Khz;
         const unsigned char orig_configisok[] = ORIG_VAL_AudioEncoderOpusConfigIsOk;
         const unsigned char orig_downmix[]    = ORIG_VAL_DownmixFunc;
@@ -793,8 +790,8 @@ private:
         const unsigned char orig_encconf1[]   = ORIG_VAL_EncoderConfigInit1;
         const unsigned char orig_encconf2[]   = ORIG_VAL_EncoderConfigInit2;
 
-        // Each site must match stock *or* our patched form (safe re-patch / resume).
-        const unsigned char patched_48khz[]    = {0x90, 0x90, 0x90};
+        // Stock or already-patched bytes per site
+        const unsigned char patched_48khz[]    = {0x90, 0x90, 0x90, 0x90};
         const unsigned char patched_configok[] = {0x48, 0xC7, 0xC0, 0x01, 0x00, 0x00, 0x00, 0xC3};
         const unsigned char patched_downmix[]  = {0xC3};
         const unsigned char patched_hp_ret[]   = {0xC3};
@@ -839,7 +836,7 @@ private:
             printf("These offsets cannot be safely applied to a different version.\n");
             return false;
         }
-        printf("  All validation checks PASSED (stock or already patched).\n\n");
+        printf("  Validation OK.\n\n");
 
         int patchCount = 0;
         printf("Applying patches...\n");
@@ -865,7 +862,7 @@ private:
         patchCount++;
 
         printf("  [3/5] Enabling 48kHz sample rate...\n");
-        if (!PatchBytes(Offsets::Emulate48Khz, "\x90\x90\x90", 3)) return false;
+        if (!PatchBytes(Offsets::Emulate48Khz, "\x90\x90\x90\x90", 4)) return false;
         patchCount++;
 
         printf("  [4/5] Injecting audio processing...\n");

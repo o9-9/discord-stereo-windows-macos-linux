@@ -20,7 +20,6 @@ fi
 [[ -z "${DETECT_HOME:-}" ]] && DETECT_HOME="${HOME:-}"
 
 VOICE_BACKUP_API="https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/Linux%20Patcher%20and%20Installer/discord_voice"
-# Same path as Stereo Hub embedded URL (single canonical copy on main)
 UPDATE_URL="https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Linux/Updates/Stereo-Installer-Linux.sh"
 
 APP_DATA_ROOT="$DETECT_HOME/.cache/DiscordVoiceFixer"
@@ -80,7 +79,7 @@ for arg in "$@"; do
             echo "  --no-gui            Use terminal menu (default: launch Python GUI if available)"
             echo "  --list-clients      Print detected client index and name (for Python GUI)"
             echo "  --start-discord     Start Discord and exit (for use by Python GUI after fix/restore)"
-            echo "  --skip-self-update  Do not fetch/re-exec latest installer from GitHub on startup"
+            echo "  --skip-self-update  Skip GitHub self-update on startup"
             echo "  --help, -h          Show this help"
             echo ""
             echo "Examples:"
@@ -1114,8 +1113,7 @@ verify_fix() {
     echo "UNKNOWN|No original backup to compare - run fix first|$current_hash|$current_size"
 }
 
-# --- Script self-update (GitHub main; cache-busted; optional re-exec) ---------
-# Set INSTALLER_SYNC_DRY_RUN=1 to only report differences (menu item 8).
+# Self-update from UPDATE_URL; INSTALLER_SYNC_DRY_RUN=1 = check only (menu 8).
 sync_self_from_github() {
     if [[ "$SKIP_SELF_UPDATE" == true ]]; then
         return 0
@@ -1161,7 +1159,7 @@ sync_self_from_github() {
     if cmp -s "$tmp" "$self_path" 2>/dev/null; then
         rm -f "$tmp"
         if [[ "${INSTALLER_SYNC_DRY_RUN:-0}" == "1" ]]; then
-            status "[OK] Installer matches GitHub (v$SCRIPT_VERSION)" green
+            status "[OK] Matches GitHub (v$SCRIPT_VERSION)" green
         fi
         return 0
     fi
@@ -1169,13 +1167,12 @@ sync_self_from_github() {
     remote_v=$(grep '^SCRIPT_VERSION=' "$tmp" 2>/dev/null | head -1 | cut -d'"' -f2 || echo "?")
 
     if [[ "${INSTALLER_SYNC_DRY_RUN:-0}" == "1" ]]; then
-        status "[!] GitHub has newer content (remote SCRIPT_VERSION=$remote_v, local v$SCRIPT_VERSION)" yellow
-        status "    Restart this script to apply (auto-sync runs each launch)." cyan
+        status "[!] Remote differs (remote v$remote_v, local v$SCRIPT_VERSION) — restart to pull" yellow
         rm -f "$tmp"
         return 0
     fi
 
-    status "Syncing installer from GitHub (v$SCRIPT_VERSION -> v$remote_v)..." yellow
+    status "Self-update v$SCRIPT_VERSION -> v$remote_v..." yellow
     newf="${self_path}.new.$$"
     if ! cp "$tmp" "$newf" 2>/dev/null; then
         rm -f "$tmp" "$newf"

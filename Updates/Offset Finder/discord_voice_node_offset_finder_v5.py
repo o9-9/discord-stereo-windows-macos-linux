@@ -3377,8 +3377,11 @@ EXPECTED_ORIGINALS_CLANG = {
 
 EXPECTED_ORIGINALS_LINUX_ONLY = {
     "EmulateStereoSuccess1":    ("00", 1),
-    "EmulateStereoSuccess2":    ("75", 1),
+    # Linux Clang uses jz (0x74) here; Windows MSVC uses jne (0x75).
+    "EmulateStereoSuccess2":    ("74", 1),
     "CreateAudioFrameStereo":   ("4C 0F 43", 4),
+    # CommitAudioCodec: REX.W + CMOVNB (4 bytes), not MSVC 3-byte cmovb.
+    "Emulate48Khz":             ("48 0F 43 D0", 4),
 }
 
 EXPECTED_ORIGINALS_MACHO_ONLY = {
@@ -3468,6 +3471,8 @@ def validate_offsets(data, results, adj, bin_fmt='pe'):
                 else:
                     # Check if already patched
                     patch_hex = PATCH_INFO.get(name, (None,))[0]
+                    if name == "Emulate48Khz" and bin_fmt == "elf":
+                        patch_hex = "90 90 90 90"
                     if patch_hex and not patch_hex.startswith('<'):
                         try:
                             patched = bytes.fromhex(patch_hex.replace(' ', ''))

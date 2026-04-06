@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 ################################################################################
 # Discord Stereo Linux Launcher
-# Updates three files in "Linux Stereo Installer/" then runs the Python GUI.
-# No backups: old files are replaced when content differs.
+# Payloads: https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates
+# Installs three files under Linux Stereo Installer/, then runs the Python GUI.
 ################################################################################
 
 if [ -z "${BASH_VERSION:-}" ]; then
@@ -16,13 +16,12 @@ set -euo pipefail
 # ------------------------------------------------------------------------------
 
 INSTALL_DIR_NAME="Linux Stereo Installer"
-BASE_URL="https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Linux%20Patcher%20and%20Installer/Updates"
+REPO_RAW_LINUX_UPDATES="https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Linux/Updates"
 
-# Format: "filename|url_path" (url_path is the filename under BASE_URL)
 FILES=(
-    "Discord_Stereo_Installer_For_Linux.py|Discord_Stereo_Installer_For_Linux.py"
-    "Stereo-Installer-Linux.sh|Stereo-Installer-Linux.sh"
-    "discord_voice_patcher_linux.sh|discord_voice_patcher_linux.sh"
+    "Discord_Stereo_Installer_For_Linux.py|${REPO_RAW_LINUX_UPDATES}/Discord_Stereo_Installer_For_Linux.py"
+    "Stereo-Installer-Linux.sh|${REPO_RAW_LINUX_UPDATES}/Stereo-Installer-Linux.sh"
+    "discord_voice_patcher_linux.sh|${REPO_RAW_LINUX_UPDATES}/discord_voice_patcher_linux.sh"
 )
 
 # ------------------------------------------------------------------------------
@@ -161,8 +160,7 @@ else
     TOTAL=${#FILES[@]}
 
     for entry in "${FILES[@]}"; do
-        IFS='|' read -r filename url_path <<< "$entry"
-        url="${BASE_URL}/${url_path}"
+        IFS='|' read -r filename url <<< "$entry"
         if [[ "$url" == *\?* ]]; then
             url="${url}&_t=$(date +%s)_${RANDOM}"
         else
