@@ -1,0 +1,12 @@
+{
+  "files": [
+    "discord_voice.node",
+    "gpu_encoder_helper",
+    "selfie_segmentation.tflite",
+    "selfie_segmentation_landscape.tflite",
+    "libmediapipe.so",
+    "package.json",
+    "index.js",
+    "manifest.json"
+  ]
+}
