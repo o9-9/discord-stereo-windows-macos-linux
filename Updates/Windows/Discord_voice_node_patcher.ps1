@@ -159,7 +159,9 @@ $Script:Config = @{
     ModuleName = "discord_voice.node"
     TempDir = "$env:TEMP\DiscordVoicePatcher"; BackupDir = "$env:TEMP\DiscordVoicePatcher\Backups"
     LogFile = "$env:TEMP\DiscordVoicePatcher\patcher.log"; ConfigFile = "$env:TEMP\DiscordVoicePatcher\config.json"
-    MaxBackupCount = 10
+    # Retention: cap per Discord client + drop anything very old (each backup is ~tens–100+ MB).
+    MaxBackupsPerClient = 3
+    MaxBackupAgeDays      = 45
     # Browser (same folder as VoiceBackupAPI): https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes/Unpatched%20Nodes%20(For%20Patcher)/Windows
     VoiceBackupAPI = "https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/Updates%2FNodes%2FUnpatched%20Nodes%20%28For%20Patcher%29%2FWindows"
     OffsetsMeta = $Script:OffsetsMeta
@@ -795,7 +797,55 @@ function Get-BackupList {
     return @($backups | ForEach-Object { @{ Path = $_.FullName; Date = $_.LastWriteTime; Size = $_.Length; Name = $_.Name } })
 }
 
+function Invoke-BackupRetention {
+    if (-not $Script:Config.BackupDir) { return }
+    EnsureDir $Script:Config.BackupDir
+    if (-not (Test-Path -LiteralPath $Script:Config.BackupDir)) { return }
+    $maxAge = [int]$Script:Config.MaxBackupAgeDays
+    if ($maxAge -lt 1) { $maxAge = 45 }
+    $perClient = [int]$Script:Config.MaxBackupsPerClient
+    if ($perClient -lt 1) { $perClient = 3 }
+    $cutoff = (Get-Date).AddDays(-$maxAge)
+    $re = New-Object System.Text.RegularExpressions.Regex(
+        '^discord_voice\.node\.(.+)\.(\d{8}_\d{6})\.backup$',
+        [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+    )
+    $removed = 0
+
+    $files = @(Get-ChildItem -LiteralPath $Script:Config.BackupDir -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'discord_voice.node.*.backup' })
+    foreach ($f in $files) {
+        if ($f.LastWriteTime -lt $cutoff) {
+            Remove-Item -LiteralPath $f.FullName -Force -ErrorAction SilentlyContinue
+            $removed++
+        }
+    }
+
+    $files = @(Get-ChildItem -LiteralPath $Script:Config.BackupDir -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'discord_voice.node.*.backup' })
+    $groups = @{}
+    foreach ($f in $files) {
+        $m = $re.Match($f.Name)
+        $key = if ($m.Success) { $m.Groups[1].Value } else { '__other__' }
+        if (-not $groups.ContainsKey($key)) {
+            $groups[$key] = [System.Collections.ArrayList]::new()
+        }
+        [void]$groups[$key].Add($f)
+    }
+    foreach ($clientKey in $groups.Keys) {
+        $list = @($groups[$clientKey] | Sort-Object LastWriteTime -Descending)
+        if ($list.Count -le $perClient) { continue }
+        foreach ($excess in ($list | Select-Object -Skip $perClient)) {
+            Remove-Item -LiteralPath $excess.FullName -Force -ErrorAction SilentlyContinue
+            $removed++
+        }
+    }
+
+    if ($removed -gt 0) {
+        Write-Log "Pruned old voice backups: removed $removed file(s) (max $perClient per client, max age ${maxAge}d)." -Level Info
+    }
+}
+
 function Show-BackupList {
+    Invoke-BackupRetention
     $backups = Get-BackupList
     if ($backups.Count -eq 0) { Write-Host "No backups found" -ForegroundColor Yellow; return }
     Write-Host "`n=== Available Backups ===" -ForegroundColor Cyan
@@ -834,6 +884,7 @@ function Restore-FromBackup {
 
     Write-Banner
     Write-Log "Starting restore..." -Level Info
+    Invoke-BackupRetention
 
     if (-not $BackupPath) {
         $backups = Get-BackupList
@@ -920,10 +971,7 @@ function Backup-VoiceNode {
         $backupPath = Join-Path $Script:Config.BackupDir "discord_voice.node.$sanitizedName.$(Get-Date -Format 'yyyyMMdd_HHmmss').backup"
         Copy-Item -Path $SourcePath -Destination $backupPath -Force
         Write-Log "Backup created: $([System.IO.Path]::GetFileName($backupPath))" -Level Success
-        $backups = Get-BackupList
-        if ($backups.Count -gt $Script:Config.MaxBackupCount) {
-            $backups | Select-Object -Skip $Script:Config.MaxBackupCount | ForEach-Object { Remove-Item $_.Path -Force -ErrorAction SilentlyContinue }
-        }
+        Invoke-BackupRetention
         return $true
     } catch { Write-Log "Backup failed: $_" -Level Error; return $false }
 }
@@ -1334,6 +1382,7 @@ function Initialize-Environment {
     }
     Cleanup-TempFiles
     "=== Discord Voice Patcher Log ===`nStarted: $(Get-Date)`nGain: $($Script:Config.AudioGainMultiplier)x`n" | Out-File $Script:Config.LogFile -Force -ErrorAction SilentlyContinue
+    Invoke-BackupRetention
 }
 
 function Show-CompilerMissingDialog {

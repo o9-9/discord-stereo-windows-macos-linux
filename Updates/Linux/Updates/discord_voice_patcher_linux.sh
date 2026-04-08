@@ -37,6 +37,9 @@ CACHE_DIR="$DETECT_HOME/.cache/DiscordVoicePatcher"
 BACKUP_DIR="$CACHE_DIR/Backups"
 LOG_FILE="$CACHE_DIR/patcher.log"
 TEMP_DIR="$CACHE_DIR/build"
+# Each backup is a full discord_voice.node (~tens–100+ MB); cap count per client + age.
+MAX_BACKUPS_PER_CLIENT="${MAX_BACKUPS_PER_CLIENT:-3}"
+MAX_BACKUP_AGE_DAYS="${MAX_BACKUP_AGE_DAYS:-45}"
 # Unpatched Linux voice bundle (same tree as Windows; Linux subfolder):
 # https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes/Unpatched%20Nodes%20(For%20Patcher)/Linux
 VOICE_BACKUP_DIR="${VOICE_BACKUP_DIR:-$CACHE_DIR/VoiceBackupLinux}"
@@ -174,6 +177,62 @@ echo "=== Discord Voice Patcher Log ===" > "$LOG_FILE"
 echo "Started: $(date)" >> "$LOG_FILE"
 echo "Platform: Linux" >> "$LOG_FILE"
 # endregion Init
+
+# region Backup retention
+# Drops backups older than MAX_BACKUP_AGE_DAYS, then keeps at most MAX_BACKUPS_PER_CLIENT
+# per client (filename: discord_voice.node.<client>.<YYYYMMDD_HHMMSS>.backup).
+prune_voice_backups() {
+    [[ -d "$BACKUP_DIR" ]] || return 0
+    local removed=0 f bn k i j
+    local -a list odd
+
+    while IFS= read -r -d '' f; do
+        [[ -f "$f" ]] || continue
+        rm -f "$f" 2>/dev/null && removed=$((removed + 1)) || true
+    done < <(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'discord_voice.node.*.backup' -mtime "+${MAX_BACKUP_AGE_DAYS}" -print0 2>/dev/null)
+
+    declare -A seen=()
+    while IFS= read -r f; do
+        [[ -f "$f" ]] || continue
+        bn=$(basename "$f")
+        if [[ "$bn" =~ ^discord_voice\.node\.(.+)\.[0-9]{8}_[0-9]{6}\.backup$ ]]; then
+            seen["${BASH_REMATCH[1]}"]=1
+        fi
+    done < <(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'discord_voice.node.*.backup' 2>/dev/null)
+
+    for k in "${!seen[@]}"; do
+        list=()
+        mapfile -t list < <(ls -1t "$BACKUP_DIR"/discord_voice.node."${k}".*.backup 2>/dev/null || true)
+        local n=${#list[@]}
+        if (( n > MAX_BACKUPS_PER_CLIENT )); then
+            for (( i = MAX_BACKUPS_PER_CLIENT; i < n; i++ )); do
+                rm -f "${list[$i]}" 2>/dev/null && removed=$((removed + 1)) || true
+            done
+        fi
+    done
+
+    odd=()
+    while IFS= read -r f; do
+        [[ -f "$f" ]] || continue
+        bn=$(basename "$f")
+        [[ "$bn" =~ ^discord_voice\.node\.(.+)\.[0-9]{8}_[0-9]{6}\.backup$ ]] && continue
+        odd+=("$f")
+    done < <(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'discord_voice.node.*.backup' 2>/dev/null)
+
+    if (( ${#odd[@]} > MAX_BACKUPS_PER_CLIENT )); then
+        mapfile -t odd < <(for f in "${odd[@]}"; do stat -c $'%Y\t%n' "$f" 2>/dev/null; done | sort -rn | cut -f2-)
+        for (( j = MAX_BACKUPS_PER_CLIENT; j < ${#odd[@]}; j++ )); do
+            rm -f "${odd[$j]}" 2>/dev/null && removed=$((removed + 1)) || true
+        done
+    fi
+
+    if (( removed > 0 )); then
+        log_info "Pruned old voice backups: removed $removed file(s) (max $MAX_BACKUPS_PER_CLIENT per client, max age ${MAX_BACKUP_AGE_DAYS}d)."
+    fi
+}
+
+prune_voice_backups
+# endregion Backup retention
 
 # region Voice bundle (GitHub)
 # Downloads the same unpatched Linux bundle the Windows patcher uses (Linux folder).
@@ -711,13 +770,7 @@ backup_node() {
         return 1
     fi
 
-    # Prune old backups per client (keep 3 - ~225MB for a 75MB node)
-    local count
-    count=$(ls -1 "$BACKUP_DIR"/discord_voice.node."${sanitized}".*.backup 2>/dev/null | wc -l || true)
-    if [[ "${count:-0}" -gt 3 ]]; then
-        ls -1t "$BACKUP_DIR"/discord_voice.node."${sanitized}".*.backup | tail -n +4 | xargs rm -f
-        log_info "  Pruned old backups (kept latest 3)"
-    fi
+    prune_voice_backups
     return 0
 }
 
