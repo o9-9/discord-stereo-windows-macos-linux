@@ -6,6 +6,7 @@ param(
     [switch]$ListBackups,
     [switch]$FixAll,
     [string]$FixClient,
+    [switch]$PatchLocalOnly,
     [switch]$SkipUpdateCheck
 )
 
@@ -137,6 +138,7 @@ if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adm
         if ($ListBackups) { $arguments += "-ListBackups" }
         if ($FixAll) { $arguments += "-FixAll" }
         if ($FixClient) { $arguments += "-FixClient", "`"$FixClient`"" }
+        if ($PatchLocalOnly) { $arguments += "-PatchLocalOnly" }
         if ($SkipUpdateCheck) { $arguments += "-SkipUpdateCheck" }
         Start-Process powershell.exe -ArgumentList $arguments -Verb RunAs
         exit 0
@@ -2505,10 +2507,17 @@ function Start-Patching {
             return $false
         }
 
-        $voiceBackupPath = Get-PreparedVoiceBackupPath
-        if (-not $voiceBackupPath) {
-            Wait-EnterOrTimeout
-            return $false
+        # PatchLocalOnly avoids downloading the repo "voice bundle" and patches the on-disk module in place.
+        # This is the mode Stereo Hub uses when it detects a new Discord build and regenerates offsets locally.
+        $voiceBackupPath = $null
+        if (-not $PatchLocalOnly) {
+            $voiceBackupPath = Get-PreparedVoiceBackupPath
+            if (-not $voiceBackupPath) {
+                Wait-EnterOrTimeout
+                return $false
+            }
+        } else {
+            Write-Log "Patch local only enabled: skipping GitHub voice module download." -Level Info
         }
 
         Write-Log "Closing all Discord processes..." -Level Info
@@ -2519,7 +2528,11 @@ function Start-Patching {
         }
 
         Start-Sleep -Seconds 1
-        $result = Invoke-PatchClients -Clients @($uniqueClients) -Compiler $compiler -VoiceBackupPath $voiceBackupPath
+        if ($PatchLocalOnly) {
+            $result = Invoke-PatchClients -Clients @($uniqueClients) -Compiler $compiler -VoiceBackupPath $null -PatchLocalOnly
+        } else {
+            $result = Invoke-PatchClients -Clients @($uniqueClients) -Compiler $compiler -VoiceBackupPath $voiceBackupPath
+        }
         Write-Host ""
         Write-Log "=== PATCHING COMPLETE ===" -Level Success
         Write-Log "Success: $($result.Success) / $($result.Total)" -Level Info
