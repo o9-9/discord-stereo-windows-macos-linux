@@ -55,7 +55,6 @@ EXPECTED_SIZE=103869656
 # --- Linux/ELF patch offsets --------------------------------------------------
 OFFSET_CreateAudioFrameStereo=0x38F4A3
 OFFSET_AudioEncoderOpusConfigSetChannels=0x7654D5
-OFFSET_AudioEncoderMultiChannelOpusCh=0x764EAE
 OFFSET_MonoDownmixer=0x35E40C
 OFFSET_EmulateStereoSuccess1=0x39BB89
 OFFSET_EmulateStereoSuccess2=0x39C55F
@@ -980,7 +979,6 @@ extern "C" void hp_cutoff(const float*, int, float*, int*, int, int, int, int);
 namespace Offsets {
     constexpr uint32_t CreateAudioFrameStereo            = OFFSET_VAL_CreateAudioFrameStereo;
     constexpr uint32_t AudioEncoderOpusConfigSetChannels = OFFSET_VAL_AudioEncoderOpusConfigSetChannels;
-    constexpr uint32_t AudioEncoderMultiChannelOpusCh    = OFFSET_VAL_AudioEncoderMultiChannelOpusCh;
     constexpr uint32_t MonoDownmixer                     = OFFSET_VAL_MonoDownmixer;
     constexpr uint32_t EmulateStereoSuccess1             = OFFSET_VAL_EmulateStereoSuccess1;
     constexpr uint32_t EmulateStereoSuccess2             = OFFSET_VAL_EmulateStereoSuccess2;
@@ -1121,18 +1119,6 @@ private:
         patchCount++;
         if (!PatchBytes(Offsets::AudioEncoderOpusConfigSetChannels, "\x02", 1)) return false;
         patchCount++;
-        // MultiChannel Opus ctor also defaults channels=1; voice stack may never touch AudioEncoderOpusConfig alone.
-        if (Offsets::AudioEncoderMultiChannelOpusCh != 0) {
-            uint32_t fomc = Offsets::AudioEncoderMultiChannelOpusCh - Offsets::FILE_OFFSET_ADJUSTMENT;
-            if ((long long)(fomc + 1) <= fileSize && (long long)fomc >= 4) {
-                unsigned char* insn = (unsigned char*)fileData + fomc - 4;
-                unsigned char* imm  = (unsigned char*)fileData + fomc;
-                if (memcmp(insn, "\x48\xC7\x47\x08", 4) == 0 && (imm[0] == 0x01 || imm[0] == 0x02)) {
-                    imm[0] = 0x02;
-                    patchCount++;
-                }
-            }
-        }
         if (!PatchBytes(Offsets::MonoDownmixer, "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\xE9", 13)) return false;
         patchCount++;
 
@@ -1197,12 +1183,9 @@ private:
 
         // Stereo channel verification (quick sanity check for "still mono" reports)
         {
-            uint32_t ch1 = 0, ch2 = 0;
+            uint32_t ch1 = 0;
             bool ok1 = ReadU32LE(Offsets::AudioEncoderOpusConfigSetChannels, ch1);
-            bool ok2 = true;
-            if (Offsets::AudioEncoderMultiChannelOpusCh != 0) ok2 = ReadU32LE(Offsets::AudioEncoderMultiChannelOpusCh, ch2);
             if (ok1) printf("  OpusConfig channels byte: 0x%02X\n", (unsigned int)(ch1 & 0xFF));
-            if (Offsets::AudioEncoderMultiChannelOpusCh != 0 && ok2) printf("  MultiChannel channels byte: 0x%02X\n", (unsigned int)(ch2 & 0xFF));
         }
 
         printf("\n  Applied %d patches successfully!\n", patchCount);
@@ -1285,7 +1268,6 @@ PATCHEOF
     sed -i "s/BITRATE_VAL/$BITRATE/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_CreateAudioFrameStereo/${OFFSET_CreateAudioFrameStereo}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_AudioEncoderOpusConfigSetChannels/${OFFSET_AudioEncoderOpusConfigSetChannels}/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/OFFSET_VAL_AudioEncoderMultiChannelOpusCh/${OFFSET_AudioEncoderMultiChannelOpusCh}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_MonoDownmixer/${OFFSET_MonoDownmixer}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_EmulateStereoSuccess1/${OFFSET_EmulateStereoSuccess1}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_EmulateStereoSuccess2/${OFFSET_EmulateStereoSuccess2}/g" "$TEMP_DIR/patcher.cpp"
