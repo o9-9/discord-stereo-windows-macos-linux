@@ -253,7 +253,7 @@ Patcher (Bash/PowerShell)
 └──────────────────────────┘
 ```
 
-### The 18 Patch Targets
+### The 17 Patch Targets
 
 | # | Target | What It Does | Patch |
 |---|---|---|---|
@@ -272,9 +272,8 @@ Patcher (Bash/PowerShell)
 | 13 | `DownmixFunc` | Immediate `RET` to skip downmix processing | `0xC3` |
 | 14 | `AudioEncoderOpusConfigIsOk` | Forces config validation to return `1` | `mov rax,1; ret` (Win) / `ret` (Linux/macOS) |
 | 15 | `ThrowError` | Suppresses encoder errors | `0xC3` |
-| 16 | `DuplicateEmulateBitrateModified` | Parallel bitrate path — same 400kbps patch as #6 | `0x80 0x1A 0x06` |
-| 17 | `EncoderConfigInit1` | First Opus config constructor — init to 400kbps | `0x80 0x1A 0x06 0x00` |
-| 18 | `EncoderConfigInit2` | Second Opus config constructor — same | `0x80 0x1A 0x06 0x00` |
+| 16 | `EncoderConfigInit1` | First Opus config constructor — init to 400kbps | `0x80 0x1A 0x06 0x00` |
+| 17 | `EncoderConfigInit2` | Second Opus config constructor — same | `0x80 0x1A 0x06 0x00` |
 
 ### Platform Differences
 
