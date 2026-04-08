@@ -37,6 +37,10 @@ CACHE_DIR="$DETECT_HOME/.cache/DiscordVoicePatcher"
 BACKUP_DIR="$CACHE_DIR/Backups"
 LOG_FILE="$CACHE_DIR/patcher.log"
 TEMP_DIR="$CACHE_DIR/build"
+# Unpatched Linux voice bundle (same tree as Windows; Linux subfolder):
+# https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes/Unpatched%20Nodes%20(For%20Patcher)/Linux
+VOICE_BACKUP_DIR="${VOICE_BACKUP_DIR:-$CACHE_DIR/VoiceBackupLinux}"
+VOICE_BACKUP_API="${VOICE_BACKUP_API:-https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/Updates%2FNodes%2FUnpatched%20Nodes%20%28For%20Patcher%29%2FLinux}"
 # endregion Config
 
 # --- Build fingerprint (update when targeting a new Discord build) ------------
@@ -110,12 +114,18 @@ banner() {
 
 show_settings() {
     echo -e "Config: ${SAMPLE_RATE}Hz, ${BITRATE}kbps, Stereo (Linux)"
+    if $PATCH_LOCAL_ONLY; then
+        echo -e "Voice bundle: ${YELLOW}local node only (--patch-local)${NC}"
+    else
+        echo -e "Voice bundle: ${GREEN}download stock module from GitHub, then patch${NC}"
+    fi
     echo ""
 }
 
 # region CLI
 SILENT_MODE=false
 PATCH_ALL=false
+PATCH_LOCAL_ONLY=false
 
 usage() {
     echo "Usage: $0 [options]"
@@ -125,7 +135,14 @@ usage() {
     echo "  --list-backups  Show available backups"
     echo "  --silent        No prompts, patch all clients"
     echo "  --patch-all     Patch all clients (no selection menu)"
+    echo "  --patch-local   Do not download the stock voice bundle from GitHub; patch"
+    echo "                  the discord_voice.node already on disk (advanced)"
     echo "  --help          Show this help"
+    echo ""
+    echo "By default the patcher downloads the unpatched Linux voice module bundle from"
+    echo "GitHub (same source as the Windows patcher, Linux folder), installs it over"
+    echo "each client's voice folder, then applies patches. Override VOICE_BACKUP_API"
+    echo "or set DISCORD_VOICE_PATCHER_GITHUB_TOKEN / GITHUB_TOKEN for private forks or API limits."
     echo ""
     echo "Examples:"
     echo "  $0              # Patch with stereo, 48kHz, 384kbps"
@@ -141,6 +158,7 @@ for arg in "$@"; do
         --list-backups) mkdir -p "$BACKUP_DIR"; ls -la "$BACKUP_DIR/" 2>/dev/null || echo "No backups found"; exit 0 ;;
         --silent|-s) SILENT_MODE=true; PATCH_ALL=true ;;
         --patch-all) PATCH_ALL=true ;;
+        --patch-local) PATCH_LOCAL_ONLY=true ;;
         --help|-h) usage ;;
         *)
             echo "Unknown option: $arg"
@@ -156,6 +174,188 @@ echo "=== Discord Voice Patcher Log ===" > "$LOG_FILE"
 echo "Started: $(date)" >> "$LOG_FILE"
 echo "Platform: Linux" >> "$LOG_FILE"
 # endregion Init
+
+# region Voice bundle (GitHub)
+# Downloads the same unpatched Linux bundle the Windows patcher uses (Linux folder).
+download_linux_voice_bundle_from_github() {
+    local py=""
+    if command -v python3 &>/dev/null; then
+        py="python3"
+    elif command -v python &>/dev/null && python -c "import sys; sys.exit(0 if sys.version_info >= (3, 6) else 1)" 2>/dev/null; then
+        py="python"
+    fi
+    if [[ -z "$py" ]]; then
+        log_error "Python 3.6+ is required to download the voice bundle from GitHub."
+        log_error "  Install python3, or re-run with --patch-local to patch your existing node only."
+        return 1
+    fi
+
+    log_info "Downloading voice bundle from GitHub..."
+    log_info "  API: ${VOICE_BACKUP_API:0:80}..."
+    log_info "  Dest: $VOICE_BACKUP_DIR"
+
+    if ! VOICE_BACKUP_DIR="$VOICE_BACKUP_DIR" VOICE_BACKUP_API="$VOICE_BACKUP_API" "$py" - <<'PY'
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+
+def die(msg: str, code: int = 1) -> None:
+    print(msg, file=sys.stderr)
+    raise SystemExit(code)
+
+def main() -> None:
+    dest = os.environ.get("VOICE_BACKUP_DIR", "").strip()
+    api = os.environ.get("VOICE_BACKUP_API", "").strip()
+    if not dest or not api:
+        die("VOICE_BACKUP_DIR / VOICE_BACKUP_API must be set")
+    token = (
+        os.environ.get("DISCORD_VOICE_PATCHER_GITHUB_TOKEN", "").strip()
+        or os.environ.get("GITHUB_TOKEN", "").strip()
+    )
+    os.makedirs(dest, exist_ok=True)
+    for name in os.listdir(dest):
+        p = os.path.join(dest, name)
+        if os.path.isdir(p):
+            import shutil
+            shutil.rmtree(p, ignore_errors=True)
+        else:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+    req = urllib.request.Request(api)
+    req.add_header("Accept", "application/vnd.github+json")
+    req.add_header("User-Agent", "DiscordVoicePatcher-Linux")
+    if token:
+        req.add_header("Authorization", f"Bearer {token}")
+
+    try:
+        with urllib.request.urlopen(req, timeout=45) as r:
+            payload = r.read()
+    except urllib.error.HTTPError as e:
+        if e.code == 403:
+            die("GitHub API returned 403 (rate limit or auth). Set DISCORD_VOICE_PATCHER_GITHUB_TOKEN or GITHUB_TOKEN, or try again later.")
+        die(f"GitHub API HTTP {e.code}: {e.reason}")
+    except urllib.error.URLError as e:
+        die(f"GitHub API request failed: {e}")
+
+    try:
+        items = json.loads(payload.decode("utf-8"))
+    except json.JSONDecodeError as e:
+        die(f"Invalid JSON from GitHub API: {e}")
+
+    if not isinstance(items, list):
+        die("Unexpected GitHub API response (expected a list of directory entries)")
+
+    n = 0
+    for item in items:
+        if not isinstance(item, dict) or item.get("type") != "file":
+            continue
+        name = item.get("name")
+        url = item.get("download_url")
+        if not name or not url:
+            continue
+        out = os.path.join(dest, name)
+        freq = urllib.request.Request(url)
+        freq.add_header("User-Agent", "DiscordVoicePatcher-Linux")
+        if token:
+            freq.add_header("Authorization", f"Bearer {token}")
+        try:
+            with urllib.request.urlopen(freq, timeout=120) as fr:
+                data = fr.read()
+        except urllib.error.HTTPError as e:
+            die(f"Failed to download {name}: HTTP {e.code}")
+        except urllib.error.URLError as e:
+            die(f"Failed to download {name}: {e}")
+        if len(data) == 0:
+            die(f"Downloaded empty file: {name}")
+        with open(out, "wb") as f:
+            f.write(data)
+        n += 1
+
+    if n == 0:
+        die("No files downloaded from the voice bundle folder (empty listing or API error).")
+    print(n)
+
+if __name__ == "__main__":
+    main()
+PY
+    then
+        log_error "Voice bundle download failed."
+        return 1
+    fi
+
+    local node="$VOICE_BACKUP_DIR/discord_voice.node"
+    if [[ ! -f "$node" ]]; then
+        log_error "discord_voice.node missing after download: $node"
+        return 1
+    fi
+
+    local sz md5
+    sz=$(stat -c%s "$node" 2>/dev/null || echo "0")
+    if [[ "$sz" != "$EXPECTED_SIZE" ]]; then
+        log_error "Downloaded discord_voice.node size $sz != expected $EXPECTED_SIZE"
+        log_error "  Refresh offsets in this script for your repo bundle, or fix VOICE_BACKUP_API."
+        return 1
+    fi
+
+    if command -v md5sum &>/dev/null; then
+        md5=$(md5sum "$node" | cut -d' ' -f1)
+    elif command -v md5 &>/dev/null; then
+        md5=$(md5 -q "$node")
+    else
+        log_warn "Could not verify MD5 (no md5sum/md5); continuing with size check only."
+        log_ok "Voice bundle downloaded ($(basename "$VOICE_BACKUP_DIR"))"
+        return 0
+    fi
+
+    if [[ "${md5,,}" != "${EXPECTED_MD5,,}" ]]; then
+        log_error "Downloaded discord_voice.node MD5 $md5 != patcher stock $EXPECTED_MD5"
+        log_error "  Update EXPECTED_MD5 / offsets in this script to match your GitHub bundle."
+        return 1
+    fi
+
+    log_ok "Voice bundle verified (stock MD5) — $(ls -1 "$VOICE_BACKUP_DIR" 2>/dev/null | wc -l) file(s)"
+    return 0
+}
+
+# Replaces the client's discord_voice/ folder contents with the cached GitHub bundle (Windows-style).
+install_linux_voice_bundle_for_client() {
+    local node_path="$1"
+    local voice_dir
+    voice_dir=$(dirname "$node_path")
+
+    if [[ ! -d "$VOICE_BACKUP_DIR" ]] || [[ -z "$(ls -A "$VOICE_BACKUP_DIR" 2>/dev/null)" ]]; then
+        log_error "Voice bundle cache empty: $VOICE_BACKUP_DIR"
+        return 1
+    fi
+
+    log_info "Installing stock voice module from bundle into:"
+    log_info "  $voice_dir"
+
+    if [[ ! -d "$voice_dir" ]]; then
+        log_error "Voice directory does not exist: $voice_dir"
+        return 1
+    fi
+
+    find "$voice_dir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+    if ! cp -a "$VOICE_BACKUP_DIR"/. "$voice_dir"/; then
+        log_error "Failed to copy voice bundle into $voice_dir"
+        return 1
+    fi
+
+    if [[ ! -f "$node_path" ]]; then
+        log_error "discord_voice.node not present after bundle install: $node_path"
+        return 1
+    fi
+
+    log_ok "Stock voice files installed"
+    return 0
+}
+# endregion Voice bundle (GitHub)
 
 # region Discord process detection
 # Returns 0 if Discord is running, 1 if not.
@@ -1146,16 +1346,28 @@ patch_client() {
     log_info "=== Processing: $name ==="
     log_info "Node: $node_path"
 
-    # Verify binary matches expected hash before patching
+    if ! $PATCH_LOCAL_ONLY; then
+        if ! backup_node "$node_path" "$name"; then
+            if ! $SKIP_BACKUP; then
+                log_error "Backup failed, aborting patch for safety"
+                return 1
+            fi
+        fi
+        if ! install_linux_voice_bundle_for_client "$node_path"; then
+            return 1
+        fi
+    fi
+
     if ! verify_binary "$node_path" "$name"; then
         return 1
     fi
 
-    # Backup (skips if identical backup already exists)
-    if ! backup_node "$node_path" "$name"; then
-        if ! $SKIP_BACKUP; then
-            log_error "Backup failed, aborting patch for safety"
-            return 1
+    if $PATCH_LOCAL_ONLY; then
+        if ! backup_node "$node_path" "$name"; then
+            if ! $SKIP_BACKUP; then
+                log_error "Backup failed, aborting patch for safety"
+                return 1
+            fi
         fi
     fi
 
@@ -1230,6 +1442,12 @@ main() {
 
     # Find compiler
     find_compiler || exit 1
+
+    if ! $PATCH_LOCAL_ONLY; then
+        download_linux_voice_bundle_from_github || exit 1
+    else
+        log_info "Patch-local mode: skipping GitHub voice bundle download."
+    fi
 
     # Select clients (skip menu in silent/patch-all mode)
     if $PATCH_ALL; then
