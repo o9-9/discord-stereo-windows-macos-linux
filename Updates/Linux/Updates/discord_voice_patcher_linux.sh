@@ -1078,6 +1078,57 @@ private:
         bool o8 = OrigOrAlt(Offsets::EncoderConfigInit2, orig_encconf2, sizeof(orig_encconf2),
                              patched_enc384, sizeof(patched_enc384));
 
+        // Clang ELF: channel path is cmovnb r12,rax (4C 0F 43 E0) -> mov r12,rax; nop (49 89 C4 90). Not MSVC r13/C5.
+        const unsigned char orig_caf[]   = {0x4C, 0x0F, 0x43, 0xE0};
+        const unsigned char patch_caf[]  = {0x49, 0x89, 0xC4, 0x90};
+        bool o9 = OrigOrAlt(Offsets::CreateAudioFrameStereo, orig_caf, 4, patch_caf, 4);
+
+        bool ess1_ok = false;
+        {
+            uint32_t fo = Offsets::EmulateStereoSuccess1 - Offsets::FILE_OFFSET_ADJUSTMENT;
+            if ((long long)(fo + 1) <= fileSize) {
+                unsigned char b = ((unsigned char*)fileData)[fo];
+                ess1_ok = (b == 0x00 || b == 0x02);
+            }
+        }
+        bool ess2_ok = false;
+        {
+            uint32_t fo = Offsets::EmulateStereoSuccess2 - Offsets::FILE_OFFSET_ADJUSTMENT;
+            if ((long long)(fo + 6) <= fileSize) {
+                unsigned char* p = (unsigned char*)fileData + fo;
+                if (p[0] == 0x0F && (p[1] == 0x84 || p[1] == 0x85))
+                    ess2_ok = true;
+                else if (p[0] == 0x74 || p[0] == 0x75 || p[0] == 0xEB)
+                    ess2_ok = true;
+                else {
+                    bool n6 = true;
+                    for (int i = 0; i < 6; i++)
+                        if (p[i] != 0x90) n6 = false;
+                    ess2_ok = n6;
+                }
+            }
+        }
+
+        const unsigned char orig_setch[]  = {0x01};
+        const unsigned char patch_setch[] = {0x02};
+        bool o10 = OrigOrAlt(Offsets::AudioEncoderOpusConfigSetChannels, orig_setch, 1, patch_setch, 1);
+
+        const unsigned char orig_ebm[]   = {0x00, 0x7D, 0x00};
+        const unsigned char patch_ebm[]  = {0x00, 0xDC, 0x05};
+        bool o11 = OrigOrAlt(Offsets::EmulateBitrateModified, orig_ebm, 3, patch_ebm, 3);
+
+        const unsigned char orig_sbor[]   = {0x48, 0x09, 0xC1};
+        const unsigned char patch_sbor[]  = {0x90, 0x90, 0x90};
+        bool o12 = OrigOrAlt(Offsets::SetsBitrateBitwiseOr, orig_sbor, 3, patch_sbor, 3);
+
+        const unsigned char orig_mono2[]  = {0x84, 0xC0};
+        const unsigned char patch_mono2[] = {0x90, 0x90};
+        bool o13 = OrigOrAlt(Offsets::MonoDownmixer, orig_mono2, 2, patch_mono2, 2);
+
+        const unsigned char orig_throw1[] = {0x41};
+        const unsigned char patch_throw[] = {0xC3};
+        bool o14 = OrigOrAlt(Offsets::ThrowError, orig_throw1, 1, patch_throw, 1);
+
         printf("  Emulate48Khz           (0x%06X): %s\n", Offsets::Emulate48Khz, o1 ? "OK" : "MISMATCH");
         printf("  AudioEncoderConfigIsOk (0x%06X): %s\n", Offsets::AudioEncoderOpusConfigIsOk, o2 ? "OK" : "MISMATCH");
         printf("  DownmixFunc            (0x%06X): %s\n", Offsets::DownmixFunc, o3 ? "OK" : "MISMATCH");
@@ -1086,8 +1137,17 @@ private:
         printf("  DcReject               (0x%06X): %s\n", Offsets::DcReject, o6 ? "OK" : "MISMATCH");
         printf("  EncoderConfigInit1     (0x%06X): %s\n", Offsets::EncoderConfigInit1, o7 ? "OK" : "MISMATCH");
         printf("  EncoderConfigInit2     (0x%06X): %s\n", Offsets::EncoderConfigInit2, o8 ? "OK" : "MISMATCH");
+        printf("  CreateAudioFrameStereo (0x%06X): %s\n", Offsets::CreateAudioFrameStereo, o9 ? "OK" : "MISMATCH");
+        printf("  EmulateStereoSuccess1  (0x%06X): %s\n", Offsets::EmulateStereoSuccess1, ess1_ok ? "OK" : "MISMATCH");
+        printf("  EmulateStereoSuccess2  (0x%06X): %s\n", Offsets::EmulateStereoSuccess2, ess2_ok ? "OK" : "MISMATCH");
+        printf("  OpusConfigSetChannels  (0x%06X): %s\n", Offsets::AudioEncoderOpusConfigSetChannels, o10 ? "OK" : "MISMATCH");
+        printf("  EmulateBitrateModified (0x%06X): %s\n", Offsets::EmulateBitrateModified, o11 ? "OK" : "MISMATCH");
+        printf("  SetsBitrateBitwiseOr   (0x%06X): %s\n", Offsets::SetsBitrateBitwiseOr, o12 ? "OK" : "MISMATCH");
+        printf("  MonoDownmixer (prefix) (0x%06X): %s\n", Offsets::MonoDownmixer, o13 ? "OK" : "MISMATCH");
+        printf("  ThrowError             (0x%06X): %s\n", Offsets::ThrowError, o14 ? "OK" : "MISMATCH");
 
-        if (!o1 || !o2 || !o3 || !o4 || !o5 || !o6 || !o7 || !o8) {
+        if (!o1 || !o2 || !o3 || !o4 || !o5 || !o6 || !o7 || !o8
+            || !o9 || !ess1_ok || !ess2_ok || !o10 || !o11 || !o12 || !o13 || !o14) {
             printf("\nERROR: Binary validation FAILED - unexpected bytes at patch sites.\n");
             printf("This discord_voice.node does not match the expected build.\n");
             printf("These offsets cannot be safely applied to a different version.\n");
@@ -1113,7 +1173,32 @@ private:
                 }
             }
         }
-        if (!PatchBytes(Offsets::EmulateStereoSuccess2, "\xEB", 1)) return false;
+        // EmulateStereoSuccess2: older builds use jcc short (74/75 -> EB). Clang uses jz/jnz rel32 (0F 84/85);
+        // writing a single EB on the first byte corrupts the 6-byte insn and can crash. NOP all 6 bytes = always
+        // fall through (same as legacy "force branch" intent for the short form).
+        {
+            uint32_t fo = Offsets::EmulateStereoSuccess2 - Offsets::FILE_OFFSET_ADJUSTMENT;
+            if ((long long)(fo + 6) > fileSize) {
+                printf("ERROR: EmulateStereoSuccess2 site exceeds file size.\n");
+                return false;
+            }
+            unsigned char* p = (unsigned char*)fileData + fo;
+            if (p[0] == 0x0F && (p[1] == 0x84 || p[1] == 0x85)) {
+                if (!PatchBytes(Offsets::EmulateStereoSuccess2, "\x90\x90\x90\x90\x90\x90", 6)) return false;
+            } else if (p[0] == 0x74 || p[0] == 0x75) {
+                if (!PatchBytes(Offsets::EmulateStereoSuccess2, "\xEB", 1)) return false;
+            } else if (p[0] == 0xEB) {
+                /* already short-patched */
+            } else {
+                bool n6 = true;
+                for (int i = 0; i < 6; i++)
+                    if (p[i] != 0x90) n6 = false;
+                if (!n6) {
+                    printf("ERROR: EmulateStereoSuccess2: unexpected bytes (need jcc short, jz/jnz near, or 6x NOP).\n");
+                    return false;
+                }
+            }
+        }
         patchCount++;
         if (!PatchBytes(Offsets::CreateAudioFrameStereo, "\x49\x89\xC4\x90", 4)) return false;
         patchCount++;
