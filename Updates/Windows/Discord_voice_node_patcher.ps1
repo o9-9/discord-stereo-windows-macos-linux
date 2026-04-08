@@ -23,30 +23,30 @@ $Script:SCRIPT_VERSION = "7"
 # Required: exactly these 17 offsets (RVA hex). Copy the "COPY BELOW -> Discord_voice_node_patcher.ps1" block.
 
 $Script:OffsetsMeta = @{
-    FinderVersion = "discord_voice_node_offset_finder.py v5.1.1"
-    Build         = "Mar 23 2026"
-    Size          = 14395320
-    MD5           = "1550d7ceeef04e81435ad87e7409f0f3"
+    FinderVersion = "discord_voice_node_offset_finder.py v5.1.2"
+    Build         = "Mar 30 2026"
+    Size          = 14438840
+    MD5           = "2743017a902fa37ef344d4eafa8dfc14"
 }
 
 $Script:Offsets = @{
-    CreateAudioFrameStereo            = 0x11A351
-    AudioEncoderOpusConfigSetChannels = 0x3AD144
-    MonoDownmixer                     = 0xD9569
-    EmulateStereoSuccess1             = 0x5441FB
-    EmulateStereoSuccess2             = 0x544207
-    EmulateBitrateModified            = 0x54465A
-    SetsBitrateBitrateValue           = 0x546481
-    SetsBitrateBitwiseOr              = 0x546489
-    Emulate48Khz                      = 0x544363
-    HighPassFilter                    = 0x550470
-    HighpassCutoffFilter              = 0x8CCFB0
-    DcReject                          = 0x8CD190
-    DownmixFunc                       = 0x8C9320
-    AudioEncoderOpusConfigIsOk        = 0x3AD3E0
-    ThrowError                        = 0x2C2FE0
-    EncoderConfigInit1                = 0x3AD14E
-    EncoderConfigInit2                = 0x3ACA57
+    CreateAudioFrameStereo            = 0x11A3B1
+    AudioEncoderOpusConfigSetChannels = 0x3AF8F4
+    MonoDownmixer                     = 0xD95C9
+    EmulateStereoSuccess1             = 0x543C0B
+    EmulateStereoSuccess2             = 0x543C17
+    EmulateBitrateModified            = 0x54406A
+    SetsBitrateBitrateValue           = 0x545E91
+    SetsBitrateBitwiseOr              = 0x545E99
+    Emulate48Khz                      = 0x543D73
+    HighPassFilter                    = 0x54FE80
+    HighpassCutoffFilter              = 0x8D7EA0
+    DcReject                          = 0x8D8080
+    DownmixFunc                       = 0x8D4210
+    AudioEncoderOpusConfigIsOk        = 0x3AFB90
+    ThrowError                        = 0x2C3040
+    EncoderConfigInit1                = 0x3AF8FE
+    EncoderConfigInit2                = 0x3AF207
 }
 
 # endregion Offsets
