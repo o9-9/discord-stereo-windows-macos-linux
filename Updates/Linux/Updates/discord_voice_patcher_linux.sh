@@ -16,11 +16,12 @@ SCRIPT_VERSION="7.4"
 SKIP_BACKUP=false
 RESTORE_MODE=false
 
-# --- Colors ------------------------------------------------------------------
+# region Colors
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'
 WHITE='\033[1;37m'; DIM='\033[0;90m'; BOLD='\033[1m'; NC='\033[0m'
+# endregion Colors
 
-# --- Config ------------------------------------------------------------------
+# region Config
 SAMPLE_RATE=48000
 BITRATE=384
 
@@ -36,14 +37,16 @@ CACHE_DIR="$DETECT_HOME/.cache/DiscordVoicePatcher"
 BACKUP_DIR="$CACHE_DIR/Backups"
 LOG_FILE="$CACHE_DIR/patcher.log"
 TEMP_DIR="$CACHE_DIR/build"
+# endregion Config
 
-# --- Build fingerprint (update when targeting a new Discord build) ------------
+# region Build fingerprint (offset target)
 # Run: python discord_voice_node_offset_finder_v5.py <path/to/discord_voice.node>
 # Copy the "COPY BELOW -> discord_voice_patcher_linux.sh" block here.
 EXPECTED_MD5="0d4f726ab33af9d6505c802295e2574c"
 EXPECTED_SIZE=104347656
+# endregion Build fingerprint (offset target)
 
-# --- Linux/ELF patch offsets --------------------------------------------------
+# region Offsets (PASTE HERE)
 OFFSET_CreateAudioFrameStereo=0x3913B3
 OFFSET_AudioEncoderOpusConfigSetChannels=0x769675
 OFFSET_AudioEncoderMultiChannelOpusCh=0x76904E
@@ -63,6 +66,7 @@ OFFSET_ThrowError=0x2D3E60
 OFFSET_EncoderConfigInit1=0x76967F
 OFFSET_EncoderConfigInit2=0x769058
 FILE_OFFSET_ADJUSTMENT=0
+# endregion Offsets (PASTE HERE)
 
 # Required offset names (same 17 as Windows patcher); validate before build.
 REQUIRED_OFFSET_NAMES=(
@@ -74,7 +78,7 @@ REQUIRED_OFFSET_NAMES=(
     EncoderConfigInit1 EncoderConfigInit2
 )
 
-# --- Original bytes at validation sites (must match offsets above) ------------
+# region Validation bytes (anchors)
 # Emulate48Khz: Clang x86_64 uses REX.W + CMOVNB (4 bytes). Do not use 3 NOPs (MSVC cmovb).
 ORIG_Emulate48Khz='{0x48, 0x0F, 0x43, 0xD0}'
 ORIG_AudioEncoderOpusConfigIsOk='{0x55, 0x48, 0x89, 0xE5, 0x8B, 0x0F, 0x31, 0xC0}'
@@ -85,15 +89,17 @@ ORIG_HighpassCutoffFilter='{0x55, 0x48, 0x89, 0xE5}'
 ORIG_DcReject='{0x55, 0x48, 0x89, 0xE5}'
 ORIG_EncoderConfigInit1='{0x00, 0x7D, 0x00, 0x00}'
 ORIG_EncoderConfigInit2='{0x00, 0x7D, 0x00, 0x00}'
+# endregion Validation bytes (anchors)
 
 # Track overall success for conditional cleanup
 PATCH_SUCCESS=false
 
-# --- Logging -----------------------------------------------------------------
+# region Logging
 log_info()  { echo -e "${WHITE}[--]${NC} $1"; echo "[INFO] $1" >> "$LOG_FILE" 2>/dev/null; }
 log_ok()    { echo -e "${GREEN}[OK]${NC} $1"; echo "[OK] $1" >> "$LOG_FILE" 2>/dev/null; }
 log_warn()  { echo -e "${YELLOW}[!!]${NC} $1"; echo "[WARN] $1" >> "$LOG_FILE" 2>/dev/null; }
 log_error() { echo -e "${RED}[XX]${NC} $1"; echo "[ERROR] $1" >> "$LOG_FILE" 2>/dev/null; }
+# endregion Logging
 
 banner() {
     echo ""
@@ -109,7 +115,7 @@ show_settings() {
     echo ""
 }
 
-# --- Parse Args --------------------------------------------------------------
+# region CLI
 SILENT_MODE=false
 PATCH_ALL=false
 
@@ -144,14 +150,16 @@ for arg in "$@"; do
             ;;
     esac
 done
+# endregion CLI
 
-# --- Initialize --------------------------------------------------------------
+# region Init
 mkdir -p "$CACHE_DIR" "$BACKUP_DIR" "$TEMP_DIR"
 echo "=== Discord Voice Patcher Log ===" > "$LOG_FILE"
 echo "Started: $(date)" >> "$LOG_FILE"
 echo "Platform: Linux" >> "$LOG_FILE"
+# endregion Init
 
-# --- Discord Process Detection -----------------------------------------------
+# region Discord process detection
 # Returns 0 if Discord is running, 1 if not.
 # Sets DISCORD_PIDS to the list of matching PIDs.
 DISCORD_PIDS=""
@@ -195,10 +203,7 @@ check_discord_running() {
     return 1
 }
 
-# Prompt user to close Discord, or optionally kill it.
-# On Linux, files are not locked like Windows, but patching while the module
-# is mmap'd by a running process can cause crashes or be overwritten on restart.
-# Additionally, Discord auto-updates modules on launch, which can overwrite patches.
+# Prompt user to close Discord (or terminate in silent mode).
 handle_discord_running() {
     if ! check_discord_running; then
         return 0
@@ -242,6 +247,7 @@ handle_discord_running() {
             ;;
     esac
 }
+# endregion Discord process detection
 
 terminate_discord() {
     log_info "Closing Discord processes..."

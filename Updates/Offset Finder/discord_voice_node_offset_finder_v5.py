@@ -3784,7 +3784,13 @@ def format_windows_debug_mode(results=None):
 
 
 def format_linux_patcher_block(results, bin_info, file_path, file_size):
-    """Linux patcher copy block (ELF file offsets + EXPECTED_MD5/SIZE, REQUIRED_OFFSET_NAMES)."""
+    """Linux patcher copy block (ELF file offsets + EXPECTED_MD5/SIZE).
+
+    Notes:
+    - Emits the standard 17 offsets (same set as the Windows patcher).
+    - Also emits `OFFSET_AudioEncoderMultiChannelOpusCh` (Linux-only, optional) because
+      some builds/configurations use the multi-channel Opus config path.
+    """
     if not bin_info or not file_path or file_size is None:
         return None
     fmt = bin_info.get('format', 'raw')
@@ -3809,17 +3815,19 @@ def format_linux_patcher_block(results, bin_info, file_path, file_size):
         else:
             lines.append(f"OFFSET_{name}=0x0")
     # Linux-only extra (optional): MultiChannel Opus config channels initializer.
+    extra_val = 0
     if "AudioEncoderMultiChannelOpusCh" in results:
-        extra = f"OFFSET_AudioEncoderMultiChannelOpusCh=0x{(results['AudioEncoderMultiChannelOpusCh'] - adj):X}"
-        # Prefer placing right after OpusConfigSetChannels for readability.
-        inserted = False
-        for i, line in enumerate(lines):
-            if line.startswith("OFFSET_AudioEncoderOpusConfigSetChannels="):
-                lines.insert(i + 1, extra)
-                inserted = True
-                break
-        if not inserted:
-            lines.append(extra)
+        extra_val = results["AudioEncoderMultiChannelOpusCh"] - adj
+    extra = f"OFFSET_AudioEncoderMultiChannelOpusCh=0x{extra_val:X}"
+    # Prefer placing right after OpusConfigSetChannels for readability.
+    inserted = False
+    for i, line in enumerate(lines):
+        if line.startswith("OFFSET_AudioEncoderOpusConfigSetChannels="):
+            lines.insert(i + 1, extra)
+            inserted = True
+            break
+    if not inserted:
+        lines.append(extra)
     lines.append("FILE_OFFSET_ADJUSTMENT=0")
     lines.append("")
     lines.append("# Required offset names (same 17 as Windows patcher); validate before build.")

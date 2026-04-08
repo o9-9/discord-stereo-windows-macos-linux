@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-"""
-Discord Voice Node Offset Finder - GUI
-Auto-detects and loads the offset finder script from the same directory.
-Matches the Stereo Installer dark theme.
+"""Discord Voice Node Offset Finder — GUI.
 
-Works with finder v5.1+: 17 offsets (same set as Windows/Linux/macOS patchers).
-Copy Block copies the Windows paste block for PE, or Linux/macOS block when applicable.
+Small Tk GUI wrapper around `discord_voice_node_offset_finder_v5.py`.
 
-Made by: Oracle | Shaun | Hallow | Ascend | Sentry | Sikimzo | Cypher | Crue | Geeko
+- Auto-detects and loads the finder script from nearby directories.
+- Produces copy blocks for Windows (PowerShell), Linux (bash), and macOS.
 """
 
 import os
@@ -35,7 +32,8 @@ SCRIPT_DIR = Path(__file__).parent
 DEBUG_MODE = os.environ.get("OFFSET_FINDER_DEBUG", "").lower() in ("1", "true", "yes") or "--debug" in sys.argv
 
 
-def _cleanup_pycache():
+def _cleanup_pycache() -> None:
+    """Remove `__pycache__` entries near this script (keeps packaged zips tidy)."""
     for d in SCRIPT_DIR.glob("__pycache__"):
         shutil.rmtree(d, ignore_errors=True)
 
@@ -43,7 +41,7 @@ def _cleanup_pycache():
 atexit.register(_cleanup_pycache)
 
 
-def _hub_scripts_cache_dir():
+def _hub_scripts_cache_dir() -> Path | None:
     """If Stereo Hub synced the finder, it may live here (same layout as discord_stereo_hub_gui.hub_scripts_dir)."""
     try:
         if sys.platform == "win32":
@@ -56,7 +54,7 @@ def _hub_scripts_cache_dir():
         return None
 
 
-def _finder_script_search_dirs():
+def _finder_script_search_dirs() -> list[Path]:
     """Prefer OFFSET FINDER/LATEST; also Stereo Hub cache when manifest synced the .py there."""
     dirs = [SCRIPT_DIR]
     hub_scripts = _hub_scripts_cache_dir()
@@ -65,28 +63,51 @@ def _finder_script_search_dirs():
     return dirs
 
 
-BG           = "#1e1e1e"
-BG_LIGHT     = "#2d2d2d"
-BG_INPUT     = "#1a1a1a"
-FG           = "#e0e0e0"
-FG_DIM       = "#888888"
-FG_ACCENT    = "#ffffff"
-BORDER       = "#3a3a3a"
-GREEN        = "#4caf50"
-GREEN_HOVER  = "#66bb6a"
-BLUE         = "#2196f3"
-BLUE_HOVER   = "#42a5f5"
-ORANGE       = "#ff9800"
-ORANGE_HOVER = "#ffb74d"
-GRAY_BTN     = "#555555"
-GRAY_HOVER   = "#666666"
-RED          = "#f44336"
-YELLOW       = "#fdd835"
-CYAN         = "#4dd0e1"
-SELECT_BG    = "#0d47a1"
+THEME = {
+    "BG": "#1e1e1e",
+    "BG_LIGHT": "#2d2d2d",
+    "BG_INPUT": "#1a1a1a",
+    "FG": "#e0e0e0",
+    "FG_DIM": "#888888",
+    "FG_ACCENT": "#ffffff",
+    "BORDER": "#3a3a3a",
+    "GREEN": "#4caf50",
+    "GREEN_HOVER": "#66bb6a",
+    "BLUE": "#2196f3",
+    "BLUE_HOVER": "#42a5f5",
+    "ORANGE": "#ff9800",
+    "ORANGE_HOVER": "#ffb74d",
+    "GRAY_BTN": "#555555",
+    "GRAY_HOVER": "#666666",
+    "RED": "#f44336",
+    "YELLOW": "#fdd835",
+    "CYAN": "#4dd0e1",
+    "SELECT_BG": "#0d47a1",
+}
+
+# Back-compat aliases (keep UI code readable / minimal diff)
+BG = THEME["BG"]
+BG_LIGHT = THEME["BG_LIGHT"]
+BG_INPUT = THEME["BG_INPUT"]
+FG = THEME["FG"]
+FG_DIM = THEME["FG_DIM"]
+FG_ACCENT = THEME["FG_ACCENT"]
+BORDER = THEME["BORDER"]
+GREEN = THEME["GREEN"]
+GREEN_HOVER = THEME["GREEN_HOVER"]
+BLUE = THEME["BLUE"]
+BLUE_HOVER = THEME["BLUE_HOVER"]
+ORANGE = THEME["ORANGE"]
+ORANGE_HOVER = THEME["ORANGE_HOVER"]
+GRAY_BTN = THEME["GRAY_BTN"]
+GRAY_HOVER = THEME["GRAY_HOVER"]
+RED = THEME["RED"]
+YELLOW = THEME["YELLOW"]
+CYAN = THEME["CYAN"]
+SELECT_BG = THEME["SELECT_BG"]
 
 
-def _ascii_safe(s):
+def _ascii_safe(s: str | bytes) -> str:
     """Patcher blocks and console copy should be ASCII-only; replace non-ASCII for clipboard."""
     if not s:
         return ""

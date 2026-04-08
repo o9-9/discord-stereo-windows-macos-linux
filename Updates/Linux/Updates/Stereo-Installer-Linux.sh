@@ -10,7 +10,7 @@ set -euo pipefail
 
 SCRIPT_VERSION="2.1"
 
-# --- Configuration -----------------------------------------------------------
+# region Configuration
 # With sudo, use invoking user's home for config/cache so we find their Discord.
 DETECT_HOME="${HOME:-}"
 if [[ -n "${SUDO_USER:-}" ]] && [[ "$(id -u 2>/dev/null)" -eq 0 ]]; then
@@ -30,14 +30,16 @@ SETTINGS_FILE="$APP_DATA_ROOT/settings.json"
 LOG_FILE="$APP_DATA_ROOT/debug.log"
 MAX_BACKUPS_PER_CLIENT=3
 MAX_LOG_SIZE_MB=5
+# endregion Configuration
 
-# --- Colors ------------------------------------------------------------------
+# region Colors
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'; WHITE='\033[1;37m'; DIM='\033[0;90m'; BLUE='\033[0;34m'
 BOLD='\033[1m'; NC='\033[0m'; ORANGE='\033[0;33m'
 LIMEGREEN='\033[1;32m'; UNDERLINE='\033[4m'
+# endregion Colors
 
-# --- CLI Flags ---------------------------------------------------------------
+# region CLI
 SILENT_MODE=false
 CHECK_ONLY=false
 RESTORE_MODE=false
@@ -95,8 +97,9 @@ for arg in "$@"; do
 done
 
 ORIGINAL_ARGS=("$@")
+# endregion CLI
 
-# --- Logging -----------------------------------------------------------------
+# region Logging
 ensure_dir() { [[ -d "$1" ]] || mkdir -p "$1" 2>/dev/null || true; }
 
 rotate_log() {
@@ -132,6 +135,7 @@ status() {
         echo -e "${DIM}[$(date '+%H:%M:%S')]${NC} ${color}${1}${NC}"
     fi
 }
+# endregion Logging
 
 banner() {
     echo ""
