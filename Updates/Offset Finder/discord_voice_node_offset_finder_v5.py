@@ -453,6 +453,18 @@ ELF_SYMBOL_MAP = {
         "at_start": False,
         "linux_scan": "opus_config_channels",
     },
+    "AudioEncoderMultiChannelOpusCh": {
+        # webrtc::AudioEncoderMultiChannelOpusConfig::AudioEncoderMultiChannelOpusConfig() [constructor]
+        # Contains channels=1 byte at +0xA: mov qword [rdi+8], 1
+        "patterns": [
+            "AudioEncoderMultiChannelOpusConfigC1Ev",
+            "AudioEncoderMultiChannelOpusConfigC2Ev",
+            "AudioEncoderMultiChannelOpusConfig",
+            "MultiChannelOpusConfig",
+        ],
+        "at_start": False,
+        "linux_scan": "multichannel_opus_config_channels",
+    },
     "SetsBitrateBitrateValue": {
         "patterns": ["WebrtcAdmHelper22EnsureRecordingStarted",
                      "WebrtcAdmHelper20EnsurePlayoutStarted"],
@@ -1158,6 +1170,19 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
     end = min(func_start + func_size, len(data))
     func = data[func_start:end]
     flen = len(func)
+
+    if scan_type == "multichannel_opus_config_channels":
+        # AudioEncoderMultiChannelOpusConfig constructor: channels=1 in struct at +0xA
+        # C7 07 14 00 00 00                 (mov dword ptr [rdi], 0x14)
+        # 48 C7 47 08 01 00 00 00            (mov qword ptr [rdi+8], 1) <- target byte is the 01
+        pat = b"\xC7\x07\x14\x00\x00\x00\x48\xC7\x47\x08"
+        for i in range(flen - (len(pat) + 4)):
+            if func[i : i + len(pat)] != pat:
+                continue
+            ch_off = i + len(pat)
+            if ch_off < flen and func[ch_off] in (0x01, 0x02):
+                return func_start + ch_off + adj
+        return None
 
     if scan_type == "opus_config_channels":
         # AudioEncoderOpusConfig constructor: packed movabs then channels=1
@@ -2401,6 +2426,7 @@ def _all_offset_names():
 ALL_OFFSET_NAMES = [
     "CreateAudioFrameStereo",
     "AudioEncoderOpusConfigSetChannels",
+    "AudioEncoderMultiChannelOpusCh",
     "MonoDownmixer",
     "EmulateStereoSuccess1",
     "EmulateStereoSuccess2",
@@ -2418,7 +2444,26 @@ ALL_OFFSET_NAMES = [
     "EncoderConfigInit2",
 ]
 
-WINDOWS_PATCHER_OFFSET_NAMES = list(ALL_OFFSET_NAMES)
+WINDOWS_PATCHER_OFFSET_NAMES = [
+    # Keep Windows patcher contract: exactly these 17 keys.
+    "CreateAudioFrameStereo",
+    "AudioEncoderOpusConfigSetChannels",
+    "MonoDownmixer",
+    "EmulateStereoSuccess1",
+    "EmulateStereoSuccess2",
+    "EmulateBitrateModified",
+    "SetsBitrateBitrateValue",
+    "SetsBitrateBitwiseOr",
+    "Emulate48Khz",
+    "HighPassFilter",
+    "HighpassCutoffFilter",
+    "DcReject",
+    "DownmixFunc",
+    "AudioEncoderOpusConfigIsOk",
+    "ThrowError",
+    "EncoderConfigInit1",
+    "EncoderConfigInit2",
+]
 
 PATCHER_OFFSET_NAMES = WINDOWS_PATCHER_OFFSET_NAMES
 
@@ -3763,6 +3808,18 @@ def format_linux_patcher_block(results, bin_info, file_path, file_size):
             lines.append(f"OFFSET_{name}=0x{file_off:X}")
         else:
             lines.append(f"OFFSET_{name}=0x0")
+    # Linux-only extra (optional): MultiChannel Opus config channels initializer.
+    if "AudioEncoderMultiChannelOpusCh" in results:
+        extra = f"OFFSET_AudioEncoderMultiChannelOpusCh=0x{(results['AudioEncoderMultiChannelOpusCh'] - adj):X}"
+        # Prefer placing right after OpusConfigSetChannels for readability.
+        inserted = False
+        for i, line in enumerate(lines):
+            if line.startswith("OFFSET_AudioEncoderOpusConfigSetChannels="):
+                lines.insert(i + 1, extra)
+                inserted = True
+                break
+        if not inserted:
+            lines.append(extra)
     lines.append("FILE_OFFSET_ADJUSTMENT=0")
     lines.append("")
     lines.append("# Required offset names (same 17 as Windows patcher); validate before build.")

@@ -43,10 +43,9 @@ TEMP_DIR="$CACHE_DIR/build"
 EXPECTED_MD5="0d4f726ab33af9d6505c802295e2574c"
 EXPECTED_SIZE=104347656
 
-# --- Linux/ELF patch offsets (Stable 0.0.130 / 0.0.131, same node blob) ----------
+# --- Linux/ELF patch offsets --------------------------------------------------
 OFFSET_CreateAudioFrameStereo=0x3913B3
 OFFSET_AudioEncoderOpusConfigSetChannels=0x769675
-# webrtc::AudioEncoderMultiChannelOpusConfig::C1 — same mov qword [rdi+8], 1 (Linux often uses this path)
 OFFSET_AudioEncoderMultiChannelOpusCh=0x76904E
 OFFSET_MonoDownmixer=0x35FB76
 OFFSET_EmulateStereoSuccess1=0x39EE53
@@ -866,7 +865,7 @@ private:
         if (!PatchBytes(Offsets::AudioEncoderOpusConfigSetChannels, "\x02", 1)) return false;
         patchCount++;
         // MultiChannel Opus ctor also defaults channels=1; voice stack may never touch AudioEncoderOpusConfig alone.
-        {
+        if (Offsets::AudioEncoderMultiChannelOpusCh != 0) {
             uint32_t fomc = Offsets::AudioEncoderMultiChannelOpusCh - Offsets::FILE_OFFSET_ADJUSTMENT;
             if ((long long)(fomc + 1) <= fileSize && (long long)fomc >= 4) {
                 unsigned char* insn = (unsigned char*)fileData + fomc - 4;
@@ -937,6 +936,16 @@ private:
                 return false;
             }
             printf("  Verified bitrate: %u bps\n", setBitrateValue);
+        }
+
+        // Stereo channel verification (quick sanity check for "still mono" reports)
+        {
+            uint32_t ch1 = 0, ch2 = 0;
+            bool ok1 = ReadU32LE(Offsets::AudioEncoderOpusConfigSetChannels, ch1);
+            bool ok2 = true;
+            if (Offsets::AudioEncoderMultiChannelOpusCh != 0) ok2 = ReadU32LE(Offsets::AudioEncoderMultiChannelOpusCh, ch2);
+            if (ok1) printf("  OpusConfig channels byte: 0x%02X\n", (unsigned int)(ch1 & 0xFF));
+            if (Offsets::AudioEncoderMultiChannelOpusCh != 0 && ok2) printf("  MultiChannel channels byte: 0x%02X\n", (unsigned int)(ch2 & 0xFF));
         }
 
         printf("\n  Applied %d patches successfully!\n", patchCount);
