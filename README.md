@@ -13,66 +13,137 @@
 
 ---
 
-## 🍎 macOS Patcher — Live
+## Start here (pick your platform)
+
+| I use… | Easiest path (recommended) | You’ll need |
+|--------|------------------------------|-------------|
+| **Windows** | [Windows — Voice Fixer (easy)](#windows-easy) | Discord installed, internet |
+| **Linux** | [Linux — Stereo Installer (easy)](#linux-easy) | `bash`, `curl`, Discord installed |
+| **macOS** | [macOS patcher (Codeberg)](#macos-patcher--live) | Follow the Codeberg guide |
+
+**Not sure what to download?** Use the **easy** path for your OS. It installs **pre-patched** voice modules and does **not** require a C++ compiler.
+
+**Advanced users** who compile patches locally or use fresh offsets: jump to [Advanced: runtime patcher](#advanced-runtime-patcher).
+
+---
+
+## Releases and “latest from GitHub”
+
+| What | Where |
+|------|--------|
+| **Bundled Windows + Linux installers** | **[GitHub Releases](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases)** (example: [v0.5](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v0.5)) |
+| **macOS** | **[Codeberg — Discord Stereo Patcher (macOS)](https://codeberg.org/DiscordStereoPatcher-macOS)** |
+| **Always-up-to-date scripts** (what launchers download) | **[`Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates)** on the `main` branch |
+
+The **`Updates/`** tree is the canonical source for scripts — used by auto-updaters, launchers, and people who run files directly from the repo.
+
+---
+
+<a id="windows-easy"></a>
+
+## Windows — Voice Fixer (easy)
+
+**What it does:** downloads **pre-patched** `discord_voice.node` files into your Discord install(s), with backup/restore and update checks. **No compiler.**
+
+**Steps**
+
+1. **Close Discord** completely (check the system tray).
+2. Open the repo folder **[`Updates/Windows/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Windows)** on GitHub.
+3. Download **`Stereo Installer.bat`** (raw file: [link](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Windows/Stereo%20Installer.bat)).
+4. **Right-click → Run as administrator** (recommended so paths under `%LOCALAPPDATA%` can be updated reliably).
+5. Follow the **DiscordVoiceFixer** GUI: pick your client(s), install, restart Discord when prompted.
+
+**Direct script (same flow):** the BAT fetches [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/DiscordVoiceFixer.ps1) from `main`. Advanced users can run that PowerShell script directly if they prefer.
+
+---
+
+<a id="linux-easy"></a>
+
+## Linux — Stereo Installer (easy)
+
+**What it does:** downloads **pre-patched** Linux voice modules for detected Discord installs (deb / Flatpak / Snap paths where supported), with backups. **No compiler** for this path.
+
+**Steps**
+
+1. **Close Discord.**
+2. Open **[`Updates/Linux/Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates)**.
+3. Download **`Stereo-Installer-Linux.sh`** ([raw](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Linux/Updates/Stereo-Installer-Linux.sh)).
+4. In a terminal:
+   ```bash
+   chmod +x Stereo-Installer-Linux.sh
+   ./Stereo-Installer-Linux.sh
+   ```
+5. Use the GUI if it opens, or run `./Stereo-Installer-Linux.sh --no-gui` for a terminal menu. See `./Stereo-Installer-Linux.sh --help` for restore, silent fix, and diagnostics.
+
+**Optional launcher (downloads latest helper + GUI into a folder):** [`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh) — run from a directory where you want a `Linux Stereo Installer/` folder created.
+
+---
+
+<a id="advanced-runtime-patcher"></a>
+
+## Advanced: runtime patcher
+
+Use this when you need **full control**, or your Discord build is **newer than** the published pre-patched nodes — after updating **offsets** (see [Offset Finder](#offset-finder)). This path **compiles** a small helper and **patches your local** `discord_voice.node` at runtime.
+
+| Platform | Entry point | Also requires |
+|----------|-------------|----------------|
+| **Windows** | [`Stereo-Node-Patcher-Windows.BAT`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Stereo-Node-Patcher-Windows.BAT) → [`Discord_voice_node_patcher.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Discord_voice_node_patcher.ps1) | **C++ toolchain** (e.g. Visual Studio C++ or MinGW-w64) |
+| **Linux** | [`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh) | **`g++`** (and usual build deps) |
+
+**Linux note:** the script can download a stock **unpatched** Linux `discord_voice.node` from this repo, then patch it — or use `--patch-local` to patch a file you already have. See `--help` inside the script.
+
+---
+
+## macOS Patcher — Live
 
 The macOS patcher is officially active. Huge thanks to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills/Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)** for six months of work to make it happen.
 
-- Bash patcher with auto-detection
-- Code signing handling
-- Apple Silicon (Rosetta) support
+- Bash patcher with auto-detection  
+- Code signing handling  
+- Apple Silicon (Rosetta) support  
 
 👉 **[Get the macOS Patcher on Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS)**
 
 ---
 
-## 🚀 Releases
-
-Bundled **Windows + Linux** patchers and installers ship on **[GitHub Releases (v0.5)](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v0.5)**.
-
-**macOS** tooling lives on **[Codeberg — Discord Stereo Patcher (macOS)](https://codeberg.org/DiscordStereoPatcher-macOS)**.
-
-The **`Updates/`** tree is the canonical source for raw scripts — used by auto-updaters, launchers, and advanced users running directly from `main`.
-
----
-
-## 🎯 Mission
+## Mission
 
 Enable **filterless true stereo** at **high bitrates** in Discord and beyond — focusing on signal integrity, channel behavior, and real-time media experimentation across all three platforms.
 
 ---
 
-## 🔬 What We Do
+## What we do
 
 | Area | Focus |
-|---|---|
-| **True Stereo Preservation** | Bypass mono downmix, force 2-channel output |
-| **Bitrate Unlocking** | Remove encoder caps, push toward Opus high-bitrate |
-| **Sample Rate Restoration** | Bypass 24kHz limits → native 48kHz |
-| **Filter Bypassing** | Disable HP filters, DC rejection, gain processing |
-| **Signal Integrity** | Clean passthrough without Discord's audio "enhancements" |
+|------|--------|
+| **True stereo preservation** | Bypass mono downmix, force 2-channel output |
+| **Bitrate unlocking** | Remove encoder caps, push toward Opus high-bitrate |
+| **Sample rate restoration** | Bypass 24 kHz limits → native 48 kHz |
+| **Filter bypassing** | Disable HP filters, DC rejection, gain processing |
+| **Signal integrity** | Clean passthrough without Discord's audio "enhancements" |
 
 ---
 
-## 📂 Repository Layout
+## Repository layout
 
 Everything shippable and research-related lives in two top-level folders.
 
 ### [`Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates)
 
 | Path | Contents |
-|---|---|
-| [`Updates/Windows/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Windows) | [`Discord_voice_node_patcher.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Discord_voice_node_patcher.ps1) — core binary patcher; compiles C++ at runtime and applies patches directly to `discord_voice.node` at known offsets · [`Stereo-Node-Patcher-Windows.BAT`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Stereo-Node-Patcher-Windows.BAT) — BAT launcher that invokes the patcher PS1 · [`Stereo Installer.bat`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Stereo%20Installer.bat) — one-click launcher that downloads and runs `DiscordVoiceFixer.ps1` · [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/DiscordVoiceFixer.ps1) — pre-patched node installer; GUI that downloads and drops pre-patched `discord_voice.node` files, with backup/restore, update detection, and EQ APO fix |
-| [`Updates/Linux/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux) | [`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh) — top-level Linux launcher · [`Updates/Linux/Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates) contains [`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh) — core patcher · [`Stereo-Installer-Linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/Updates/Stereo-Installer-Linux.sh) — installer helper |
-| [`Updates/Offset Finder/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Offset%20Finder) | [`discord_voice_node_offset_finder_v5.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Offset%20Finder/discord_voice_node_offset_finder_v5.py) — CLI tool to discover/validate RVAs after a Discord update · [`offset_finder_gui.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Offset%20Finder/offset_finder_gui.py) — GUI wrapper for the same |
-| [`Updates/Nodes/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes) | **Unpatched Nodes** — stock module metadata the patcher expects · **Patched Nodes** — pre-patched bundles for the Windows installer flow |
+|------|----------|
+| [`Updates/Windows/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Windows) | **`Stereo Installer.bat`** → Voice Fixer (pre-patched nodes) · **`Stereo-Node-Patcher-Windows.BAT`** → runtime patcher PS1 |
+| [`Updates/Linux/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux) | **`discord-stereo-launcher.sh`** · **`Updates/Linux/Updates/`** — **`Stereo-Installer-Linux.sh`**, **`discord_voice_patcher_linux.sh`** |
+| [`Updates/Offset Finder/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Offset%20Finder) | **`discord_voice_node_offset_finder_v5.py`**, **`offset_finder_gui.py`** |
+| [`Updates/Nodes/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes) | Unpatched / patched module metadata the installers expect |
 
 ### [`Voice Node Dump/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Voice%20Node%20Dump)
 
-Archived `discord_voice` module trees keyed by **platform + build** — used for offset research, regression checks, and comparing unpatched vs patched layouts. Maintainer/contributor material; not required to run the patcher from Releases.
+Archived `discord_voice` module trees keyed by **platform + build** — for offset research and regression checks. Maintainer material; **not** required to use Releases or the easy installers.
 
 ---
 
-## ❓ FAQ
+## FAQ
 
 <details>
 <summary><b>Discord updated and the patcher stopped working</b></summary>
@@ -85,7 +156,7 @@ Check [`Updates/Windows/Discord_voice_node_patcher.ps1`](https://github.com/Prod
 <details>
 <summary><b>"No C++ compiler found"</b></summary>
 
-The patcher compiles a small C++ binary at runtime. You need a compiler:
+The **runtime patcher** compiles a small C++ binary at runtime. The **easy installers** do not need a compiler.
 
 **Windows:** Install [Visual Studio](https://visualstudio.microsoft.com/) (Community, select "Desktop development with C++") or [MinGW-w64](https://www.mingw-w64.org/).
 
@@ -235,7 +306,7 @@ If you're using a **VPN, your audio may not transmit correctly.** Low-quality or
 
 ---
 
-## 🧬 Technical Deep Dive
+## Technical deep dive
 
 ### Architecture
 
@@ -253,13 +324,13 @@ Patcher (Bash/PowerShell)
 └──────────────────────────┘
 ```
 
-### The 17 Patch Targets
+### The 17 patch targets
 
-| # | Target | What It Does | Patch |
-|---|---|---|---|
+| # | Target | What it does | Patch |
+|---|--------|--------------|--------|
 | 1 | `CreateAudioFrameStereo` | Forces stereo channel count in frame metadata | `mov r13,rax; nop` (Win) / `mov r12,rax; nop` (Linux/macOS) |
 | 2 | `AudioEncoderOpusConfigSetChannels` | Overwrite channel immediate to `2` | `0x02` |
-| 3 | `MonoDownmixer` | Bypasses stereo→mono mix entirely | 12× `NOP` + `JMP` |
+| 3 | `MonoDownmixer` | Bypasses stereo→mono mix entirely | NOP block + `JMP rel32` (layout-aware on Linux Clang vs MSVC) |
 | 4 | `EmulateStereoSuccess1` | Forces stereo capability check to return `2` | `0x02` |
 | 5 | `EmulateStereoSuccess2` | Patches conditional branch to unconditional jump | `JMP (0xEB)` |
 | 6 | `EmulateBitrateModified` | Overwrites bitrate result with 400000 | `0x80 0x1A 0x06` |
@@ -275,10 +346,10 @@ Patcher (Bash/PowerShell)
 | 16 | `EncoderConfigInit1` | First Opus config constructor — init to 400kbps | `0x80 0x1A 0x06 0x00` |
 | 17 | `EncoderConfigInit2` | Second Opus config constructor — same | `0x80 0x1A 0x06 0x00` |
 
-### Platform Differences
+### Platform differences
 
 | Aspect | Windows (PE) | Linux (ELF) | macOS (Mach-O) |
-|---|---|---|---|
+|--------|--------------|-------------|----------------|
 | **Compiler** | MSVC | Clang | Clang |
 | **Calling convention** | rcx, rdx, r8, r9 | rdi, rsi, rdx, rcx | rdi, rsi, rdx, rcx |
 | **Image base** | `0x180000000` | 0 (PIE) | 0 (PIE) |
@@ -287,7 +358,7 @@ Patcher (Bash/PowerShell)
 | **ConfigIsOk patch** | 8-byte `mov rax,1; ret` | 1-byte `ret` | 1-byte `ret` |
 | **HighPassFilter patch** | 11-byte stub | 1-byte `ret` | 1-byte `ret` |
 
-### Amplifier Injection
+### Amplifier injection
 
 `hp_cutoff` and `dc_reject` are compiled separately, then their machine code is copied byte-for-byte into the binary at the corresponding offsets — replacing Discord's filter implementations with custom versions that write specific values to the Opus encoder state and apply a gain multiplier: `out[i] = in[i] * (channels + Multiplier)`.
 
@@ -299,31 +370,31 @@ When Discord rebases `discord_voice.node`, RVAs move. Run [`discord_voice_node_o
 
 ---
 
-## 📋 Changelog
+## Changelog
 
-### Repo Layout (Mar 2026)
+### Repo layout (Mar 2026)
 - Flattened shipping assets under `Updates/` (Windows, Linux, Offset Finder, Nodes)
 - Added `Voice Node Dump/` for archived module trees and build-to-build research
 - README paths updated; macOS remains on [Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS)
 
-### v6.0 — Cross-Platform Release (Feb 2026)
-- 🍎 macOS Patcher — native bash, code signing, Apple Silicon (Rosetta)
-- 🐧 Linux Beta Patcher — native bash, auto-detects deb/Flatpak/Snap
+### v6.0 — Cross-platform release (Feb 2026)
+- macOS Patcher — native bash, code signing, Apple Silicon (Rosetta)
+- Linux beta patcher — native bash, auto-detects deb/Flatpak/Snap
 - Platform-specific patch bytes (r12 vs r13, je vs jne, Clang vs MSVC prologue)
 - POSIX file I/O (mmap/msync) for Linux/macOS
 
-### v5.0 — Multi-Client & GUI Patcher (Feb 2026)
+### v5.0 — Multi-client & GUI patcher (Feb 2026)
 - Multi-client detection (Stable, Canary, PTB, BD, Vencord, Equicord, etc.)
 - GUI patcher with gain slider, backup/restore, auto-relaunch
 - Auto-updater with version comparison and downgrade prevention
 - User config persistence
 
-### v4.0 — Encoder Config Init (Feb 2026)
+### v4.0 — Encoder config init (Feb 2026)
 - Patched both Opus encoder config constructors (`EncoderConfigInit1`, `EncoderConfigInit2`)
 - Prevents bitrate reset between encoder creation and first `SetBitrate`
 - `DuplicateEmulateBitrateModified` path patching
 
-### v3.0 — Full Stereo Pipeline (Jan 2026)
+### v3.0 — Full stereo pipeline (Jan 2026)
 - Complete stereo enforcement: `CreateAudioFrameStereo`, `SetChannels`, `MonoDownmixer`
 - Bitrate unlock across encoder paths
 - 48kHz sample rate restoration
@@ -331,22 +402,22 @@ When Discord rebases `discord_voice.node`, RVAs move. Run [`discord_voice_node_o
 - `ConfigIsOk` override and `ThrowError` suppression
 - Configurable audio gain (1–10x)
 
-### v2.0 — Initial Patcher (Jan 2026)
+### v2.0 — Initial patcher (Jan 2026)
 - Basic binary patching for stereo and bitrate
 - Single-client support, manual offset entry
 
-### v1.0 — Proof of Concept (Dec 2025)
+### v1.0 — Proof of concept (Dec 2025)
 - Manual hex editing guide, initial Windows PE research
 
 ---
 
-## 🤝 Partners
+## Partners
 
 [Shaun (sh6un)](https://github.com/sh6un) · [UnpackedX](https://codeberg.org/UnpackedX) · [Voice Playground](https://discord-voice.xyz/) · [Oracle](https://github.com/oracle-dsc) · [Loof-sys](https://github.com/LOOF-sys) · [Hallow](https://github.com/ProdHallow) · [Ascend](https://github.com/bloodybapestas) · BluesCat · [Sentry](https://github.com/sentry1000) · [Sikimzo](https://github.com/sikimzo) · [CRÜE](https://codeberg.org/DiscordStereoPatcher-macOS) · [HorrorPills / Geeko](https://github.com/HorrorPills)
 
 ---
 
-## 💬 Get Involved
+## Get involved
 
 Found new offsets? Have test results? Want to help reverse engineer macOS/Linux builds? **Contributors, testers, and audio nerds welcome.**
 
