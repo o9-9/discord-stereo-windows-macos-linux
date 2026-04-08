@@ -28,6 +28,9 @@ BITRATE_PATCH_3 = " ".join(f"{b:02X}" for b in _BITRATE_LE[:3])
 BITRATE_PATCH_4 = " ".join(f"{b:02X}" for b in _BITRATE_LE)
 BITRATE_PATCH_5 = BITRATE_PATCH_4 + " 00"
 
+# Phase-2 relative offsets from anchors (mostly MSVC / PE layout). Used on PE for
+# derivation when scans miss; several keys are meaningless on Clang ELF/Mach-O
+# (see _PHASE2_SKIP_CLANG). Cross-validation of these distances runs on PE only.
 DERIVATIONS = {
     "EmulateStereoSuccess2": [
         ("EmulateStereoSuccess1", 0xC),
@@ -58,6 +61,13 @@ DERIVATIONS = {
         ("AudioEncoderOpusConfigSetChannels", 0xA),
     ],
 }
+
+# On ELF/Mach-O, ApplySettings→bitrate/48kHz/HP sites are not at MSVC deltas;
+# those entries are resolved via symbols or PHASE 2b. Skipping Phase 2 here
+# avoids a bogus [FAIL] line before heuristics succeed.
+_PHASE2_SKIP_CLANG = frozenset({
+    "EmulateBitrateModified",
+})
 
 SLIDING_WINDOW_DEFAULT = 128
 SLIDING_WINDOW_OVERRIDES = {
@@ -2617,46 +2627,46 @@ def _run_heuristic_scan(data, missing_names, adj, text_start, text_end):
     return hints[:15]
 
 
-def _cross_validate(results, adj, data, tiers_used=None):
-    """Cross-validate independently found offsets for internal consistency.
+def _cross_validate(results, adj, data, tiers_used=None, bin_fmt='pe'):
+    """Cross-validate discovered offsets.
 
-    Checks:
-      1. Derivation pairs: if both anchor and derived are found independently,
-         verify their distance matches the expected delta.
-      2. Encoder config pair: EncoderConfigInit1 and EncoderConfigInit2 (Linux/macOS).
-      3. Bitrate consistency where both EmulateBitrateModified and Duplicate are found.
+    On **PE**: optional derivation-distance checks against DERIVATIONS (MSVC-oriented
+    layout), plus symbol-tier skips when the address came from the symbol table.
+
+    On **ELF/Mach-O**: derivation distances are not meaningful vs MSVC anchors; Phase 3
+    byte verification is authoritative. We only run encoder-init literal checks here.
+
+    (There is no separate "DuplicateEmulateBitrateModified" check in this function.)
     """
     warnings = []
     tiers = tiers_used or {}
 
-    # Check derivation distances
-    for derived_name, paths in DERIVATIONS.items():
-        if derived_name not in results:
-            continue
-        # Skip delta check if the derived offset was found by symbol table
-        # (the symbol gives the true address; the Windows delta is irrelevant)
-        derived_tier = tiers.get(derived_name, '')
-        if derived_tier.startswith('symbol'):
-            continue
-        # Check ALL paths - only warn if NONE match (handles Linux vs Windows deltas)
-        matched_any = False
-        checked_any = False
-        mismatch_msg = None
-        for anchor_name, expected_delta in paths:
-            if anchor_name not in results:
+    # Derivation-distance sanity: PE only (Clang layout != MSVC fixed deltas).
+    if bin_fmt == 'pe':
+        for derived_name, paths in DERIVATIONS.items():
+            if derived_name not in results:
                 continue
-            checked_any = True
-            actual_delta = results[derived_name] - results[anchor_name]
-            if actual_delta == expected_delta:
-                matched_any = True
-                break
-            mismatch_msg = (
-                f"Delta mismatch: {derived_name} - {anchor_name} = "
-                f"0x{actual_delta:X} (expected deltas: "
-                f"{', '.join(f'0x{d:X}' for _, d in paths)})"
-            )
-        if checked_any and not matched_any and mismatch_msg:
-            warnings.append(mismatch_msg)
+            derived_tier = tiers.get(derived_name, '')
+            if derived_tier.startswith('symbol'):
+                continue
+            matched_any = False
+            checked_any = False
+            mismatch_msg = None
+            for anchor_name, expected_delta in paths:
+                if anchor_name not in results:
+                    continue
+                checked_any = True
+                actual_delta = results[derived_name] - results[anchor_name]
+                if actual_delta == expected_delta:
+                    matched_any = True
+                    break
+                mismatch_msg = (
+                    f"Delta mismatch: {derived_name} - {anchor_name} = "
+                    f"0x{actual_delta:X} (expected deltas: "
+                    f"{', '.join(f'0x{d:X}' for _, d in paths)})"
+                )
+            if checked_any and not matched_any and mismatch_msg:
+                warnings.append(mismatch_msg)
 
     if "EncoderConfigInit1" in results and "EncoderConfigInit2" in results:
         for name in ["EncoderConfigInit1", "EncoderConfigInit2"]:
@@ -3152,6 +3162,8 @@ def _discover_offsets_impl(data, bin_info):
     for derived_name in _topo_sort_derivations(DERIVATIONS):
         if derived_name in results:
             continue
+        if fmt in ('elf', 'macho') and derived_name in _PHASE2_SKIP_CLANG:
+            continue
 
         paths = DERIVATIONS[derived_name]
         found = False
@@ -3266,7 +3278,8 @@ def _discover_offsets_impl(data, bin_info):
                     config_off = None
                 else:
                     tag = "FULL-TEXT" if "full-text-scan" in reason else "ANCHOR"
-                    print(f"  [{tag}] EmulateBitrateModified    = 0x{config_off:X}  [{reason}]  (delta from ESS1: 0x{dist:X})")
+                    print(f"  [{tag}] EmulateBitrateModified    = 0x{config_off:X}  "
+                          f"[{reason}]  (distance from ApplySettings anchor: 0x{dist:X})")
                     results["EmulateBitrateModified"] = config_off
                     tiers_used["EmulateBitrateModified"] = reason
                     missing = [n for n in _all_offset_names() if n not in results]
@@ -3275,8 +3288,8 @@ def _discover_offsets_impl(data, bin_info):
         # Collect far EmulateBitrateModified candidates for last-resort fallback (Mach-O x86_64 only)
         ebm_far_candidates = []
         if hints:
-            # EmulateBitrateModified heuristic must be near EmulateStereoSuccess1 (same function)
-            # to avoid picking a random 32000 elsewhere (macOS/Clang layout can break derivation).
+            # Prefer 32000 sites near ApplySettings anchor (legacy MSVC heuristic);
+            # on Clang, correct EBM is often in another function — far hits go to ebm_far_candidates (Mach-O).
             EMULATE_BITRATE_MAX_DISTANCE = 0x2000  # ~8KB
             for name, file_off, reason in hints:
                 if name in results:
@@ -3377,7 +3390,7 @@ EXPECTED_ORIGINALS_CLANG = {
 
 EXPECTED_ORIGINALS_LINUX_ONLY = {
     "EmulateStereoSuccess1":    ("00", 1),
-    # Linux Clang uses jz (0x74) here; Windows MSVC uses jne (0x75).
+    # jcc short after second stereo cmp: jz (74) or jne (75) depending on build.
     "EmulateStereoSuccess2":    ("74", 1),
     "CreateAudioFrameStereo":   ("4C 0F 43", 4),
     # CommitAudioCodec: REX.W + CMOVNB (4 bytes), not MSVC 3-byte cmovb.
@@ -3462,6 +3475,12 @@ def validate_offsets(data, results, adj, bin_fmt='pe'):
         if name in expected_map:
             expected_hex, length = expected_map[name]
             actual = data[file_off:file_off+length]
+
+            if name == "EmulateStereoSuccess2" and bin_fmt == "elf" and length >= 1:
+                if actual[0] in (0x74, 0x75):
+                    print(f"  [PASS] {name:45s} original bytes: {actual[:1].hex(' ')}")
+                    verified += 1
+                    continue
 
             if expected_hex:
                 expected = bytes.fromhex(expected_hex.replace(' ', ''))
@@ -4269,7 +4288,7 @@ def main():
             run_bitrate_audit_pe(data, results, adj, t_start, t_end)
 
         # --- Cross-validation ------------------------------------------
-        xval_warnings = _cross_validate(results, adj, data, tiers_used=tiers_used)
+        xval_warnings = _cross_validate(results, adj, data, tiers_used=tiers_used, bin_fmt=fmt)
         if xval_warnings:
             print("\n" + "=" * 65)
             print("  PHASE 5: Cross-Validation")

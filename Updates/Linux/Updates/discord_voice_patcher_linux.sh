@@ -12,7 +12,7 @@ fi
 
 set -euo pipefail
 
-SCRIPT_VERSION="7.2"
+SCRIPT_VERSION="7.4"
 SKIP_BACKUP=false
 RESTORE_MODE=false
 
@@ -43,9 +43,11 @@ TEMP_DIR="$CACHE_DIR/build"
 EXPECTED_MD5="0d4f726ab33af9d6505c802295e2574c"
 EXPECTED_SIZE=104347656
 
-# --- Linux/ELF patch offsets (Stable 0.0.130) ---------------------------------
+# --- Linux/ELF patch offsets (Stable 0.0.130 / 0.0.131, same node blob) ----------
 OFFSET_CreateAudioFrameStereo=0x3913B3
 OFFSET_AudioEncoderOpusConfigSetChannels=0x769675
+# webrtc::AudioEncoderMultiChannelOpusConfig::C1 — same mov qword [rdi+8], 1 (Linux often uses this path)
+OFFSET_AudioEncoderMultiChannelOpusCh=0x76904E
 OFFSET_MonoDownmixer=0x35FB76
 OFFSET_EmulateStereoSuccess1=0x39EE53
 OFFSET_EmulateStereoSuccess2=0x39EEC8
@@ -722,6 +724,7 @@ extern "C" void hp_cutoff(const float*, int, float*, int*, int, int, int, int);
 namespace Offsets {
     constexpr uint32_t CreateAudioFrameStereo            = OFFSET_VAL_CreateAudioFrameStereo;
     constexpr uint32_t AudioEncoderOpusConfigSetChannels = OFFSET_VAL_AudioEncoderOpusConfigSetChannels;
+    constexpr uint32_t AudioEncoderMultiChannelOpusCh    = OFFSET_VAL_AudioEncoderMultiChannelOpusCh;
     constexpr uint32_t MonoDownmixer                     = OFFSET_VAL_MonoDownmixer;
     constexpr uint32_t EmulateStereoSuccess1             = OFFSET_VAL_EmulateStereoSuccess1;
     constexpr uint32_t EmulateStereoSuccess2             = OFFSET_VAL_EmulateStereoSuccess2;
@@ -844,12 +847,36 @@ private:
         printf("  [1/5] Enabling stereo audio...\n");
         if (!PatchBytes(Offsets::EmulateStereoSuccess1, "\x02", 1)) return false;
         patchCount++;
+        // Clang ApplySettings: after cmp imm8, the next insn is often jcc short (74/75 xx).
+        // Patching only the immediate leaves jne/jz that still skips stereo; EB xx = jmp same rel8.
+        {
+            uint32_t fo = Offsets::EmulateStereoSuccess1 - Offsets::FILE_OFFSET_ADJUSTMENT;
+            if ((long long)(fo + 2) <= fileSize) {
+                unsigned char* p = (unsigned char*)fileData + fo + 1;
+                if (*p == 0x74 || *p == 0x75) {
+                    *p = 0xEB;
+                    patchCount++;
+                }
+            }
+        }
         if (!PatchBytes(Offsets::EmulateStereoSuccess2, "\xEB", 1)) return false;
         patchCount++;
         if (!PatchBytes(Offsets::CreateAudioFrameStereo, "\x49\x89\xC4\x90", 4)) return false;
         patchCount++;
         if (!PatchBytes(Offsets::AudioEncoderOpusConfigSetChannels, "\x02", 1)) return false;
         patchCount++;
+        // MultiChannel Opus ctor also defaults channels=1; voice stack may never touch AudioEncoderOpusConfig alone.
+        {
+            uint32_t fomc = Offsets::AudioEncoderMultiChannelOpusCh - Offsets::FILE_OFFSET_ADJUSTMENT;
+            if ((long long)(fomc + 1) <= fileSize && (long long)fomc >= 4) {
+                unsigned char* insn = (unsigned char*)fileData + fomc - 4;
+                unsigned char* imm  = (unsigned char*)fileData + fomc;
+                if (memcmp(insn, "\x48\xC7\x47\x08", 4) == 0 && (imm[0] == 0x01 || imm[0] == 0x02)) {
+                    imm[0] = 0x02;
+                    patchCount++;
+                }
+            }
+        }
         if (!PatchBytes(Offsets::MonoDownmixer, "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\xE9", 13)) return false;
         patchCount++;
 
@@ -992,6 +1019,7 @@ PATCHEOF
     sed -i "s/BITRATE_VAL/$BITRATE/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_CreateAudioFrameStereo/${OFFSET_CreateAudioFrameStereo}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_AudioEncoderOpusConfigSetChannels/${OFFSET_AudioEncoderOpusConfigSetChannels}/g" "$TEMP_DIR/patcher.cpp"
+    sed -i "s/OFFSET_VAL_AudioEncoderMultiChannelOpusCh/${OFFSET_AudioEncoderMultiChannelOpusCh}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_MonoDownmixer/${OFFSET_MonoDownmixer}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_EmulateStereoSuccess1/${OFFSET_EmulateStereoSuccess1}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_EmulateStereoSuccess2/${OFFSET_EmulateStereoSuccess2}/g" "$TEMP_DIR/patcher.cpp"
