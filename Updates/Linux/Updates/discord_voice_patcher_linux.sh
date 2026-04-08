@@ -39,34 +39,32 @@ LOG_FILE="$CACHE_DIR/patcher.log"
 TEMP_DIR="$CACHE_DIR/build"
 # endregion Config
 
-# region Build fingerprint (offset target)
+# --- Build fingerprint (update when targeting a new Discord build) ------------
 # Run: python discord_voice_node_offset_finder_v5.py <path/to/discord_voice.node>
 # Copy the "COPY BELOW -> discord_voice_patcher_linux.sh" block here.
-EXPECTED_MD5="0d4f726ab33af9d6505c802295e2574c"
-EXPECTED_SIZE=104347656
-# endregion Build fingerprint (offset target)
+EXPECTED_MD5="60eb8fb70999b092c1f2be1ac0f286ce"
+EXPECTED_SIZE=103869656
 
-# region Offsets (PASTE HERE)
-OFFSET_CreateAudioFrameStereo=0x3913B3
-OFFSET_AudioEncoderOpusConfigSetChannels=0x769675
-OFFSET_AudioEncoderMultiChannelOpusCh=0x76904E
-OFFSET_MonoDownmixer=0x35FB76
-OFFSET_EmulateStereoSuccess1=0x39EE53
-OFFSET_EmulateStereoSuccess2=0x39EEC8
-OFFSET_EmulateBitrateModified=0x39139C
-OFFSET_SetsBitrateBitrateValue=0x356815
-OFFSET_SetsBitrateBitwiseOr=0x35681D
-OFFSET_Emulate48Khz=0x39DA5F
-OFFSET_HighPassFilter=0x704200
-OFFSET_HighpassCutoffFilter=0x7622E0
-OFFSET_DcReject=0x762490
-OFFSET_DownmixFunc=0x98E0A0
-OFFSET_AudioEncoderOpusConfigIsOk=0x769810
-OFFSET_ThrowError=0x2D3E60
-OFFSET_EncoderConfigInit1=0x76967F
-OFFSET_EncoderConfigInit2=0x769058
+# --- Linux/ELF patch offsets --------------------------------------------------
+OFFSET_CreateAudioFrameStereo=0x38F4A3
+OFFSET_AudioEncoderOpusConfigSetChannels=0x7654D5
+OFFSET_AudioEncoderMultiChannelOpusCh=0x764EAE
+OFFSET_MonoDownmixer=0x35E40C
+OFFSET_EmulateStereoSuccess1=0x39BB89
+OFFSET_EmulateStereoSuccess2=0x39C55F
+OFFSET_EmulateBitrateModified=0x38F48C
+OFFSET_SetsBitrateBitrateValue=0x355255
+OFFSET_SetsBitrateBitwiseOr=0x35525D
+OFFSET_Emulate48Khz=0x39AD1F
+OFFSET_HighPassFilter=0x700070
+OFFSET_HighpassCutoffFilter=0x75E140
+OFFSET_DcReject=0x75E2F0
+OFFSET_DownmixFunc=0x989F20
+OFFSET_AudioEncoderOpusConfigIsOk=0x765670
+OFFSET_ThrowError=0x2D3B30
+OFFSET_EncoderConfigInit1=0x7654DF
+OFFSET_EncoderConfigInit2=0x764EB8
 FILE_OFFSET_ADJUSTMENT=0
-# endregion Offsets (PASTE HERE)
 
 # Required offset names (same 17 as Windows patcher); validate before build.
 REQUIRED_OFFSET_NAMES=(
