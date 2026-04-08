@@ -1123,7 +1123,9 @@ private:
 
         const unsigned char orig_mono2[]  = {0x84, 0xC0};
         const unsigned char patch_mono2[] = {0x90, 0x90};
-        bool o13 = OrigOrAlt(Offsets::MonoDownmixer, orig_mono2, 2, patch_mono2, 2);
+        const unsigned char patch_mono_jmp[] = {0xE9};
+        bool o13 = OrigOrAlt(Offsets::MonoDownmixer, orig_mono2, 2, patch_mono2, 2)
+                || CheckBytes(Offsets::MonoDownmixer, patch_mono_jmp, 1);
 
         const unsigned char orig_throw1[] = {0x41};
         const unsigned char patch_throw[] = {0xC3};
@@ -1204,7 +1206,57 @@ private:
         patchCount++;
         if (!PatchBytes(Offsets::AudioEncoderOpusConfigSetChannels, "\x02", 1)) return false;
         patchCount++;
-        if (!PatchBytes(Offsets::MonoDownmixer, "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\xE9", 13)) return false;
+        // MonoDownmixer: NOP the test+jz+cmp, then convert jg to JMP.
+        // Layout varies between MSVC (7-byte cmp dword [rsi+disp32]) and
+        // Clang (4-byte cmp dword [rbx+disp8]).  Detect the jg opcode
+        // dynamically so the NOP sled length is always correct.
+        {
+            uint32_t fo = Offsets::MonoDownmixer - Offsets::FILE_OFFSET_ADJUSTMENT;
+            unsigned char* p = (unsigned char*)fileData + fo;
+            // p[0..1] = test al,al (84 C0)
+            // p[2..3] = jz rel8   (74 xx)
+            // p[4]    = cmp opcode (83)
+            if (p[4] != 0x83) {
+                printf("ERROR: MonoDownmixer: expected cmp (0x83) at +4, got 0x%02X\n", p[4]);
+                return false;
+            }
+            int cmp_mod = p[5] >> 6;
+            int cmp_len;  // total bytes of the cmp instruction
+            if (cmp_mod == 1)      cmp_len = 4;  // cmp [reg+disp8], imm8
+            else if (cmp_mod == 2) cmp_len = 7;  // cmp [reg+disp32], imm8
+            else {
+                printf("ERROR: MonoDownmixer: unexpected cmp mod=%d\n", cmp_mod);
+                return false;
+            }
+            int jg_off = 4 + cmp_len;  // offset of jg from p
+            unsigned char jg0 = p[jg_off];
+            int32_t jmp_target_abs;  // absolute offset from p of the jg target
+            if (jg0 == 0x0F && (p[jg_off+1] == 0x8F || p[jg_off+1] == 0x8D)) {
+                // near jg/jge: 6-byte insn (0F 8F/8D + rel32)
+                int32_t rel32;
+                memcpy(&rel32, p + jg_off + 2, 4);
+                jmp_target_abs = jg_off + 6 + rel32;
+            } else if (jg0 == 0x7F || jg0 == 0x7D) {
+                // short jg/jge: 2-byte insn (7F/7D + rel8)
+                int8_t rel8 = (int8_t)p[jg_off + 1];
+                jmp_target_abs = jg_off + 2 + rel8;
+            } else {
+                printf("ERROR: MonoDownmixer: expected jg (0F 8F / 7F) at +%d, got 0x%02X\n", jg_off, jg0);
+                return false;
+            }
+            // NOP everything from p[0] to where we place our JMP
+            // We place a 5-byte JMP (E9 + rel32) such that it jumps to the
+            // same target as the original jg.
+            // Place JMP at offset 0 after NOPping the block.
+            int total_orig_len = (jg0 == 0x0F) ? (jg_off + 6) : (jg_off + 2);
+            // NOP the entire block first
+            memset(p, 0x90, total_orig_len);
+            // Write JMP rel32 at the start: E9 <rel32>
+            // JMP target relative to (p + 5): rel32 = jmp_target_abs - 5
+            int32_t jmp_rel32 = jmp_target_abs - 5;
+            p[0] = 0xE9;
+            memcpy(p + 1, &jmp_rel32, 4);
+        }
         patchCount++;
 
         printf("  [2/5] Setting bitrate to %dkbps...\n", BITRATE);
