@@ -22,8 +22,8 @@
 | Step | What to do |
 |:---:|:---|
 | **1** | **Pick your OS** in the table below — always start with the easy path. |
-| **2** | **Close Discord** before running anything (tray icon too). |
-| **3** | Run the installer → **restart Discord** → join a voice channel to test. |
+| **2** | **Run** the installer or patcher for your OS (the scripts **close Discord and restart it** when needed — you don’t have to quit manually). |
+| **3** | Join a voice channel and confirm everything sounds right. |
 
 > 💡 **Easy path** = pre-downloaded patches. **No C++ compiler.**  
 > 🧩 **Advanced path** = you compile + patch yourself — only if you need fresh offsets or full control → [Advanced: runtime patcher](#advanced-runtime-patcher).
@@ -60,18 +60,16 @@
 
 ### ⚡ TL;DR — do this
 
-1. **Quit Discord** (system tray → Exit).
-2. Download **`Stereo Installer.bat`** → [open the `Updates/Windows` folder](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Windows) → use the file, or grab it directly: [**Stereo Installer.bat (raw)**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Windows/Stereo%20Installer.bat).
-3. **Right‑click → Run as administrator.**
-4. In **DiscordVoiceFixer**, pick your client(s) → install → **restart Discord** when asked.
+1. Download **`Stereo Installer.bat`** → [open the `Updates/Windows` folder](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Windows) → use the file, or grab it directly: [**Stereo Installer.bat (raw)**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Windows/Stereo%20Installer.bat).
+2. **Right‑click → Run as administrator.**
+3. In **DiscordVoiceFixer**, pick your client(s) → install. The script **closes Discord for you** and restarts it when needed.
 
 <details>
 <summary><b>📝 More detail (optional)</b></summary>
 
-1. Same as above: fully exit Discord.
-2. Save `Stereo Installer.bat` anywhere you like (Desktop is fine).
-3. Run as **Administrator** so `%LOCALAPPDATA%\Discord\...` can be updated without permission errors.
-4. The BAT downloads and runs [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/DiscordVoiceFixer.ps1) from `main` — power users can invoke that script directly if they prefer.
+1. Save `Stereo Installer.bat` anywhere you like (Desktop is fine).
+2. Run as **Administrator** so `%LOCALAPPDATA%\Discord\...` can be updated without permission errors.
+3. The BAT downloads and runs [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/DiscordVoiceFixer.ps1) from `main` — power users can invoke that script directly if they prefer.
 
 </details>
 
@@ -85,16 +83,15 @@
 
 ### ⚡ TL;DR — do this
 
-1. **Quit Discord.**
-2. Download **`Stereo-Installer-Linux.sh`** from [`Updates/Linux/Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates) — direct: [**raw file**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Linux/Updates/Stereo-Installer-Linux.sh).
-3. In a terminal (in the folder where you saved the script):
+1. Download **`Stereo-Installer-Linux.sh`** from [`Updates/Linux/Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates) — direct: [**raw file**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Linux/Updates/Stereo-Installer-Linux.sh).
+2. In a terminal (in the folder where you saved the script):
 
    ```bash
    chmod +x Stereo-Installer-Linux.sh
    ./Stereo-Installer-Linux.sh
    ```
 
-4. Follow the GUI — or use `./Stereo-Installer-Linux.sh --no-gui` for a text menu.
+3. Follow the GUI — or use `./Stereo-Installer-Linux.sh --no-gui` for a text menu. The installer **handles Discord** (close/restart) for you unless you pass flags like `--no-restart`.
 
 <details>
 <summary><b>📝 Extras (help, launcher)</b></summary>
