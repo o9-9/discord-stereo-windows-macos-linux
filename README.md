@@ -24,7 +24,7 @@
 | **3** | **Hop in a voice channel** and make sure everything sounds right. |
 
 > 🪟 **Windows:** [Voice Fixer](#windows-voice-fixer) is the easy road — pre-patched files, **no compiler.**  
-> 🐧 **Linux:** use the **[Linux Patcher](#linux-voice-patcher)** — you need **`g++`**. Prefer **[`discord-stereo-launcher.sh`](#linux-voice-patcher)** if you want a small GUI that downloads the patcher **and** the installer script and **asks which mode to run**; the UI **warns that installer mode is still a placeholder** (pre-built bundles).  
+> 🐧 **Linux:** start with **[`discord-stereo-launcher.sh`](#linux-launcher)** — it downloads the **installer + patcher + GUI** and you **pick a mode**. The GUI **warns that installer mode is still a placeholder**; use **patcher mode** for a working path (needs **`g++`**).  
 > 🔧 **Windows (advanced):** need new offsets or full control? See **[Advanced Windows patching](#advanced-windows-patching)** — requires a **C++ compiler** (skip if Voice Fixer is enough).
 
 ---
@@ -34,7 +34,7 @@
 |  | **You want…** | **Jump to** |
 |:---:|:---|:---|
 | 🪟 | **Windows — easiest** | [**Voice Fixer**](#windows-voice-fixer) |
-| 🐧 | **Linux — patcher** | [**Linux Patcher**](#linux-voice-patcher) |
+| 🐧 | **Linux — launcher** | [**Stereo launcher**](#linux-launcher) |
 | 🍎 | **macOS** | [**Codeberg patcher**](#macos) |
 | 🔧 | **Windows — advanced** | [**Advanced patching**](#advanced-windows-patching) |
 
@@ -73,23 +73,29 @@ The `.bat` pulls [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow/Discord
 
 ---
 
+<a id="linux-launcher"></a>
+
+## 🐧 Linux — Stereo launcher
+
+**Start here on Linux.** [`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh) downloads **`discord_voice_patcher_linux.sh`**, **`Stereo-Installer-Linux.sh`**, and **`Discord_Stereo_Installer_For_Linux.py`** into **`Linux Stereo Installer/`** next to the launcher, then opens a **GUI** where you **choose installer vs patcher mode**. The UI **warns that installer mode is still a placeholder** (pre-built bundles) — **use patcher mode** for a working path today.
+
+### Quick steps
+
+1. Install dependencies (Debian/Ubuntu examples):
+   - **`sudo apt install g++ python3 python3-tk`** — `g++` for patcher mode, **Python 3 + tkinter** for the GUI.
+2. Download **[`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Linux/discord-stereo-launcher.sh)** from [`Updates/Linux/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux).
+3. `chmod +x discord-stereo-launcher.sh` and run **`./discord-stereo-launcher.sh`**. When the GUI opens, choose **patcher mode** unless you are testing installer flow.
+
+When Discord updates the voice module, run the [Offset Finder](#offset-finder) and **update offsets** in `discord_voice_patcher_linux.sh` (the launcher downloads the latest copy from `main` unless you use `--no-update`).
+
+<details>
+<summary>📝 Run the patcher script directly (no GUI)</summary>
+
 <a id="linux-voice-patcher"></a>
 
-## 🐧 Linux Patcher
+Use [`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh) from [`Updates/Linux/Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates) if you prefer the terminal only: install **`g++`**, `chmod +x`, run **`./discord_voice_patcher_linux.sh --help`**.
 
-**What you run:** [`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh) **compiles** a small patcher and patches `discord_voice.node` at known offsets. You need **`g++`**.
-
-### Optional: Linux launcher (installer + patcher)
-
-[`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh) downloads **`discord_voice_patcher_linux.sh`**, **`Stereo-Installer-Linux.sh`**, and the Python GUI into a **`Linux Stereo Installer/`** folder next to the script, then opens the GUI. You **choose installer vs patcher mode** there. The UI **tells you that installer mode is currently a placeholder** (pre-built bundles are not maintained yet) — **use patcher mode** for a working path today.
-
-### Quick steps (patcher only)
-
-1. Install a compiler (e.g. **`sudo apt install g++`** on Debian/Ubuntu).
-2. Download [`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh) from [`Updates/Linux/Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates).
-3. `chmod +x discord_voice_patcher_linux.sh` and run it. Try **`./discord_voice_patcher_linux.sh --help`** for `--patch-local` and other flags.
-
-When Discord updates the voice module, run the [Offset Finder](#offset-finder) and **update the offsets** in the script.
+</details>
 
 ---
 
@@ -142,7 +148,7 @@ Enable **filterless true stereo** at **high bitrates** in Discord — with empha
 | Path | Contents |
 |------|----------|
 | [`Updates/Windows/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Windows) | Voice Fixer, Advanced Windows patching (`.BAT` + PS1) |
-| [`Updates/Linux/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux) | `discord_voice_patcher_linux.sh`; [`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh) (downloads installer + patcher + GUI; installer mode placeholder) |
+| [`Updates/Linux/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux) | **[`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh)** (main entry — GUI mode picker); `Updates/Linux/Updates/` — patcher + installer scripts |
 | [`Updates/Offset Finder/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Offset%20Finder) | Offset finder CLI and GUI |
 | [`Updates/Nodes/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes) | Reference nodes for patchers |
 
@@ -166,7 +172,7 @@ Discord often ships a new `discord_voice.node`, which moves RVAs. Wait for updat
 
 **Voice Fixer (Windows)** does not need a compiler.
 
-**Advanced Windows patching** and the **Linux Patcher** generate and compile C++ when you run them. Install a toolchain:
+**Advanced Windows patching** and **Linux patcher mode** (`discord_voice_patcher_linux.sh`, including via the [stereo launcher](#linux-launcher)) generate and compile C++ when you run them. Install a toolchain:
 
 **Windows:** [Visual Studio](https://visualstudio.microsoft.com/) (Desktop development with C++) or [MinGW-w64](https://www.mingw-w64.org/).
 
@@ -286,7 +292,7 @@ Some **VPNs** break voice UDP. Disconnect the VPN and test again; try another se
 
 **Advanced Windows patching** ([`Stereo-Node-Patcher-Windows.BAT`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Stereo-Node-Patcher-Windows.BAT) → [`Discord_voice_node_patcher.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Discord_voice_node_patcher.ps1)) builds the patcher on your machine and edits the binary. **Needs a C++ compiler.** Use when Voice Fixer isn’t enough — new Discord build, custom offsets, or you want full control.
 
-**Linux:** use the [Linux Patcher](#linux-voice-patcher) (`discord_voice_patcher_linux.sh`). [`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh) can fetch the installer + patcher and let you pick a mode; **installer mode is still a placeholder.**
+**Linux:** use the **[stereo launcher](#linux-launcher)** first — it downloads the installer + patcher and lets you pick a mode; **installer mode is still a placeholder.** Patcher mode runs `discord_voice_patcher_linux.sh`. You can also run [`discord_voice_patcher_linux.sh`](#linux-voice-patcher) alone (see collapsible under [Linux — Stereo launcher](#linux-launcher)).
 
 </details>
 
