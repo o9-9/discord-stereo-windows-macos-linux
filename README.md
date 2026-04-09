@@ -24,7 +24,7 @@
 | **3** | **Hop in a voice channel** and make sure everything sounds right. |
 
 > 🪟 **Windows:** [Voice Fixer](#windows-voice-fixer) is the easy road — pre-patched files, **no compiler.**  
-> 🐧 **Linux:** use the [voice patcher](#linux-voice-patcher) — you need **`g++`**. The Linux Stereo Installer (pre-built bundles) is **placeholder** for now; don’t use it as your main path.  
+> 🐧 **Linux:** use the **[Linux Patcher](#linux-voice-patcher)** — you need **`g++`**. The Linux Stereo Installer (pre-built bundles) is **placeholder** for now; don’t use it as your main path.  
 > 🔧 **Windows (advanced):** need new offsets or full control? See **[Advanced Windows patching](#advanced-windows-patching)** — requires a **C++ compiler** (skip if Voice Fixer is enough).
 
 ---
@@ -34,7 +34,7 @@
 |  | **You want…** | **Jump to** |
 |:---:|:---|:---|
 | 🪟 | **Windows — easiest** | [**Voice Fixer**](#windows-voice-fixer) |
-| 🐧 | **Linux — patcher** | [**`discord_voice_patcher_linux.sh`**](#linux-voice-patcher) |
+| 🐧 | **Linux — patcher** | [**Linux Patcher**](#linux-voice-patcher) |
 | 🍎 | **macOS** | [**Codeberg patcher**](#macos) |
 | 🔧 | **Windows — advanced** | [**Advanced patching**](#advanced-windows-patching) |
 
@@ -75,9 +75,9 @@ The `.bat` pulls [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow/Discord
 
 <a id="linux-voice-patcher"></a>
 
-## 🐧 Linux — Voice patcher
+## 🐧 Linux Patcher
 
-**What it does:** **compiles** a small patcher and patches `discord_voice.node` at known offsets. You need **`g++`**.
+**Script:** `discord_voice_patcher_linux.sh` — **compiles** a small patcher and patches `discord_voice.node` at known offsets. You need **`g++`**.
 
 ### Quick steps
 
@@ -164,7 +164,7 @@ Discord often ships a new `discord_voice.node`, which moves RVAs. Wait for updat
 
 **Voice Fixer (Windows)** does not need a compiler.
 
-**Advanced Windows patching** and the **Linux voice patcher** generate and compile C++ when you run them. Install a toolchain:
+**Advanced Windows patching** and the **Linux Patcher** generate and compile C++ when you run them. Install a toolchain:
 
 **Windows:** [Visual Studio](https://visualstudio.microsoft.com/) (Desktop development with C++) or [MinGW-w64](https://www.mingw-w64.org/).
 
@@ -284,7 +284,7 @@ Some **VPNs** break voice UDP. Disconnect the VPN and test again; try another se
 
 **Advanced Windows patching** ([`Stereo-Node-Patcher-Windows.BAT`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Stereo-Node-Patcher-Windows.BAT) → [`Discord_voice_node_patcher.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Discord_voice_node_patcher.ps1)) builds the patcher on your machine and edits the binary. **Needs a C++ compiler.** Use when Voice Fixer isn’t enough — new Discord build, custom offsets, or you want full control.
 
-**Linux:** use [`discord_voice_patcher_linux.sh`](#linux-voice-patcher). The Linux Stereo Installer is not supported yet.
+**Linux:** use the [Linux Patcher](#linux-voice-patcher) (`discord_voice_patcher_linux.sh`). The Linux Stereo Installer is not supported yet.
 
 </details>
 
