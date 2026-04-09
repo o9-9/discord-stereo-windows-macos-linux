@@ -24,7 +24,7 @@
 | **3** | **Hop in a voice channel** and make sure everything sounds right. |
 
 > 🪟 **Windows:** [Voice Fixer](#windows-voice-fixer) is the easy road — pre-patched files, **no compiler.**  
-> 🐧 **Linux:** use the **[Linux Patcher](#linux-voice-patcher)** — you need **`g++`**. The Linux Stereo Installer (pre-built bundles) is **placeholder** for now; don’t use it as your main path.  
+> 🐧 **Linux:** use the **[Linux Patcher](#linux-voice-patcher)** — you need **`g++`**. Prefer **[`discord-stereo-launcher.sh`](#linux-voice-patcher)** if you want a small GUI that downloads the patcher **and** the installer script and **asks which mode to run**; the UI **warns that installer mode is still a placeholder** (pre-built bundles).  
 > 🔧 **Windows (advanced):** need new offsets or full control? See **[Advanced Windows patching](#advanced-windows-patching)** — requires a **C++ compiler** (skip if Voice Fixer is enough).
 
 ---
@@ -77,17 +77,19 @@ The `.bat` pulls [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow/Discord
 
 ## 🐧 Linux Patcher
 
-**Script:** `discord_voice_patcher_linux.sh` — **compiles** a small patcher and patches `discord_voice.node` at known offsets. You need **`g++`**.
+**What you run:** [`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh) **compiles** a small patcher and patches `discord_voice.node` at known offsets. You need **`g++`**.
 
-### Quick steps
+### Optional: Linux launcher (installer + patcher)
+
+[`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh) downloads **`discord_voice_patcher_linux.sh`**, **`Stereo-Installer-Linux.sh`**, and the Python GUI into a **`Linux Stereo Installer/`** folder next to the script, then opens the GUI. You **choose installer vs patcher mode** there. The UI **tells you that installer mode is currently a placeholder** (pre-built bundles are not maintained yet) — **use patcher mode** for a working path today.
+
+### Quick steps (patcher only)
 
 1. Install a compiler (e.g. **`sudo apt install g++`** on Debian/Ubuntu).
 2. Download [`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh) from [`Updates/Linux/Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates).
 3. `chmod +x discord_voice_patcher_linux.sh` and run it. Try **`./discord_voice_patcher_linux.sh --help`** for `--patch-local` and other flags.
 
 When Discord updates the voice module, run the [Offset Finder](#offset-finder) and **update the offsets** in the script.
-
-> 🚧 **`Stereo-Installer-Linux.sh`** and similar stay in the repo for later — **not** the supported flow today.
 
 ---
 
@@ -140,7 +142,7 @@ Enable **filterless true stereo** at **high bitrates** in Discord — with empha
 | Path | Contents |
 |------|----------|
 | [`Updates/Windows/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Windows) | Voice Fixer, Advanced Windows patching (`.BAT` + PS1) |
-| [`Updates/Linux/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux) | `discord_voice_patcher_linux.sh`; installer scripts reserved |
+| [`Updates/Linux/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux) | `discord_voice_patcher_linux.sh`; [`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh) (downloads installer + patcher + GUI; installer mode placeholder) |
 | [`Updates/Offset Finder/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Offset%20Finder) | Offset finder CLI and GUI |
 | [`Updates/Nodes/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes) | Reference nodes for patchers |
 
@@ -284,7 +286,7 @@ Some **VPNs** break voice UDP. Disconnect the VPN and test again; try another se
 
 **Advanced Windows patching** ([`Stereo-Node-Patcher-Windows.BAT`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Stereo-Node-Patcher-Windows.BAT) → [`Discord_voice_node_patcher.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Discord_voice_node_patcher.ps1)) builds the patcher on your machine and edits the binary. **Needs a C++ compiler.** Use when Voice Fixer isn’t enough — new Discord build, custom offsets, or you want full control.
 
-**Linux:** use the [Linux Patcher](#linux-voice-patcher) (`discord_voice_patcher_linux.sh`). The Linux Stereo Installer is not supported yet.
+**Linux:** use the [Linux Patcher](#linux-voice-patcher) (`discord_voice_patcher_linux.sh`). [`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh) can fetch the installer + patcher and let you pick a mode; **installer mode is still a placeholder.**
 
 </details>
 
