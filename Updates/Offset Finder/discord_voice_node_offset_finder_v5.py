@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Discord Voice Node Offset Finder v5.1.2 — PE/ELF/Mach-O offset discovery (17 patcher offsets)."""
+"""Discord Voice Node Offset Finder v5.1.2 — PE/ELF/Mach-O offset discovery (17 Windows patcher offsets; ELF adds Linux-only MultiChannel Opus = 18)."""
 
 import sys
 import os
@@ -452,6 +452,18 @@ ELF_SYMBOL_MAP = {
                      "OpusConfigC1", "OpusConfigC2"],
         "at_start": False,
         "linux_scan": "opus_config_channels",
+    },
+    "AudioEncoderMultiChannelOpusCh": {
+        # webrtc::AudioEncoderMultiChannelOpusConfig::AudioEncoderMultiChannelOpusConfig() [constructor]
+        # Contains channels=1 byte after: mov dword [rdi], 0x14 ; mov qword [rdi+8], 1
+        "patterns": [
+            "AudioEncoderMultiChannelOpusConfigC1Ev",
+            "AudioEncoderMultiChannelOpusConfigC2Ev",
+            "AudioEncoderMultiChannelOpusConfig",
+            "MultiChannelOpusConfig",
+        ],
+        "at_start": False,
+        "linux_scan": "multichannel_opus_config_channels",
     },
     "SetsBitrateBitrateValue": {
         "patterns": ["WebrtcAdmHelper22EnsureRecordingStarted",
@@ -1158,6 +1170,19 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
     end = min(func_start + func_size, len(data))
     func = data[func_start:end]
     flen = len(func)
+
+    if scan_type == "multichannel_opus_config_channels":
+        # AudioEncoderMultiChannelOpusConfig constructor: channels=1 in struct at +0xA after pattern head
+        # C7 07 14 00 00 00                 (mov dword ptr [rdi], 0x14)
+        # 48 C7 47 08 01 00 00 00            (mov qword ptr [rdi+8], 1) <- target byte is the 01
+        pat = b"\xC7\x07\x14\x00\x00\x00\x48\xC7\x47\x08"
+        for i in range(flen - (len(pat) + 4)):
+            if func[i : i + len(pat)] != pat:
+                continue
+            ch_off = i + len(pat)
+            if ch_off < flen and func[ch_off] in (0x01, 0x02):
+                return func_start + ch_off + adj
+        return None
 
     if scan_type == "opus_config_channels":
         # AudioEncoderOpusConfig constructor: packed movabs then channels=1
@@ -2401,6 +2426,7 @@ def _all_offset_names():
 ALL_OFFSET_NAMES = [
     "CreateAudioFrameStereo",
     "AudioEncoderOpusConfigSetChannels",
+    "AudioEncoderMultiChannelOpusCh",
     "MonoDownmixer",
     "EmulateStereoSuccess1",
     "EmulateStereoSuccess2",
@@ -3414,6 +3440,8 @@ EXPECTED_ORIGINALS_LINUX_ONLY = {
     "CreateAudioFrameStereo":   ("4C 0F 43", 4),
     # CommitAudioCodec: REX.W + CMOVNB (4 bytes), not MSVC 3-byte cmovb.
     "Emulate48Khz":             ("48 0F 43 D0", 4),
+    # Linux-only: MultiChannel Opus config default channels (same 1->2 patch intent as OpusConfigSetChannels).
+    "AudioEncoderMultiChannelOpusCh": ("01", 1),
 }
 
 EXPECTED_ORIGINALS_MACHO_ONLY = {
@@ -3460,6 +3488,7 @@ PATCH_INFO = {
     "HighPassFilter":           ("<dynamic: mov rax, IMAGE_BASE+HPC; ret>", "Redirect to HPC"),
     "CreateAudioFrameStereo":   ("49 89 C4 90", "Clang ELF: cmovnb r12,rax -> mov r12,rax; nop (PE/MSVC uses 49 89 C5 90 / r13)"),
     "AudioEncoderOpusConfigSetChannels": ("02", "Channel count 1->2"),
+    "AudioEncoderMultiChannelOpusCh": ("02", "MultiChannel Opus config channels 1->2 (Linux)"),
     "AudioEncoderOpusConfigIsOk": ("48 C7 C0 01 00 00 00 C3", "return 1"),
     "MonoDownmixer":            ("90 90 90 90 90 90 90 90 90 90 90 90 E9", "NOP sled + jmp"),
     "ThrowError":               ("C3", "ret (disable throws)"),
@@ -3752,6 +3781,7 @@ PATCHER_DEBUG_GROUPS = {
     "ENCODER": [
         ("EncoderConfigInit1", "EncoderConfigInit1 (32000->384000)"),
         ("EncoderConfigInit2", "EncoderConfigInit2 (32000->384000)"),
+        ("AudioEncoderMultiChannelOpusCh", "AudioEncoderMultiChannelOpusCh (Linux ch=2)"),
     ],
 }
 
@@ -3770,7 +3800,7 @@ def format_windows_debug_mode(results=None):
 def format_linux_patcher_block(results, bin_info, file_path, file_size):
     """Linux patcher copy block (ELF file offsets + EXPECTED_MD5/SIZE).
 
-    Emits the same 17 offsets as the Windows patcher (no extra Linux-only keys).
+    Emits the 17 Windows-aligned offsets plus Linux-only OFFSET_AudioEncoderMultiChannelOpusCh when found.
     """
     if not bin_info or not file_path or file_size is None:
         return None
@@ -3795,11 +3825,24 @@ def format_linux_patcher_block(results, bin_info, file_path, file_size):
             lines.append(f"OFFSET_{name}=0x{file_off:X}")
         else:
             lines.append(f"OFFSET_{name}=0x0")
+    # Linux-only: MultiChannel Opus config channels initializer (paste after OpusConfigSetChannels).
+    extra_val = 0
+    if "AudioEncoderMultiChannelOpusCh" in results:
+        extra_val = results["AudioEncoderMultiChannelOpusCh"] - adj
+    extra = f"OFFSET_AudioEncoderMultiChannelOpusCh=0x{extra_val:X}"
+    inserted = False
+    for i, line in enumerate(lines):
+        if line.startswith("OFFSET_AudioEncoderOpusConfigSetChannels="):
+            lines.insert(i + 1, extra)
+            inserted = True
+            break
+    if not inserted:
+        lines.append(extra)
     lines.append("FILE_OFFSET_ADJUSTMENT=0")
     lines.append("")
-    lines.append("# Required offset names (same 17 as Windows patcher); validate before build.")
+    lines.append("# Required offset names (17 Windows + Linux MultiChannel); validate before build.")
     lines.append("REQUIRED_OFFSET_NAMES=(")
-    lines.append("    CreateAudioFrameStereo AudioEncoderOpusConfigSetChannels MonoDownmixer")
+    lines.append("    CreateAudioFrameStereo AudioEncoderOpusConfigSetChannels AudioEncoderMultiChannelOpusCh MonoDownmixer")
     lines.append("    EmulateStereoSuccess1 EmulateStereoSuccess2 EmulateBitrateModified")
     lines.append("    SetsBitrateBitrateValue SetsBitrateBitwiseOr Emulate48Khz")
     lines.append("    HighPassFilter HighpassCutoffFilter DcReject DownmixFunc")

@@ -343,7 +343,7 @@ class OffsetFinderGUI:
             self.status_var.set("Output copied to clipboard")
 
     def _copy_block(self):
-        # Prefer Windows block; else Linux; else macOS (same 17 offsets for all patchers)
+        # Prefer Windows block; else Linux; else macOS (Windows 17; Linux copy block adds MultiChannel = 18)
         block = (self.last_windows_block or self.last_linux_block or self.last_macos_block or "").strip()
         if not block:
             self.status_var.set("No patcher block to copy (run Find Offsets first)")
@@ -616,7 +616,7 @@ class OffsetFinderGUI:
                 self._append_output_safe("  Cross-validation: clean\n" if not xval else f"  Cross-validation: {len(xval)} issue(s)\n", "pass" if not xval else "warn")
 
             if fmt == "pe" and hasattr(mod, "format_windows_patcher_block"):
-                # Finder v5.1+: 17 offsets; signature is (results, bin_info, path, file_size)
+                # Finder v5.1+: 17 Windows offsets; ELF also resolves MultiChannel Opus (18 total on Linux)
                 block = mod.format_windows_patcher_block(results, bin_info, path, file_size)
                 if block:
                     self.last_windows_block = _ascii_safe(block)

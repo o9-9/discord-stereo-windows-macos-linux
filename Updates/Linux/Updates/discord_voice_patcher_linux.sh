@@ -55,6 +55,7 @@ EXPECTED_SIZE=103869656
 # --- Linux/ELF patch offsets --------------------------------------------------
 OFFSET_CreateAudioFrameStereo=0x38F4A3
 OFFSET_AudioEncoderOpusConfigSetChannels=0x7654D5
+OFFSET_AudioEncoderMultiChannelOpusCh=0x764EAE
 OFFSET_MonoDownmixer=0x35E40C
 OFFSET_EmulateStereoSuccess1=0x39BB89
 OFFSET_EmulateStereoSuccess2=0x39C55F
@@ -72,9 +73,9 @@ OFFSET_EncoderConfigInit1=0x7654DF
 OFFSET_EncoderConfigInit2=0x764EB8
 FILE_OFFSET_ADJUSTMENT=0
 
-# Required offset names (same 17 as Windows patcher); validate before build.
+# Required offset names (17 Windows-aligned + Linux MultiChannel Opus); validate before build.
 REQUIRED_OFFSET_NAMES=(
-    CreateAudioFrameStereo AudioEncoderOpusConfigSetChannels MonoDownmixer
+    CreateAudioFrameStereo AudioEncoderOpusConfigSetChannels AudioEncoderMultiChannelOpusCh MonoDownmixer
     EmulateStereoSuccess1 EmulateStereoSuccess2 EmulateBitrateModified
     SetsBitrateBitrateValue SetsBitrateBitwiseOr Emulate48Khz
     HighPassFilter HighpassCutoffFilter DcReject DownmixFunc
@@ -950,7 +951,7 @@ validate_required_offsets() {
     done
     if [[ ${#missing[@]} -gt 0 ]]; then
         log_error "Missing or empty required offset(s): ${missing[*]}"
-        log_error "Paste the full offset block from the offset finder (17 OFFSET_* lines)."
+        log_error "Paste the full offset block from the offset finder (18 OFFSET_* lines including MultiChannel)."
         return 1
     fi
     return 0
@@ -979,6 +980,7 @@ extern "C" void hp_cutoff(const float*, int, float*, int*, int, int, int, int);
 namespace Offsets {
     constexpr uint32_t CreateAudioFrameStereo            = OFFSET_VAL_CreateAudioFrameStereo;
     constexpr uint32_t AudioEncoderOpusConfigSetChannels = OFFSET_VAL_AudioEncoderOpusConfigSetChannels;
+    constexpr uint32_t AudioEncoderMultiChannelOpusCh    = OFFSET_VAL_AudioEncoderMultiChannelOpusCh;
     constexpr uint32_t MonoDownmixer                     = OFFSET_VAL_MonoDownmixer;
     constexpr uint32_t EmulateStereoSuccess1             = OFFSET_VAL_EmulateStereoSuccess1;
     constexpr uint32_t EmulateStereoSuccess2             = OFFSET_VAL_EmulateStereoSuccess2;
@@ -1113,6 +1115,10 @@ private:
         const unsigned char patch_setch[] = {0x02};
         bool o10 = OrigOrAlt(Offsets::AudioEncoderOpusConfigSetChannels, orig_setch, 1, patch_setch, 1);
 
+        const unsigned char orig_mcopus[]  = {0x01};
+        const unsigned char patch_mcopus[] = {0x02};
+        bool o10b = OrigOrAlt(Offsets::AudioEncoderMultiChannelOpusCh, orig_mcopus, 1, patch_mcopus, 1);
+
         const unsigned char orig_ebm[]   = {0x00, 0x7D, 0x00};
         const unsigned char patch_ebm[]  = {0x00, 0xDC, 0x05};
         bool o11 = OrigOrAlt(Offsets::EmulateBitrateModified, orig_ebm, 3, patch_ebm, 3);
@@ -1143,13 +1149,14 @@ private:
         printf("  EmulateStereoSuccess1  (0x%06X): %s\n", Offsets::EmulateStereoSuccess1, ess1_ok ? "OK" : "MISMATCH");
         printf("  EmulateStereoSuccess2  (0x%06X): %s\n", Offsets::EmulateStereoSuccess2, ess2_ok ? "OK" : "MISMATCH");
         printf("  OpusConfigSetChannels  (0x%06X): %s\n", Offsets::AudioEncoderOpusConfigSetChannels, o10 ? "OK" : "MISMATCH");
+        printf("  MultiChannelOpusCh     (0x%06X): %s\n", Offsets::AudioEncoderMultiChannelOpusCh, o10b ? "OK" : "MISMATCH");
         printf("  EmulateBitrateModified (0x%06X): %s\n", Offsets::EmulateBitrateModified, o11 ? "OK" : "MISMATCH");
         printf("  SetsBitrateBitwiseOr   (0x%06X): %s\n", Offsets::SetsBitrateBitwiseOr, o12 ? "OK" : "MISMATCH");
         printf("  MonoDownmixer (prefix) (0x%06X): %s\n", Offsets::MonoDownmixer, o13 ? "OK" : "MISMATCH");
         printf("  ThrowError             (0x%06X): %s\n", Offsets::ThrowError, o14 ? "OK" : "MISMATCH");
 
         if (!o1 || !o2 || !o3 || !o4 || !o5 || !o6 || !o7 || !o8
-            || !o9 || !ess1_ok || !ess2_ok || !o10 || !o11 || !o12 || !o13 || !o14) {
+            || !o9 || !ess1_ok || !ess2_ok || !o10 || !o10b || !o11 || !o12 || !o13 || !o14) {
             printf("\nERROR: Binary validation FAILED - unexpected bytes at patch sites.\n");
             printf("This discord_voice.node does not match the expected build.\n");
             printf("These offsets cannot be safely applied to a different version.\n");
@@ -1205,6 +1212,8 @@ private:
         if (!PatchBytes(Offsets::CreateAudioFrameStereo, "\x49\x89\xC4\x90", 4)) return false;
         patchCount++;
         if (!PatchBytes(Offsets::AudioEncoderOpusConfigSetChannels, "\x02", 1)) return false;
+        patchCount++;
+        if (!PatchBytes(Offsets::AudioEncoderMultiChannelOpusCh, "\x02", 1)) return false;
         patchCount++;
         // MonoDownmixer: NOP the test+jz+cmp, then convert jg to JMP.
         // Layout varies between MSVC (7-byte cmp dword [rsi+disp32]) and
@@ -1320,9 +1329,11 @@ private:
 
         // Stereo channel verification (quick sanity check for "still mono" reports)
         {
-            uint32_t ch1 = 0;
+            uint32_t ch1 = 0, ch2 = 0;
             bool ok1 = ReadU32LE(Offsets::AudioEncoderOpusConfigSetChannels, ch1);
+            bool ok2 = ReadU32LE(Offsets::AudioEncoderMultiChannelOpusCh, ch2);
             if (ok1) printf("  OpusConfig channels byte: 0x%02X\n", (unsigned int)(ch1 & 0xFF));
+            if (ok2) printf("  MultiChannel Opus channels byte: 0x%02X\n", (unsigned int)(ch2 & 0xFF));
         }
 
         printf("\n  Applied %d patches successfully!\n", patchCount);
@@ -1405,6 +1416,7 @@ PATCHEOF
     sed -i "s/BITRATE_VAL/$BITRATE/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_CreateAudioFrameStereo/${OFFSET_CreateAudioFrameStereo}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_AudioEncoderOpusConfigSetChannels/${OFFSET_AudioEncoderOpusConfigSetChannels}/g" "$TEMP_DIR/patcher.cpp"
+    sed -i "s/OFFSET_VAL_AudioEncoderMultiChannelOpusCh/${OFFSET_AudioEncoderMultiChannelOpusCh}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_MonoDownmixer/${OFFSET_MonoDownmixer}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_EmulateStereoSuccess1/${OFFSET_EmulateStereoSuccess1}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_EmulateStereoSuccess2/${OFFSET_EmulateStereoSuccess2}/g" "$TEMP_DIR/patcher.cpp"
