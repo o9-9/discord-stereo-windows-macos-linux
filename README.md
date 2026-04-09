@@ -22,11 +22,11 @@
 | Step | What to do |
 |:---:|:---|
 | **1** | **Pick your OS** in the table below — always start with the easy path. |
-| **2** | **Run** the installer or patcher for your OS (the scripts **close Discord and restart it** when needed — you don’t have to quit manually). |
+| **2** | **Run** the tool for your OS — **Windows:** Voice Fixer; **Linux:** [`discord_voice_patcher_linux.sh`](#linux-voice) (scripts **close Discord and restart** when needed). |
 | **3** | Join a voice channel and confirm everything sounds right. |
 
-> 💡 **Easy path** = pre-downloaded patches. **No C++ compiler.**  
-> 🧩 **Advanced path** = you compile + patch yourself — only if you need fresh offsets or full control → [Advanced: runtime patcher](#advanced-runtime-patcher).
+> 💡 **Windows easy path** = pre-downloaded patches, **no compiler.**  
+> 🐧 **Linux:** use the **[runtime patcher](#linux-voice)** (`g++` required). The **Linux Stereo Installer** (pre-patched bundles) is **not** recommended yet — it’s placeholder until real modules ship again.
 
 ---
 
@@ -35,7 +35,7 @@
 |  | **You want…** | **Jump to** |
 |:---:|:---|:---|
 | 🪟 | **Windows — simplest** | [**Voice Fixer (easy)**](#windows-easy) |
-| 🐧 | **Linux** — pre-patched installer *or* runtime patcher | [**Stereo Installer**](#linux-easy) · [**Runtime patcher**](#advanced-runtime-patcher) |
+| 🐧 | **Linux — runtime patcher** | [**`discord_voice_patcher_linux.sh`**](#linux-voice) |
 | 🍎 | **macOS** | [**macOS on Codeberg**](#macos-patcher--live) |
 
 ---
@@ -75,34 +75,26 @@
 
 ---
 
-<a id="linux-easy"></a>
+<a id="linux-voice"></a>
 
-## 🐧 Linux — Stereo Installer (pre-patched)
+## 🐧 Linux — `discord_voice_patcher_linux.sh`
 
-**In one sentence:** downloads **pre-built patched** `discord_voice.node` bundles from the repo and installs them for common Discord paths (deb / Flatpak / Snap where supported). **No compiler.**
+**This is the path to use on Linux right now:** it **compiles** a small patcher and rewrites your `discord_voice.node` at known offsets. You need **`g++`**.
 
-> ⚠️ **Pre-patched Linux bundles often lag Discord stable.** Community drops have not always been refreshed every release (for example, working pre-built modules were last aligned with older app versions such as **0.0.128**, while Discord may ship **0.0.132** or newer). If the installer’s modules **don’t match** your installed Discord build, use the **[Linux runtime patcher](#advanced-runtime-patcher)** with [`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh) instead — it targets the **offsets + fingerprint** baked into the script for a specific `discord_voice.node` (update offsets when Discord updates).
+The **Linux Stereo Installer** (`Stereo-Installer-Linux.sh`, pre-patched bundles / GUI) is **placeholder** — **do not rely on it** until maintainers publish real pre-built Linux modules again.
 
 ### ⚡ TL;DR — do this
 
-1. Download **`Stereo-Installer-Linux.sh`** from [`Updates/Linux/Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates) — direct: [**raw file**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Linux/Updates/Stereo-Installer-Linux.sh).
-2. In a terminal (in the folder where you saved the script):
+1. Install a compiler, e.g. **`sudo apt install g++`** (Debian/Ubuntu) or your distro’s equivalent.
+2. Download **[`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh)** from [`Updates/Linux/Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates).
+3. `chmod +x discord_voice_patcher_linux.sh` and run it. It can pull a stock node from this repo or use **`--patch-local`** on a `discord_voice.node` you already have. See **`./discord_voice_patcher_linux.sh --help`**.
 
-   ```bash
-   chmod +x Stereo-Installer-Linux.sh
-   ./Stereo-Installer-Linux.sh
-   ```
-
-3. Follow the GUI — or use `./Stereo-Installer-Linux.sh --no-gui` for a text menu. The installer **handles Discord** (close/restart) for you unless you pass flags like `--no-restart`.
+Update **offsets** in the script when Discord updates the voice module ([Offset Finder](#offset-finder)).
 
 <details>
-<summary><b>📝 Extras (help, launcher)</b></summary>
+<summary><b>📝 Linux Stereo Installer (placeholder — skip for now)</b></summary>
 
-|  |  |
-|:---|:---|
-| 📖 **All options** | `./Stereo-Installer-Linux.sh --help` (restore, silent, diagnostics, …) |
-| 🚀 **One-shot launcher** | [`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh) downloads the latest helper + GUI into a **`Linux Stereo Installer/`** folder next to the script |
-| 🔧 **Current Discord, no matching bundle?** | Use [`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh) (see [Advanced: runtime patcher](#advanced-runtime-patcher)) and refresh offsets if needed ([Offset Finder](#offset-finder)). |
+Files such as **`Stereo-Installer-Linux.sh`** and **`discord-stereo-launcher.sh`** remain in the repo for future use; they are **not** the recommended flow until pre-patched Linux bundles are maintained again.
 
 </details>
 
@@ -110,21 +102,15 @@
 
 <a id="advanced-runtime-patcher"></a>
 
-## 🧩 Advanced: runtime patcher
+## 🧩 Advanced: runtime patcher (Windows)
 
-You **compile** a small tool and **patch** your local `discord_voice.node` at runtime. **On Linux this is often the reliable path** when you are on the latest Discord build and the **pre-patched Stereo Installer** bundles are behind. Update **offsets** when Discord ships a new voice module ([Offset Finder](#offset-finder)).
+Same idea as Linux — **compile** a small tool and **patch** `discord_voice.node` at runtime. Use when you need **fresh offsets** or full control. **macOS:** see the [Codeberg patcher](#macos-patcher--live).
 
 | OS | Start here | You also need |
 |:---|:---|:---|
 | 🪟 **Windows** | [`Stereo-Node-Patcher-Windows.BAT`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Stereo-Node-Patcher-Windows.BAT) → [`Discord_voice_node_patcher.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Discord_voice_node_patcher.ps1) | **C++** (VS Build Tools or MinGW-w64) |
-| 🐧 **Linux** | [`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh) | **`g++`** |
 
-<details>
-<summary><b>🐧 Linux runtime patcher notes</b></summary>
-
-Can download an **unpatched** stock node from this repo, then patch — or use **`--patch-local`** for a file you already have. Run the script with **`--help`** for all flags.
-
-</details>
+Linux is covered above under **[Linux — `discord_voice_patcher_linux.sh`](#linux-voice)**.
 
 ---
 
@@ -166,7 +152,7 @@ Everything shippable and research-related lives in two top-level folders.
 | Path | Contents |
 |------|----------|
 | [`Updates/Windows/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Windows) | **`Stereo Installer.bat`** → Voice Fixer (pre-patched nodes) · **`Stereo-Node-Patcher-Windows.BAT`** → runtime patcher PS1 |
-| [`Updates/Linux/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux) | **`discord-stereo-launcher.sh`** · **`Updates/Linux/Updates/`** — **`Stereo-Installer-Linux.sh`**, **`discord_voice_patcher_linux.sh`** |
+| [`Updates/Linux/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux) | **`discord_voice_patcher_linux.sh`** (primary) · **`Stereo-Installer-Linux.sh`** / launcher (placeholder until pre-patched bundles return) |
 | [`Updates/Offset Finder/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Offset%20Finder) | **`discord_voice_node_offset_finder_v5.py`**, **`offset_finder_gui.py`** |
 | [`Updates/Nodes/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes) | Unpatched / patched module metadata the installers expect |
 
