@@ -13,54 +13,60 @@
 
 ---
 
-## Start here
+## 👋 New here?
 
-| Step | Action |
+**Goal:** better Discord voice (stereo, bitrate, clarity) — follow the steps, then pick your OS below.
+
+| Step | Your guide |
 |:---:|:---|
-| **1** | Pick your OS in the table below. |
-| **2** | Run the tool for your platform (see [Windows](#windows-voice-fixer) or [Linux](#linux-voice-patcher)). Scripts close and restart Discord when needed. |
-| **3** | Join a voice channel and verify audio. |
+| **1** | **Choose your OS** in the next table — start with the path we link to. |
+| **2** | **Run** the tool for that platform. Scripts **close and restart Discord** for you when they need to touch `discord_voice.node`. |
+| **3** | **Hop in a voice channel** and make sure everything sounds right. |
 
-**Windows:** [Voice Fixer](#windows-voice-fixer) — pre-patched modules, no compiler.
-
-**Linux:** [`discord_voice_patcher_linux.sh`](#linux-voice-patcher) — needs `g++`. The Linux Stereo Installer (pre-built bundles) is a placeholder and not supported yet.
+> 💡 **Windows:** [Voice Fixer](#windows-voice-fixer) is the easy road — pre-patched files, **no compiler.**  
+> 🐧 **Linux:** use the [voice patcher](#linux-voice-patcher) — you need **`g++`**. The Linux Stereo Installer (pre-built bundles) is **placeholder** for now; don’t use it as your main path.  
+> 🧩 **Need fresh offsets or full control on Windows?** See [runtime patcher](#windows-runtime-patcher).
 
 ---
 
-## Choose your platform
+## ✨ Pick your platform
 
-|  | Link |
-|:---:|:---|
-| Windows | [Voice Fixer](#windows-voice-fixer) |
-| Linux | [Voice patcher](#linux-voice-patcher) |
-| macOS | [Codeberg](#macos) |
+|  | **You want…** | **Jump to** |
+|:---:|:---|:---|
+| 🪟 | **Windows — easiest** | [**Voice Fixer**](#windows-voice-fixer) |
+| 🐧 | **Linux — patcher** | [**`discord_voice_patcher_linux.sh`**](#linux-voice-patcher) |
+| 🍎 | **macOS** | [**Codeberg patcher**](#macos) |
 
 ---
 
-## Downloads
+## 📦 Where to download
 
 |  |  |
 |:---|:---|
-| Releases | [GitHub Releases](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases) |
-| macOS patcher | [Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS) |
-| Latest scripts | [`Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates) on `main` |
+| 📀 **Releases** | [**GitHub Releases**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases) |
+| 🍎 **macOS** | [**Codeberg**](https://codeberg.org/DiscordStereoPatcher-macOS) |
+| ⚡ **Latest scripts** | **[`Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates)** on `main` (what the launchers fetch) |
+
+> **`Updates/`** is always current — handy if you run scripts straight from the repo.
 
 ---
 
 <a id="windows-voice-fixer"></a>
 
-## Windows — Voice Fixer
+## 🪟 Windows — Voice Fixer
 
-Installs pre-patched `discord_voice.node` files with backups. No compiler.
+**What it does:** drops **pre-patched** `discord_voice.node` files into your install(s), with backups. **No compiler.**
 
-1. Download [`Stereo Installer.bat`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Windows/Stereo%20Installer.bat) from [`Updates/Windows/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Windows).
-2. Right-click → **Run as administrator**.
-3. In DiscordVoiceFixer, select clients and install. Discord is closed and restarted for you.
+### ⚡ Do this
+
+1. Grab [`Stereo Installer.bat`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Windows/Stereo%20Installer.bat) from [`Updates/Windows/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Windows).
+2. **Right-click → Run as administrator.**
+3. In **DiscordVoiceFixer**, pick your client(s) and install. Discord is **closed and restarted** for you.
 
 <details>
-<summary>More detail</summary>
+<summary>📝 Optional detail</summary>
 
-The batch file downloads [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/DiscordVoiceFixer.ps1) from `main`. Run as Administrator so `%LOCALAPPDATA%\Discord\` can be updated.
+The `.bat` pulls [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/DiscordVoiceFixer.ps1) from `main`. Running as Administrator avoids permission issues under `%LOCALAPPDATA%\Discord\`.
 
 </details>
 
@@ -68,25 +74,27 @@ The batch file downloads [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow
 
 <a id="linux-voice-patcher"></a>
 
-## Linux — Voice patcher
+## 🐧 Linux — Voice patcher
 
-Compiles a small patcher and patches `discord_voice.node` at fixed offsets. Requires **`g++`**.
+**What it does:** **compiles** a small patcher and patches `discord_voice.node` at known offsets. You need **`g++`**.
 
-1. Install a toolchain (e.g. `sudo apt install g++` on Debian/Ubuntu).
+### ⚡ Do this
+
+1. Install a compiler (e.g. **`sudo apt install g++`** on Debian/Ubuntu).
 2. Download [`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh) from [`Updates/Linux/Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates).
-3. `chmod +x discord_voice_patcher_linux.sh` and run it. Use `./discord_voice_patcher_linux.sh --help` for options (`--patch-local`, etc.).
+3. `chmod +x discord_voice_patcher_linux.sh` and run it. Try **`./discord_voice_patcher_linux.sh --help`** for `--patch-local` and other flags.
 
-When Discord updates the voice module, refresh offsets with the [Offset Finder](#offset-finder) and update the script.
+When Discord updates the voice module, run the [Offset Finder](#offset-finder) and **update the offsets** in the script.
 
-`Stereo-Installer-Linux.sh` and related files remain in the repo for later; they are not the supported path today.
+> ⏸️ **`Stereo-Installer-Linux.sh`** and similar stay in the repo for later — **not** the supported flow today.
 
 ---
 
 <a id="windows-runtime-patcher"></a>
 
-## Windows — Runtime patcher
+## 🧩 Windows — Runtime patcher
 
-Use when you need new offsets or full control. Compiles C++ at runtime — requires a **C++** toolchain (Visual Studio with C++, or MinGW-w64).
+For **new offsets**, odd builds, or **full control**: same patch-at-runtime idea as Linux, but on Windows. **Requires a C++ toolchain** (Visual Studio with C++, or MinGW-w64).
 
 - [`Stereo-Node-Patcher-Windows.BAT`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Stereo-Node-Patcher-Windows.BAT) → [`Discord_voice_node_patcher.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Discord_voice_node_patcher.ps1)
 
@@ -94,22 +102,22 @@ Use when you need new offsets or full control. Compiles C++ at runtime — requi
 
 <a id="macos"></a>
 
-## macOS
+## 🍎 macOS
 
-Thanks to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)** for the macOS patcher (bash, signing, Apple Silicon).
+Huge thanks to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)** — bash patcher, code signing, Apple Silicon.
 
-**[macOS patcher on Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS)**
+👉 **[Get the macOS patcher on Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS)**
 
 ---
 
 <details>
-<summary><b>Mission and repository layout</b></summary>
+<summary><b>🎯 Mission &amp; repository layout</b></summary>
 
-## Mission
+## 🎯 Mission
 
-Enable **filterless true stereo** at **high bitrates** in Discord — with emphasis on signal integrity and real-time audio behavior across Windows, macOS, and Linux.
+Enable **filterless true stereo** at **high bitrates** in Discord — with emphasis on signal integrity and real-time audio across **Windows, macOS, and Linux**.
 
-## What we do
+## 🔊 What we do
 
 | Area | Focus |
 |------|--------|
@@ -119,7 +127,7 @@ Enable **filterless true stereo** at **high bitrates** in Discord — with empha
 | Filters | Bypass HP/DC paths where patched |
 | Integrity | Less client-side “enhancement” on the signal |
 
-## Repository layout
+## 📂 Repository layout
 
 | Path | Contents |
 |------|----------|
@@ -134,7 +142,7 @@ Enable **filterless true stereo** at **high bitrates** in Discord — with empha
 
 ---
 
-## FAQ
+## ❓ FAQ
 
 <details>
 <summary><b>Discord updated and the patcher stopped working</b></summary>
@@ -275,7 +283,7 @@ Some **VPNs** break voice UDP. Disconnect the VPN and test again; try another se
 ---
 
 <details>
-<summary><b>Technical deep dive</b></summary>
+<summary><b>🧬 Technical deep dive</b></summary>
 
 ### Architecture
 
@@ -307,7 +315,7 @@ After Discord rebases the module, run [`discord_voice_node_offset_finder_v5.py`]
 ---
 
 <details>
-<summary><b>Changelog</b></summary>
+<summary><b>📋 Changelog</b></summary>
 
 ### Repo layout (Mar 2026)
 - Shipping assets under `Updates/`; `Voice Node Dump/` for archives
@@ -325,16 +333,16 @@ After Discord rebases the module, run [`discord_voice_node_offset_finder_v5.py`]
 
 ---
 
-## Partners
+## 🤝 Partners
 
 [Shaun (sh6un)](https://github.com/sh6un) · [UnpackedX](https://codeberg.org/UnpackedX) · [Voice Playground](https://discord-voice.xyz/) · [Oracle](https://github.com/oracle-dsc) · [Loof-sys](https://github.com/LOOF-sys) · [Hallow](https://github.com/ProdHallow) · [Ascend](https://github.com/bloodybapestas) · BluesCat · [Sentry](https://github.com/sentry1000) · [Sikimzo](https://github.com/sikimzo) · [CRÜE](https://codeberg.org/DiscordStereoPatcher-macOS) · [HorrorPills / Geeko](https://github.com/HorrorPills)
 
 ---
 
-## Get involved
+## 💬 Get involved
 
-**[Issues](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/issues)** · **[Discord](https://discord.gg/gDY6F8RAfM)**
+**[Report an issue](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/issues)** · **[Join the Discord](https://discord.gg/gDY6F8RAfM)**
 
 ---
 
-> **Disclaimer:** Provided as-is for research. Not affiliated with Discord Inc. Use at your own risk.
+> ⚠️ **Disclaimer:** Provided as-is for research and experimentation. Not affiliated with Discord Inc. Use at your own risk.
