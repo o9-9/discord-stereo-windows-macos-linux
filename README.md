@@ -120,9 +120,9 @@ If offsets in the script don’t match your Discord build, use the [Offset Finde
 
 ## 🍎 macOS
 
-Huge thanks to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)** — bash patcher, code signing, Apple Silicon.
+The macOS build lives on **Codeberg**: a **native Swift GUI** for patching and backups (Apple Silicon–friendly), plus signing and related tooling. Huge thanks to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)**.
 
-👉 **[Get the macOS patcher on Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS)**
+👉 **[Discord Stereo Patcher — macOS on Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS)** (repos and docs there describe the Swift app and any optional scripts.)
 
 ---
 
@@ -324,7 +324,7 @@ Full byte-level detail varies by platform (MSVC vs Clang, register choices, etc.
 
 ### Offset Finder
 
-After Discord rebases the module, run [`discord_voice_node_offset_finder_v5.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Offset%20Finder/discord_voice_node_offset_finder_v5.py) or [`offset_finder_gui.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Offset%20Finder/offset_finder_gui.py), then paste the generated offset block into the Windows script and align Linux/macOS configs.
+After Discord rebases the module, run [`discord_voice_node_offset_finder_v5.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Offset%20Finder/discord_voice_node_offset_finder_v5.py) or [`offset_finder_gui.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Offset%20Finder/offset_finder_gui.py), then paste the generated offset block into the Windows / Linux patcher scripts. For **macOS**, follow the **Swift** patcher workflow on [Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS).
 
 </details>
 
@@ -337,7 +337,7 @@ After Discord rebases the module, run [`discord_voice_node_offset_finder_v5.py`]
 - Shipping assets under `Updates/`; `Voice Node Dump/` for archives
 
 ### v6.0 (Feb 2026)
-- macOS patcher; Linux bash patcher; platform-specific bytes; mmap I/O on Unix
+- macOS **Swift** GUI on Codeberg; Linux bash patcher; platform-specific bytes; mmap I/O on Unix
 
 ### v5.0 (Feb 2026)
 - Multi-client GUI, backups, auto-update hooks
