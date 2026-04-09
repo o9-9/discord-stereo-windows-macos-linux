@@ -178,7 +178,7 @@ Discord often ships a new `discord_voice.node`, which moves RVAs. Wait for updat
 
 **Linux:** e.g. `sudo apt install g++` (Debian/Ubuntu), `sudo dnf install gcc-c++` (Fedora), `sudo pacman -S gcc` (Arch).
 
-**macOS:** `xcode-select --install`
+**macOS** uses the [Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS) Swift app — see their docs for toolchain or build steps.
 
 </details>
 
@@ -189,7 +189,7 @@ Discord often ships a new `discord_voice.node`, which moves RVAs. Wait for updat
 
 **Linux:** Most installs under `~/.config/discord/` are user-writable. If not: `sudo chmod +w /path/to/discord_voice.node`
 
-**macOS:** `codesign --remove-signature /path/to/discord_voice.node` if required, then retry.
+**macOS:** see the [Codeberg macOS project](https://codeberg.org/DiscordStereoPatcher-macOS) for permission and signing behavior.
 
 </details>
 
@@ -210,7 +210,7 @@ The patcher saw its own bytes at a site. It may re-apply patches so everything s
 <details>
 <summary><b>No Discord installation found</b></summary>
 
-Standard paths are scanned. **Windows:** `%LOCALAPPDATA%\Discord`. **Linux:** `~/.config/discord`, `/opt/discord`, Flatpak, Snap. **macOS:** `~/Library/Application Support/discord`, `/Applications/Discord.app`. Custom installs may need a manual path to the `.node` file.
+Standard paths are scanned. **Windows:** `%LOCALAPPDATA%\Discord`. **Linux:** `~/.config/discord`, `/opt/discord`, Flatpak, Snap. Custom installs may need a manual path to the `.node` file. **macOS:** handled in the [Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS) app — check their docs if Discord is not found.
 
 </details>
 
@@ -224,7 +224,7 @@ Gain may be too high. Stay at **1×** unless the source is very quiet; values ab
 <details>
 <summary><b>BetterDiscord / Vencord / Equicord</b></summary>
 
-**Yes** on Windows (auto-detected clients). The patch targets `discord_voice.node`. On Linux or macOS, standard Electron layouts are supported if the mod keeps the usual module paths.
+**Yes** on Windows (auto-detected clients). The patch targets `discord_voice.node`. On Linux, standard Electron layouts work if the mod keeps the usual module paths. **macOS:** see [Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS).
 
 </details>
 
@@ -242,23 +242,9 @@ This changes local encoding only. There are **no known bans** tied to this proje
 
 **Linux:** `./discord_voice_patcher_linux.sh --restore`
 
-**macOS:** `./discord_voice_patcher_macos.sh --restore`
+**macOS:** use restore or backup options in the [Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS) app (this repo does not ship macOS scripts).
 
 A Discord app update also replaces `discord_voice.node` with a fresh copy.
-
-</details>
-
-<details>
-<summary><b>macOS: “Discord is damaged”</b></summary>
-
-Quarantine after patching. Try: `xattr -cr /Applications/Discord.app`
-
-</details>
-
-<details>
-<summary><b>macOS: signing / mmap errors</b></summary>
-
-Patching can break the signature. The macOS patcher re-signs when possible. If needed: `codesign --remove-signature /path/to/discord_voice.node`, then run the patcher again.
 
 </details>
 
