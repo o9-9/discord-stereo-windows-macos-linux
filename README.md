@@ -15,7 +15,7 @@
 
 ## 👋 Are You New Here?
 
-**Well our goal is to give yoy better Discord voice quality with stereo, bitrate, and filterless audio - just follow the steps listed below**
+**Well our goal is to give you better Discord voice quality with stereo, bitrate, and filterless audio - just follow the steps listed below**
 
 | Step | Your guide |
 |:---:|:---|
