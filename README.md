@@ -23,10 +23,6 @@
 | **2** | **Run** the tool for that platform. Scripts **close and restart Discord** for you when they need to touch `discord_voice.node`. |
 | **3** | **Hop in a voice channel** and make sure everything sounds right. |
 
-> 🪟 **Windows:** [Voice Fixer](#windows-voice-fixer) is the easy road — pre-patched files, **no compiler.**  
-> 🐧 **Linux:** start with **[`discord-stereo-launcher.sh`](#linux-launcher)** — it downloads the **installer + patcher + GUI** and you **pick a mode**. The GUI **warns that installer mode is still a placeholder**; use **patcher mode** for a working path (needs **`g++`**).  
-> 🔧 **Windows (advanced):** need new offsets or full control? See **[Advanced Windows patching](#advanced-windows-patching)** — requires a **C++ compiler** (skip if Voice Fixer is enough).
-
 ---
 
 ## 🧭 Pick your platform
