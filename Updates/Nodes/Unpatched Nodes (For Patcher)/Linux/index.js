@@ -236,7 +236,33 @@ function bindConnectionInstance(instance) {
   return {
     destroy: () => instance.destroy(),
 
-    setTransportOptions: (options) => instance.setTransportOptions(options),
+    setTransportOptions: (options) => {
+      if (options.audioEncoder) {
+        options.audioEncoder.params = {
+          stereo: 1,
+          'sprop-stereo': 1,
+          maxaveragebitrate: 384000,
+          useinbandfec: 0,
+          usedtx: 0,
+          cbr: 1,
+          maxplaybackrate: 48000,
+        };
+        options.audioEncoder.channels = 2;
+        options.audioEncoder.freq = 48000;
+        options.audioEncoder.rate = 384000;
+        options.audioEncoder.pacsize = 960;
+        options.audioEncoder.bits_per_sample = 24;
+      }
+
+      options.disable_agc = true;
+      options.disable_noise_suppression = true;
+      options.disable_echo_cancellation = true;
+
+      if (options.encodingVoiceBitRate) {
+        options.encodingVoiceBitRate = 384000;
+      }
+      return instance.setTransportOptions(options);
+    },
     setSelfMute: (mute) => instance.setSelfMute(mute),
     setSelfDeafen: (deaf) => instance.setSelfDeafen(deaf),
 
