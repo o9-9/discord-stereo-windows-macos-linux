@@ -13,9 +13,9 @@
 
 ---
 
-## 👋 New here?
+## 👋 Are You New Here?
 
-**Goal:** better Discord voice (stereo, bitrate, clarity) — follow the steps, then pick your OS below.
+**Well Our Goal is to give you:** better Discord voice (stereo, bitrate, clarity) - just follow the steps, then pick your OS below.
 
 | Step | Your guide |
 |:---:|:---|
