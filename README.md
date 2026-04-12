@@ -11,6 +11,8 @@
 
 </div>
 
+> **v1.0 is releasing soon.** We are polishing installers, launchers, and docs for a stable 1.0 line across Windows, macOS, and Linux. Until then, grab the current bundled tree as **`Updates.zip`** on [**Releases**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases) (**v0.5**), which matches [`Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates) on `main`.
+
 ---
 
 ## 👋 Are You New Here?
