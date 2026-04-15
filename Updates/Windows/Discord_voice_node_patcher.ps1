@@ -733,6 +733,39 @@ function Get-InstalledClients {
 
 # region Process Management
 
+function Get-DiscordInstallBasePaths {
+    <#
+        Base folders that contain Discord's Update.exe (e.g. %LocalAppData%\Discord).
+        Used so we only touch Update.exe from known Discord installs — the process name
+        "Update" alone matches many unrelated Windows updaters and caused long waits
+        after Discord had already exited.
+    #>
+    $bases = New-Object 'System.Collections.Generic.HashSet[string]'
+    foreach ($k in $Script:DiscordClients.Keys) {
+        $c = $Script:DiscordClients[$k]
+        foreach ($prop in @('Path', 'FallbackPath')) {
+            if (-not $c.ContainsKey($prop)) { continue }
+            $dir = $c[$prop]
+            if ([string]::IsNullOrWhiteSpace($dir) -or -not (Test-Path -LiteralPath $dir)) { continue }
+            try {
+                $full = (Get-Item -LiteralPath $dir).FullName.TrimEnd('\')
+                if ($full) { [void]$bases.Add($full) }
+            } catch { }
+        }
+    }
+    return @($bases)
+}
+
+function Stop-DiscordUpdateProcesses {
+    $paths = Get-DiscordInstallBasePaths
+    if (-not $paths -or $paths.Count -eq 0) { return $true }
+    $ok = $true
+    foreach ($base in $paths) {
+        if (-not (Stop-DiscordProcesses -ProcessNames @('Update') -InstallPath $base)) { $ok = $false }
+    }
+    return $ok
+}
+
 function Stop-DiscordProcesses {
     param([string[]]$ProcessNames, [string]$InstallPath)
     if (-not $ProcessNames -or $ProcessNames.Count -eq 0) { return $true }
@@ -782,8 +815,10 @@ function Stop-DiscordProcesses {
 }
 
 function Stop-AllDiscordProcesses {
-    $allProcs = @("Discord","DiscordCanary","DiscordPTB","DiscordDevelopment","Lightcord","BetterVencord","Equicord","Vencord","Update")
-    return Stop-DiscordProcesses $allProcs
+    $allProcs = @("Discord","DiscordCanary","DiscordPTB","DiscordDevelopment","Lightcord","BetterVencord","Equicord","Vencord")
+    $main = Stop-DiscordProcesses $allProcs
+    $upd = Stop-DiscordUpdateProcesses
+    return ($main -and $upd)
 }
 
 # endregion Process Management
