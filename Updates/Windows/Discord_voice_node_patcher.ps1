@@ -25,29 +25,29 @@ $Script:SCRIPT_VERSION = "7"
 
 $Script:OffsetsMeta = @{
     FinderVersion = "discord_voice_node_offset_finder.py v5.1.2"
-    Build         = "Mar 30 2026"
-    Size          = 14438840
-    MD5           = "2743017a902fa37ef344d4eafa8dfc14"
+    Build         = "Apr 6 2026"
+    Size          = 14413752
+    MD5           = "9327248682af2f2480c4c3e2b5ab68c9"
 }
 
 $Script:Offsets = @{
-    CreateAudioFrameStereo            = 0x11A3B1
-    AudioEncoderOpusConfigSetChannels = 0x3AF8F4
-    MonoDownmixer                     = 0xD95C9
-    EmulateStereoSuccess1             = 0x543C0B
-    EmulateStereoSuccess2             = 0x543C17
-    EmulateBitrateModified            = 0x54406A
-    SetsBitrateBitrateValue           = 0x545E91
-    SetsBitrateBitwiseOr              = 0x545E99
-    Emulate48Khz                      = 0x543D73
-    HighPassFilter                    = 0x54FE80
-    HighpassCutoffFilter              = 0x8D7EA0
-    DcReject                          = 0x8D8080
-    DownmixFunc                       = 0x8D4210
-    AudioEncoderOpusConfigIsOk        = 0x3AFB90
-    ThrowError                        = 0x2C3040
-    EncoderConfigInit1                = 0x3AF8FE
-    EncoderConfigInit2                = 0x3AF207
+    CreateAudioFrameStereo            = 0x117291
+    AudioEncoderOpusConfigSetChannels = 0x3AB1B4
+    MonoDownmixer                     = 0xD6DBE
+    EmulateStereoSuccess1             = 0x54B98B
+    EmulateStereoSuccess2             = 0x54B997
+    EmulateBitrateModified            = 0x54BDEA
+    SetsBitrateBitrateValue           = 0x54DC11
+    SetsBitrateBitwiseOr              = 0x54DC19
+    Emulate48Khz                      = 0x54BAF3
+    HighPassFilter                    = 0x557C00
+    HighpassCutoffFilter              = 0x8D3090
+    DcReject                          = 0x8D3270
+    DownmixFunc                       = 0x8CF400
+    AudioEncoderOpusConfigIsOk        = 0x3AB450
+    ThrowError                        = 0x2BCBE0
+    EncoderConfigInit1                = 0x3AB1BE
+    EncoderConfigInit2                = 0x3AAAC7
 }
 
 # endregion Offsets
@@ -733,39 +733,6 @@ function Get-InstalledClients {
 
 # region Process Management
 
-function Get-DiscordInstallBasePaths {
-    <#
-        Base folders that contain Discord's Update.exe (e.g. %LocalAppData%\Discord).
-        Used so we only touch Update.exe from known Discord installs — the process name
-        "Update" alone matches many unrelated Windows updaters and caused long waits
-        after Discord had already exited.
-    #>
-    $bases = New-Object 'System.Collections.Generic.HashSet[string]'
-    foreach ($k in $Script:DiscordClients.Keys) {
-        $c = $Script:DiscordClients[$k]
-        foreach ($prop in @('Path', 'FallbackPath')) {
-            if (-not $c.ContainsKey($prop)) { continue }
-            $dir = $c[$prop]
-            if ([string]::IsNullOrWhiteSpace($dir) -or -not (Test-Path -LiteralPath $dir)) { continue }
-            try {
-                $full = (Get-Item -LiteralPath $dir).FullName.TrimEnd('\')
-                if ($full) { [void]$bases.Add($full) }
-            } catch { }
-        }
-    }
-    return @($bases)
-}
-
-function Stop-DiscordUpdateProcesses {
-    $paths = Get-DiscordInstallBasePaths
-    if (-not $paths -or $paths.Count -eq 0) { return $true }
-    $ok = $true
-    foreach ($base in $paths) {
-        if (-not (Stop-DiscordProcesses -ProcessNames @('Update') -InstallPath $base)) { $ok = $false }
-    }
-    return $ok
-}
-
 function Stop-DiscordProcesses {
     param([string[]]$ProcessNames, [string]$InstallPath)
     if (-not $ProcessNames -or $ProcessNames.Count -eq 0) { return $true }
@@ -815,10 +782,8 @@ function Stop-DiscordProcesses {
 }
 
 function Stop-AllDiscordProcesses {
-    $allProcs = @("Discord","DiscordCanary","DiscordPTB","DiscordDevelopment","Lightcord","BetterVencord","Equicord","Vencord")
-    $main = Stop-DiscordProcesses $allProcs
-    $upd = Stop-DiscordUpdateProcesses
-    return ($main -and $upd)
+    $allProcs = @("Discord","DiscordCanary","DiscordPTB","DiscordDevelopment","Lightcord","BetterVencord","Equicord","Vencord","Update")
+    return Stop-DiscordProcesses $allProcs
 }
 
 # endregion Process Management
