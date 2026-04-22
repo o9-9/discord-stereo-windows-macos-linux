@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Discord Stereo Installer For Linux - GUI wrapper for installer and patcher scripts.
-Expects Stereo-Installer-Linux.sh and discord_voice_patcher_linux.sh in the same directory.
-DPI-aware on Windows. Run: python3 Discord_Stereo_Installer_For_Linux.py
-"""
+"""Linux Stereo installer GUI: runs Stereo-Installer-Linux.sh / discord_voice_patcher_linux.sh beside this file."""
 from __future__ import annotations
 
 import os
@@ -16,7 +12,8 @@ import threading
 import tkinter as tk
 from tkinter import scrolledtext, messagebox
 
-# Script paths: same directory as this file.
+# region Paths
+
 def _script_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
@@ -32,14 +29,18 @@ def patcher_script():
     """Path to discord_voice_patcher_linux.sh (same directory as this .py)."""
     return os.path.join(_script_dir(), "discord_voice_patcher_linux.sh")
 
-# -----------------------------------------------------------------------------
-# Platform and debug (Windows: validate only if no bash/WSL)
-# -----------------------------------------------------------------------------
+# endregion Paths
+
+
+# region Platform / debug
+
 IS_WINDOWS = sys.platform.startswith("win")
 DEBUG_MODE = (
     os.environ.get("DISCORD_VOICE_FIXER_DEBUG", "").lower() in ("1", "true", "yes")
     or "--debug" in sys.argv
 )
+
+# endregion Platform / debug
 
 
 def _which(cmd: str):

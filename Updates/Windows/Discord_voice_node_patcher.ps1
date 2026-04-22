@@ -15,14 +15,14 @@ $ProgressPreference = 'SilentlyContinue'
 
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing -ErrorAction SilentlyContinue
 
-# Prefer modern TLS defaults for GitHub/HTTPS calls on older Windows/PowerShell.
+# TLS 1.2 for GitHub/HTTPS on older hosts.
 try {
     if ([Net.ServicePointManager]::SecurityProtocol -band [Net.SecurityProtocolType]::Tls12 -eq 0) {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
     }
 } catch { }
 
-# Upstream source (used for self-update)
+# Self-update URL (raw script on GitHub).
 $Script:UPDATE_URL_BASE = "https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Windows/Discord_voice_node_patcher.ps1"
 $Script:SCRIPT_VERSION = "8"
 
@@ -81,14 +81,26 @@ $Script:Offsets = @{
 
 # endregion Offsets
 
-# Offsets required for the patcher core (order matches the offset-finder copy block)
+# Offsets required before C++ codegen / copy block (order = PATCHER_OFFSET_NAMES in offset finder)
 $Script:RequiredOffsetNames = @(
     "CreateAudioFrameStereo", "AudioEncoderOpusConfigSetChannels", "MonoDownmixer",
     "EmulateStereoSuccess1", "EmulateStereoSuccess2", "EmulateBitrateModified",
     "SetsBitrateBitrateValue", "SetsBitrateBitwiseOr", "Emulate48Khz",
     "HighPassFilter", "HighpassCutoffFilter", "DcReject", "DownmixFunc",
     "AudioEncoderOpusConfigIsOk", "ThrowError",
-    "EncoderConfigInit1", "EncoderConfigInit2"
+    "EncoderConfigInit1", "EncoderConfigInit2",
+    "OpusPacketLossCvtt1", "OpusPacketLossCvtt2",
+    "NetEqDelayMgr_MsPerLossPercent", "Pacer_BlockAudio_Disable",
+    "Discord_SetAutomaticGainControl_1", "Discord_SetAutomaticGainControl_2",
+    "Discord_SetNoiseSuppression_1", "Discord_SetNoiseSuppression_2",
+    "Discord_SetEchoCancellation_1", "Discord_SetEchoCancellation_2",
+    "Discord_SetEchoCancellationPre",
+    "Discord_EnableBuiltInAEC",
+    "Discord_SetNoiseCancellation", "Discord_SetNoiseCancellationAfter",
+    "Discord_SetNoiseCancellationDuring", "Discord_SetNoiseCancellationStats",
+    "Discord_SetSidechainCompression", "Discord_SetHasFullbandPerformance",
+    "Discord_SetDuckingPreference", "Discord_SetIdleJitterBufferFlush",
+    "Discord_SetAudioInputEnabled", "Discord_SetAecDump"
 )
 
 # region Patch Definitions
@@ -160,6 +172,9 @@ foreach ($grp in $Script:PatchGroups.Values) {
 
 $Script:SelectedPatches = @{}
 foreach ($k in $Script:AllPatchKeys) { $Script:SelectedPatches[$k] = $true }
+
+# Discord can fail to launch if DISCORD_API_LOCK offsets drift. Keep it opt-in.
+foreach ($k in $Script:PatchGroups.DISCORD_API_LOCK.Keys) { $Script:SelectedPatches[$k] = $false }
 
 # endregion Patch Definitions
 
@@ -343,6 +358,16 @@ function Test-DiscordVoiceNodeOffsetAnchors {
     $bCfg = & $slice $rCfg 4
     $bDm = & $slice $rDm 4
 
+    $rOp1 = $null; $bOp1 = $null
+    if ($Offsets.ContainsKey('OpusPacketLossCvtt1') -and $Offsets.OpusPacketLossCvtt1) {
+        $rOp1 = [int]$Offsets.OpusPacketLossCvtt1
+        $bOp1 = & $slice $rOp1 4
+    }
+    $rOp2 = $null; $bOp2 = $null
+    if ($Offsets.ContainsKey('OpusPacketLossCvtt2') -and $Offsets.OpusPacketLossCvtt2) {
+        $rOp2 = [int]$Offsets.OpusPacketLossCvtt2
+        $bOp2 = & $slice $rOp2 4
+    }
     $rNe = $null; $bNe = $null
     if ($Offsets.ContainsKey('NetEqDelayMgr_MsPerLossPercent') -and $Offsets.NetEqDelayMgr_MsPerLossPercent) {
         $rNe = [int]$Offsets.NetEqDelayMgr_MsPerLossPercent
@@ -353,7 +378,7 @@ function Test-DiscordVoiceNodeOffsetAnchors {
         $rPace = [int]$Offsets.Pacer_BlockAudio_Disable
         $bPace = & $slice $rPace 3
     }
-    if (-not $b48 -or -not $bCfg -or -not $bDm -or ($rNe -and -not $bNe) -or ($rPace -and -not $bPace)) {
+    if (-not $b48 -or -not $bCfg -or -not $bDm -or ($rOp1 -and -not $bOp1) -or ($rOp2 -and -not $bOp2) -or ($rNe -and -not $bNe) -or ($rPace -and -not $bPace)) {
         Write-Log "Anchor check: RVA->file offset out of range (FILE_OFFSET_ADJUSTMENT=0x$('{0:X}' -f $FileOffsetAdjustment))." -Level Error
         return $false
     }
@@ -380,6 +405,22 @@ function Test-DiscordVoiceNodeOffsetAnchors {
         )
     }
 
+    $okOp1 = $true
+    if ($rOp1) {
+        # cvttss2si edx,xmm0 (F2 0F 2C D0) or patched xor edx,edx; nop nop
+        $okOp1 = (
+            ($bOp1[0] -eq 0xF2 -and $bOp1[1] -eq 0x0F -and $bOp1[2] -eq 0x2C -and $bOp1[3] -eq 0xD0) -or
+            ($bOp1[0] -eq 0x31 -and $bOp1[1] -eq 0xD2 -and $bOp1[2] -eq 0x90 -and $bOp1[3] -eq 0x90)
+        )
+    }
+    $okOp2 = $true
+    if ($rOp2) {
+        $okOp2 = (
+            ($bOp2[0] -eq 0xF2 -and $bOp2[1] -eq 0x0F -and $bOp2[2] -eq 0x2C -and $bOp2[3] -eq 0xD0) -or
+            ($bOp2[0] -eq 0x31 -and $bOp2[1] -eq 0xD2 -and $bOp2[2] -eq 0x90 -and $bOp2[3] -eq 0x90)
+        )
+    }
+
     $okPace = $true
     if ($rPace) {
         # Accept original setz bl or patched xor bl,bl; nop
@@ -389,13 +430,15 @@ function Test-DiscordVoiceNodeOffsetAnchors {
         )
     }
 
-    if ($ok48 -and $okCfg -and $okDm -and $okNe -and $okPace) { return $true }
+    if ($ok48 -and $okCfg -and $okDm -and $okNe -and $okOp1 -and $okOp2 -and $okPace) { return $true }
 
     Write-Log "Pre-patch anchor check failed (offsets do not match this discord_voice.node file)." -Level Error
     Write-Log ("  FILE_OFFSET_ADJUSTMENT=0x{0:X} (from PE .text); re-paste the full '# region Offsets' block from the offset finder." -f $FileOffsetAdjustment) -Level Error
     Write-Log ("  Emulate48Khz @0x{0:X} file 0x{1:X}: {2} (expected 0F 42 C1 or 90 90 90)" -f $r48, ($r48 - $FileOffsetAdjustment), (& $hex $b48 3)) -Level Error
     Write-Log ("  ConfigIsOk   @0x{0:X} file 0x{1:X}: {2} (expected 8B 11 31 C0 or 48 C7 C0 01)" -f $rCfg, ($rCfg - $FileOffsetAdjustment), (& $hex $bCfg 4)) -Level Error
     Write-Log ("  DownmixFunc  @0x{0:X} file 0x{1:X}: {2} (expected 41 57 41 56 or C3)" -f $rDm, ($rDm - $FileOffsetAdjustment), (& $hex $bDm 4)) -Level Error
+    if ($rOp1) { Write-Log ("  OpusPacketLossCvtt1 @0x{0:X} file 0x{1:X}: {2} (expected F2 0F 2C D0 or 31 D2 90 90)" -f $rOp1, ($rOp1 - $FileOffsetAdjustment), (& $hex $bOp1 4)) -Level Error }
+    if ($rOp2) { Write-Log ("  OpusPacketLossCvtt2 @0x{0:X} file 0x{1:X}: {2} (expected F2 0F 2C D0 or 31 D2 90 90)" -f $rOp2, ($rOp2 - $FileOffsetAdjustment), (& $hex $bOp2 4)) -Level Error }
     if ($rNe) { Write-Log ("  NetEq(ms/loss) @0x{0:X} file 0x{1:X}: {2} (expected 48 B8 14 00 00 00 C8 00 00 00 or 48 B8 00..00)" -f $rNe, ($rNe - $FileOffsetAdjustment), (& $hex $bNe 10)) -Level Error }
     if ($rPace) { Write-Log ("  Pacer(BlockAudio) @0x{0:X} file 0x{1:X}: {2} (expected 0F 94 C3 or 30 DB 90)" -f $rPace, ($rPace - $FileOffsetAdjustment), (& $hex $bPace 3)) -Level Error }
     return $false
@@ -1788,10 +1831,10 @@ function Get-PatcherSourceCode {
     $offsets = $Script:Config.Offsets
     $c = $Script:Config
 
-    # Require all 17 offsets before generating C++ (avoids null/zero in embedded code)
+    # Require full Windows offset list (core + extended) before generating C++ (avoids null/zero in embedded code)
     $missing = @($Script:RequiredOffsetNames | Where-Object { $null -eq $offsets[$_] -or ($offsets[$_] -is [int] -and $offsets[$_] -eq 0) })
     if ($missing.Count -gt 0) {
-        throw "Missing or zero offset(s) required for patcher: $($missing -join ', '). Paste the full offset block from the offset finder (17 entries)."
+        throw "Missing or zero offset(s) required for patcher: $($missing -join ', '). Paste the full '# region Offsets' block from the offset finder ($($Script:RequiredOffsetNames.Count) entries)."
     }
     $sp = $Script:SelectedPatches
     $bitrateKbps = [Math]::Min(384, [int]$c.Bitrate)
@@ -1970,6 +2013,49 @@ private:
             }
             memcpy((char*)fileData + fileOffset, bytes, len);
             return true;
+        };
+
+        // Resolve function start RVA via PE .pdata (RUNTIME_FUNCTION table).
+        // This prevents "RET in the middle of a function" when an offset drifts.
+        auto FindPdataFunctionStart = [&](uint32_t anyRva, uint32_t& outBegin) -> bool {
+            __try {
+                const unsigned char* base = (const unsigned char*)fileData;
+                if (fileSize < 0x1000) return false;
+                const IMAGE_DOS_HEADER* dos = (const IMAGE_DOS_HEADER*)base;
+                if (dos->e_magic != IMAGE_DOS_SIGNATURE) return false;
+                const IMAGE_NT_HEADERS64* nt = (const IMAGE_NT_HEADERS64*)(base + dos->e_lfanew);
+                if ((const unsigned char*)nt < base || (const unsigned char*)nt + sizeof(IMAGE_NT_HEADERS64) > base + fileSize) return false;
+                if (nt->Signature != IMAGE_NT_SIGNATURE) return false;
+                const IMAGE_SECTION_HEADER* sec = IMAGE_FIRST_SECTION(nt);
+                const int nsec = nt->FileHeader.NumberOfSections;
+                const IMAGE_SECTION_HEADER* pdata = nullptr;
+                for (int i = 0; i < nsec; i++) {
+                    const char* nm = (const char*)sec[i].Name;
+                    if (memcmp(nm, ".pdata", 6) == 0) { pdata = &sec[i]; break; }
+                }
+                if (!pdata) return false;
+                const uint32_t raw = pdata->PointerToRawData;
+                const uint32_t rawSize = pdata->SizeOfRawData;
+                const uint32_t vaddr = pdata->VirtualAddress;
+                if (raw == 0 || rawSize < 12) return false;
+                if ((LONGLONG)(raw + rawSize) > fileSize) return false;
+
+                const unsigned char* p = base + raw;
+                const unsigned char* e = p + rawSize;
+                while (p + 12 <= e) {
+                    uint32_t beginRva = *(const uint32_t*)(p + 0);
+                    uint32_t endRva   = *(const uint32_t*)(p + 4);
+                    // uint32_t unwindRva= *(const uint32_t*)(p + 8);
+                    if (beginRva && endRva && beginRva <= anyRva && anyRva < endRva) {
+                        outBegin = beginRva;
+                        return true;
+                    }
+                    p += 12;
+                }
+                return false;
+            } __except (EXCEPTION_EXECUTE_HANDLER) {
+                return false;
+            }
         };
 
         auto ReadU32LE = [&](uint32_t offset, uint32_t& value) -> bool {
@@ -2167,99 +2253,183 @@ private:
 
 #if PATCH_Discord_SetAutomaticGainControl_1
         printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl (1) -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetAutomaticGainControl_1, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetAutomaticGainControl_1;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] (1) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl (1) - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetAutomaticGainControl_2
         printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl (2) -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetAutomaticGainControl_2, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetAutomaticGainControl_2;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] (2) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl (2) - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetNoiseSuppression_1
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression (1) -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetNoiseSuppression_1, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetNoiseSuppression_1;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] NS(1) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression (1) - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetNoiseSuppression_2
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression (2) -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetNoiseSuppression_2, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetNoiseSuppression_2;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] NS(2) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression (2) - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetEchoCancellation_1
         printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation (1) -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetEchoCancellation_1, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetEchoCancellation_1;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] EC(1) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation (1) - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetEchoCancellation_2
         printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation (2) -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetEchoCancellation_2, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetEchoCancellation_2;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] EC(2) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation (2) - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetEchoCancellationPre
         printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellationPreEcho -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetEchoCancellationPre, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetEchoCancellationPre;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] ECPre - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellationPreEcho - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_EnableBuiltInAEC
         printf("  [DISCORD_API_LOCK] Discord::EnableBuiltInAEC -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_EnableBuiltInAEC, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_EnableBuiltInAEC;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] AEC - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::EnableBuiltInAEC - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetNoiseCancellation
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellation -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetNoiseCancellation, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetNoiseCancellation;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] NC - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellation - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetNoiseCancellationAfter
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationAfterProcessing -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetNoiseCancellationAfter, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetNoiseCancellationAfter;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] NCAfter - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationAfterProcessing - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetNoiseCancellationDuring
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationDuringProcessing -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetNoiseCancellationDuring, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetNoiseCancellationDuring;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] NCDuring - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationDuringProcessing - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetNoiseCancellationStats
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationEnableStats -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetNoiseCancellationStats, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetNoiseCancellationStats;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] NCStats - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationEnableStats - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetSidechainCompression
         printf("  [DISCORD_API_LOCK] Discord::SetSidechainCompression -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetSidechainCompression, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetSidechainCompression;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] Sidechain - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetSidechainCompression - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetHasFullbandPerformance
         printf("  [DISCORD_API_LOCK] Discord::SetHasFullbandPerformance -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetHasFullbandPerformance, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetHasFullbandPerformance;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] Fullband - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetHasFullbandPerformance - SKIPPED\n"); skipCount++;
 #endif

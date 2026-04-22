@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Discord Voice Node Offset Finder — GUI.
-
-Small Tk GUI wrapper around `discord_voice_node_offset_finder_v5.py`.
-
-- Auto-detects and loads the finder script from nearby directories.
-- Produces copy blocks for Windows (PowerShell), Linux (bash), and macOS.
-"""
+"""Tk GUI for discord_voice_node_offset_finder_v5.py (copy blocks for Windows/Linux/macOS)."""
 
 import os
 import sys
@@ -28,7 +22,7 @@ sys.dont_write_bytecode = True
 
 VERSION = "1.1.1"
 SCRIPT_DIR = Path(__file__).parent
-# Windows debug: no bash needed; finder runs natively on PE. Set OFFSET_FINDER_DEBUG=1 for verbose log.
+# OFFSET_FINDER_DEBUG=1 or --debug for verbose finder log.
 DEBUG_MODE = os.environ.get("OFFSET_FINDER_DEBUG", "").lower() in ("1", "true", "yes") or "--debug" in sys.argv
 
 
@@ -62,6 +56,8 @@ def _finder_script_search_dirs() -> list[Path]:
         dirs.append(hub_scripts)
     return dirs
 
+
+# region Theme
 
 THEME = {
     "BG": "#1e1e1e",
@@ -106,9 +102,11 @@ YELLOW = THEME["YELLOW"]
 CYAN = THEME["CYAN"]
 SELECT_BG = THEME["SELECT_BG"]
 
+# endregion Theme
+
 
 def _ascii_safe(s: str | bytes) -> str:
-    """Patcher blocks and console copy should be ASCII-only; replace non-ASCII for clipboard."""
+    """ASCII-only text for clipboard / patcher blocks."""
     if not s:
         return ""
     if isinstance(s, bytes):
@@ -749,6 +747,8 @@ class OffsetFinderGUI:
         self.root.destroy()
 
 
+# region Main
+
 def main():
     if tk is None:
         print("Offset Finder requires Tkinter.", file=sys.stderr)
@@ -796,6 +796,9 @@ def main():
 
     app = OffsetFinderGUI(root)
     root.mainloop()
+
+
+# endregion Main
 
 
 if __name__ == "__main__":

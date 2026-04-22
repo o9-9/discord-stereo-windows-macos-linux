@@ -1,5 +1,5 @@
 @echo off
-REM Fetches from bundle Updates/Windows. Or run: powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Discord_voice_node_patcher.ps1"
+REM Wraps: Updates/Windows/Discord_voice_node_patcher.ps1 (or run that .ps1 locally).
 
 title Discord Voice Node Patcher
 echo Fetching latest Voice Node Patcher from bundle repo...

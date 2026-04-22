@@ -318,6 +318,8 @@ CLANG_ALT_PATTERNS = [
      "B8 80 BB 00 00 41 ?? 00 7D 00 00 ?? 0F 43 ??", 31),
 ]
 
+# region PE Parser
+
 def parse_pe(data):
     """Extract PE info; file_offset_adjustment from .text VA - raw, else 0xC00."""
     if len(data) < 0x40 or data[:2] != b'MZ':
@@ -389,10 +391,7 @@ def parse_pe(data):
 
 
 # region ELF Parser
-# Offset names -> ELF symbol substrings (Linux node not stripped)
-# client builds (Stable, PTB, Canary). Function names are in .symtab/.dynsym.
-# Each entry is a list of candidate symbol substrings (tried in order).
-# Entries with target_within=True mean the offset is INSIDE the function, not at its start.
+# Linux node: symbol name hints (.symtab). target_within = offset inside function, not at entry.
 ELF_SYMBOL_MAP = {
     # -- Function-start offsets (symbol address IS the offset) --------------
     # Verified against Linux discord_voice.node (Aug 2025 build)
@@ -1926,6 +1925,9 @@ def find_offset(data, sig, text_start=0, text_end=None):
                     return file_offset, None, f"{tier}(ambig:{len(resolved)})"
 
     return None, f"no matches across {len(tiers)} tier(s)", "none"
+
+
+# endregion Signature Scanner
 
 
 # region Patch Safety and Heuristics
@@ -3588,6 +3590,8 @@ def _discover_offsets_impl(data, bin_info):
 
 # endregion Offset Discovery Engine
 
+
+# region Validation
 
 EXPECTED_ORIGINALS = {
     "EmulateStereoSuccess1":    ("01", 1),
