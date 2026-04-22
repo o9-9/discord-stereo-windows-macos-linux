@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Discord Voice Node Offset Finder v5.1.2 — PE/ELF/Mach-O offset discovery (17 Windows patcher offsets; ELF adds Linux-only MultiChannel Opus = 18)."""
+"""Discord Voice Node Offset Finder v5.1.4 — PE/ELF/Mach-O offset discovery (Windows: 17 core + extended packet-loss/NetEq/Pacer/Discord API RVAs for Discord_voice_node_patcher.ps1; ELF adds Linux-only MultiChannel Opus = 18)."""
 
 import sys
 import os
@@ -8,6 +8,7 @@ import atexit
 import struct
 import json
 import hashlib
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,7 +21,7 @@ try:
 except ImportError:
     VIZ_AVAILABLE = False
 
-VERSION = "5.1.2"
+VERSION = "5.1.3"
 
 TARGET_BITRATE_BPS = 384000
 _BITRATE_LE = TARGET_BITRATE_BPS.to_bytes(4, "little")
@@ -2445,7 +2446,7 @@ ALL_OFFSET_NAMES = [
 ]
 
 WINDOWS_PATCHER_OFFSET_NAMES = [
-    # Keep Windows patcher contract: exactly these 17 keys.
+    # Core 17: required for stereo/bitrate/encoder/filter pipeline.
     "CreateAudioFrameStereo",
     "AudioEncoderOpusConfigSetChannels",
     "MonoDownmixer",
@@ -2465,7 +2466,58 @@ WINDOWS_PATCHER_OFFSET_NAMES = [
     "EncoderConfigInit2",
 ]
 
-PATCHER_OFFSET_NAMES = WINDOWS_PATCHER_OFFSET_NAMES
+# Windows-only extended sites (Discord_voice_node_patcher.ps1 PACKETLOSS / NETEQ / PACING / DISCORD_API_LOCK).
+WINDOWS_EXTENDED_OFFSET_NAMES = [
+    "OpusPacketLossCvtt1",
+    "OpusPacketLossCvtt2",
+    "NetEqDelayMgr_MsPerLossPercent",
+    "Pacer_BlockAudio_Disable",
+    "Discord_SetAutomaticGainControl_1",
+    "Discord_SetAutomaticGainControl_2",
+    "Discord_SetNoiseSuppression_1",
+    "Discord_SetNoiseSuppression_2",
+    "Discord_SetEchoCancellation_1",
+    "Discord_SetEchoCancellation_2",
+    "Discord_SetEchoCancellationPre",
+    "Discord_EnableBuiltInAEC",
+    "Discord_SetNoiseCancellation",
+    "Discord_SetNoiseCancellationAfter",
+    "Discord_SetNoiseCancellationDuring",
+    "Discord_SetNoiseCancellationStats",
+    "Discord_SetSidechainCompression",
+    "Discord_SetHasFullbandPerformance",
+    "Discord_SetDuckingPreference",
+    "Discord_SetIdleJitterBufferFlush",
+    "Discord_SetAudioInputEnabled",
+    "Discord_SetAecDump",
+]
+
+# Reference EmulateStereoSuccess1 RVA from the build used to record Discord_* RVAs below (Discord desktop ~Apr 2026).
+WINDOWS_DISCORD_REF_EMULATE_STEREO_SUCCESS1 = 0x54B98B
+
+# Discord API patch sites (RVA) on the reference build; relocated as (new_ESS - WINDOWS_DISCORD_REF_EMULATE_STEREO_SUCCESS1).
+WINDOWS_DISCORD_OFFSETS_REF = {
+    "Discord_SetAutomaticGainControl_1": 0x88C20,
+    "Discord_SetAutomaticGainControl_2": 0x88F30,
+    "Discord_SetNoiseSuppression_1": 0x88570,
+    "Discord_SetNoiseSuppression_2": 0x88870,
+    "Discord_SetEchoCancellation_1": 0x87F50,
+    "Discord_SetEchoCancellation_2": 0x88560,
+    "Discord_SetEchoCancellationPre": 0x88250,
+    "Discord_EnableBuiltInAEC": 0x87C50,
+    "Discord_SetNoiseCancellation": 0x88F40,
+    "Discord_SetNoiseCancellationAfter": 0x89DE0,
+    "Discord_SetNoiseCancellationDuring": 0x89AD0,
+    "Discord_SetNoiseCancellationStats": 0x897C0,
+    "Discord_SetSidechainCompression": 0xA15C0,
+    "Discord_SetHasFullbandPerformance": 0xA3A90,
+    "Discord_SetDuckingPreference": 0x997A0,
+    "Discord_SetIdleJitterBufferFlush": 0x87940,
+    "Discord_SetAudioInputEnabled": 0xA12C0,
+    "Discord_SetAecDump": 0x9EB60,
+}
+
+PATCHER_OFFSET_NAMES = list(WINDOWS_PATCHER_OFFSET_NAMES) + list(WINDOWS_EXTENDED_OFFSET_NAMES)
 
 if len(ALL_OFFSET_NAMES) != len(set(ALL_OFFSET_NAMES)):
     raise RuntimeError("ALL_OFFSET_NAMES has duplicate entries (breaks patcher hit counting)")
@@ -2480,7 +2532,7 @@ def count_patcher_offsets_found(results, patcher_names=None):
     return hits, len(names)
 
 
-ALLOWED_OFFSET_NAMES = frozenset(ALL_OFFSET_NAMES)
+ALLOWED_OFFSET_NAMES = frozenset(ALL_OFFSET_NAMES) | frozenset(WINDOWS_EXTENDED_OFFSET_NAMES)
 for _map_name, _map in (("ELF_SYMBOL_MAP", ELF_SYMBOL_MAP), ("ARM64_SYMBOL_MAP", ARM64_SYMBOL_MAP)):
     _extra = set(_map.keys()) - ALLOWED_OFFSET_NAMES
     if _extra:
@@ -2945,6 +2997,136 @@ def discover_offsets_arm64(data, arm64_info):
     return results, errors, adj, tiers_used
 
 
+def _pe_file_off_to_rva(file_off, sections):
+    """Map PE on-disk offset to RVA using section table."""
+    for sec in sections or []:
+        ro = sec.get("raw_offset", 0)
+        rs = sec.get("raw_size", 0)
+        va = sec.get("vaddr", 0)
+        if ro > 0 and ro <= file_off < ro + rs:
+            return file_off - ro + va
+    return None
+
+
+def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, text_start, text_end):
+    """PE-only: Opus packet-loss cvtts, NetEq ms/loss imm, Pacer BlockAudio setz, Discord API (ESS-relative)."""
+    if bin_info.get("format") != "pe" or "EmulateStereoSuccess1" not in results:
+        return
+
+    adj = bin_info.get("file_offset_adjustment", 0xC00)
+    image_base = bin_info.get("image_base", 0x180000000)
+    sections = bin_info.get("sections") or []
+
+    print("\n" + "=" * 65)
+    print("  PHASE 2c: Windows Extended (packet loss / NetEq / Pacer / Discord API)")
+    print("=" * 65)
+
+    # --- NetEq: movabs imm64 0xC800000014 (ms_per_loss_percent default) ----------------
+    pat_ne = bytes.fromhex("48 B8 14 00 00 00 C8 00 00 00")
+    ne_hits = []
+    idx = text_start
+    while idx < text_end:
+        j = data.find(pat_ne, idx, text_end)
+        if j < 0:
+            break
+        ne_hits.append(j + adj)
+        idx = j + 1
+    if len(ne_hits) == 1:
+        rva = ne_hits[0]
+        results["NetEqDelayMgr_MsPerLossPercent"] = rva
+        tiers_used["NetEqDelayMgr_MsPerLossPercent"] = "extended(neteq-movabs)"
+        print(f"  [ OK ] NetEqDelayMgr_MsPerLossPercent{' ':16s} = 0x{rva:X}  [movabs 14..C8]")
+    elif not ne_hits:
+        print("  [FAIL] NetEqDelayMgr_MsPerLossPercent: movabs pattern not found")
+    else:
+        print(f"  [FAIL] NetEqDelayMgr_MsPerLossPercent: ambiguous ({len(ne_hits)} movabs hits)")
+
+    # --- Pacer BlockAudio: LEA to WebRTC-Pacer-BlockAudio then setz bl (0F 94 C3) -------
+    pacer_key = b"WebRTC-Pacer-BlockAudio\x00"
+    pk = data.find(pacer_key)
+    if pk < 0:
+        print("  [FAIL] Pacer_BlockAudio_Disable: string WebRTC-Pacer-BlockAudio not found")
+    else:
+        str_rva = _pe_file_off_to_rva(pk, sections)
+        if str_rva is None:
+            print("  [FAIL] Pacer_BlockAudio_Disable: could not map string file offset to RVA")
+        else:
+            str_va = image_base + str_rva
+            lea_rva = None
+            i = text_start
+            ts = bin_info.get("text_section") or {}
+            tva = ts.get("vaddr", 0x1000)
+            traw = ts.get("raw_offset", text_start)
+            while i < text_end - 7:
+                if data[i : i + 3] == b"\x48\x8d\x05":
+                    disp = struct.unpack_from("<i", data, i + 3)[0]
+                    insn_rva = tva + (i - traw)
+                    tgt_va = image_base + insn_rva + 7 + disp
+                    if tgt_va == str_va:
+                        lea_rva = insn_rva
+                        break
+                i += 1
+            if lea_rva is None:
+                print("  [FAIL] Pacer_BlockAudio_Disable: no LEA to BlockAudio string in .text")
+            else:
+                lea_file = lea_rva - adj
+                found_p = None
+                for k in range(lea_file, min(lea_file + 0x120, text_end - 3)):
+                    if data[k : k + 3] == b"\x0f\x94\xc3":
+                        found_p = k + adj
+                        break
+                if found_p:
+                    results["Pacer_BlockAudio_Disable"] = found_p
+                    tiers_used["Pacer_BlockAudio_Disable"] = "extended(pacer-blockaudio)"
+                    print(f"  [ OK ] Pacer_BlockAudio_Disable{' ':21s} = 0x{found_p:X}  [setz bl after LEA]")
+                else:
+                    print("  [FAIL] Pacer_BlockAudio_Disable: setz bl not found after LEA")
+
+    # --- Opus packet loss: paired F2 0F 2C D0 with mov rcx/rcx,[reg+0xA8] ---------------
+    ess = results["EmulateStereoSuccess1"]
+    ess_f = ess - adj
+    lo = max(text_start, ess_f - 0x2000)
+    hi = min(text_end, ess_f + 0xA000)
+    cvtt = bytes.fromhex("F2 0F 2C D0")
+    cands = []
+    i = lo
+    while i < hi:
+        j = data.find(cvtt, i, hi)
+        if j < 0:
+            break
+        tail = data[j + 4 : j + 4 + 6]
+        if tail.startswith(b"\x48\x8B\x8E\xA8") or tail.startswith(b"\x48\x8B\x89\xA8"):
+            cands.append(j + adj)
+        i = j + 4
+    best_pair = None
+    for a in range(len(cands)):
+        for b in range(a + 1, len(cands)):
+            dlt = cands[b] - cands[a]
+            if 0x120 <= dlt <= 0x1B0:
+                best_pair = (cands[a], cands[b], dlt)
+                break
+        if best_pair:
+            break
+    if best_pair:
+        o1, o2, dlt = best_pair
+        results["OpusPacketLossCvtt1"] = o1
+        results["OpusPacketLossCvtt2"] = o2
+        tiers_used["OpusPacketLossCvtt1"] = "extended(opus-cvtt-pair)"
+        tiers_used["OpusPacketLossCvtt2"] = "extended(opus-cvtt-pair)"
+        print(f"  [ OK ] OpusPacketLossCvtt1 / Cvtt2{' ':15s} = 0x{o1:X} / 0x{o2:X}  (delta 0x{dlt:X})")
+    else:
+        print(f"  [FAIL] Opus packet-loss sites: no cvttsd2si pair in cluster (candidates={len(cands)})")
+
+    # --- Discord API: same displacement from EmulateStereoSuccess1 as reference build ---
+    ref_ess = WINDOWS_DISCORD_REF_EMULATE_STEREO_SUCCESS1
+    new_ess = results["EmulateStereoSuccess1"]
+    for name, ref_rva in WINDOWS_DISCORD_OFFSETS_REF.items():
+        rva = new_ess + (ref_rva - ref_ess)
+        results[name] = rva
+        tiers_used[name] = "extended(discord-api+ess-delta)"
+    print(f"  [ OK ] Discord API lock sites{' ':26s} ({len(WINDOWS_DISCORD_OFFSETS_REF)} RVAs, ESS delta)")
+
+
 def discover_offsets(data, bin_info, verbose=True):
     """Full discovery pipeline; verbose=False suppresses phase prints. Returns (results, errors, adj, tiers_used)."""
     _saved_stdout = None
@@ -3379,6 +3561,9 @@ def _discover_offsets_impl(data, bin_info):
         if not hints:
             print(f"  No heuristic candidates for: {', '.join(missing)}")
 
+    if fmt == "pe" and bin_info:
+        _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, text_start, text_end)
+
     validation_failures = _validate_discovered_offsets(results, data, adj)
     for name, reason in validation_failures:
         results.pop(name, None)
@@ -3422,6 +3607,10 @@ EXPECTED_ORIGINALS = {
     "DcReject":                 (None, 0x1B6),
     "EncoderConfigInit1":       ("00 7D 00 00", 4),
     "EncoderConfigInit2":       ("00 7D 00 00", 4),
+    "OpusPacketLossCvtt1":      ("F2 0F 2C D0", 4),
+    "OpusPacketLossCvtt2":      ("F2 0F 2C D0", 4),
+    "NetEqDelayMgr_MsPerLossPercent": ("48 B8 14 00 00 00 C8 00 00 00", 10),
+    "Pacer_BlockAudio_Disable": ("0F 94 C3", 3),
 }
 
 EXPECTED_ORIGINALS_CLANG = {
@@ -3497,6 +3686,10 @@ PATCH_INFO = {
     "DcReject":                 ("<injected: dc_reject>", "Custom DC reject + gain"),
     "EncoderConfigInit1":       (BITRATE_PATCH_4, "Config qword: 32000->384000"),
     "EncoderConfigInit2":       (BITRATE_PATCH_4, "Config qword: 32000->384000"),
+    "OpusPacketLossCvtt1":      ("31 D2 90 90", "cvtt -> xor edx; nop nop"),
+    "OpusPacketLossCvtt2":      ("31 D2 90 90", "cvtt -> xor edx; nop nop"),
+    "NetEqDelayMgr_MsPerLossPercent": ("48 B8 00 00 00 00 00 00 00 00", "imm64 -> 0"),
+    "Pacer_BlockAudio_Disable": ("30 DB 90", "setz bl -> xor bl,bl; nop"),
 }
 
 
@@ -3705,10 +3898,16 @@ def _validate_pe_offsets_for_patcher(results, bin_info, file_size):
     return True, None
 
 
+# Linux/macOS copy blocks use core Windows names only (no PE-only extended keys).
 WINDOWS_PATCHER_OFFSET_ORDER = list(WINDOWS_PATCHER_OFFSET_NAMES)
 
-_MONTHS_ASCII = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+def _infer_discord_app_version_from_path(file_path):
+    """Discord desktop installs use folders named app-x.y.z; parse from any path to the .node file."""
+    if not file_path:
+        return "unspecified"
+    s = os.path.normpath(str(file_path))
+    m = re.search(r'app-\s*([\d.]+)', s, re.I)
+    return m.group(1).strip() if m else "unspecified"
 
 
 def format_windows_patcher_block(results, bin_info, file_path, file_size):
@@ -3722,26 +3921,22 @@ def format_windows_patcher_block(results, bin_info, file_path, file_size):
         return None
     with open(file_path, 'rb') as f:
         md5 = hashlib.md5(f.read()).hexdigest().lower()
-    if bin_info.get('build_time') and hasattr(bin_info['build_time'], 'month'):
-        bt = bin_info['build_time']
-        build_str = "%s %d %d" % (_MONTHS_ASCII[bt.month - 1], bt.day, bt.year)
-    else:
-        build_str = "PE binary"
+    app_ver = _infer_discord_app_version_from_path(file_path)
     lines = [
         "# region Offsets (PASTE HERE)",
         "# Paste output from: python discord_voice_node_offset_finder_v5.py <path\\to\\discord_voice.node>",
-        "# Required: exactly these 17 offsets (RVA hex). Copy the \"COPY BELOW -> Discord_voice_node_patcher.ps1\" block.",
+        "# Required: core 17 + extended Windows offsets (RVA hex). Copy the full block into Discord_voice_node_patcher.ps1.",
         "",
         "$Script:OffsetsMeta = @{",
         '    FinderVersion = "discord_voice_node_offset_finder.py v%s"' % VERSION,
-        '    Build         = "%s"' % build_str,
+        '    DiscordAppVersion = "%s"' % app_ver,
         "    Size          = %s" % file_size,
         '    MD5           = "%s"' % md5,
         "}",
         "",
         "$Script:Offsets = @{",
     ]
-    ordered = WINDOWS_PATCHER_OFFSET_ORDER
+    ordered = list(PATCHER_OFFSET_NAMES)
     max_len = max((len(n) for n in ordered), default=0)
     for name in ordered:
         if name not in results:
@@ -3782,6 +3977,36 @@ PATCHER_DEBUG_GROUPS = {
         ("EncoderConfigInit1", "EncoderConfigInit1 (32000->384000)"),
         ("EncoderConfigInit2", "EncoderConfigInit2 (32000->384000)"),
         ("AudioEncoderMultiChannelOpusCh", "AudioEncoderMultiChannelOpusCh (Linux ch=2)"),
+    ],
+    "PACKETLOSS": [
+        ("OpusPacketLossCvtt1", "Opus packet loss rate -> 0 (site 1)"),
+        ("OpusPacketLossCvtt2", "Opus packet loss rate -> 0 (site 2)"),
+    ],
+    "NETEQ": [
+        ("NetEqDelayMgr_MsPerLossPercent", "NetEq ms_per_loss_percent -> 0"),
+    ],
+    "PACING": [
+        ("Pacer_BlockAudio_Disable", "Pacer BlockAudio -> false"),
+    ],
+    "DISCORD_API_LOCK": [
+        ("Discord_SetAutomaticGainControl_1", "Discord::SetAutomaticGainControl (1)"),
+        ("Discord_SetAutomaticGainControl_2", "Discord::SetAutomaticGainControl (2)"),
+        ("Discord_SetNoiseSuppression_1", "Discord::SetNoiseSuppression (1)"),
+        ("Discord_SetNoiseSuppression_2", "Discord::SetNoiseSuppression (2)"),
+        ("Discord_SetEchoCancellation_1", "Discord::SetEchoCancellation (1)"),
+        ("Discord_SetEchoCancellation_2", "Discord::SetEchoCancellation (2)"),
+        ("Discord_SetEchoCancellationPre", "Discord::SetEchoCancellationPreEcho"),
+        ("Discord_EnableBuiltInAEC", "Discord::EnableBuiltInAEC"),
+        ("Discord_SetNoiseCancellation", "Discord::SetNoiseCancellation"),
+        ("Discord_SetNoiseCancellationAfter", "Discord::SetNoiseCancellationAfterProcessing"),
+        ("Discord_SetNoiseCancellationDuring", "Discord::SetNoiseCancellationDuringProcessing"),
+        ("Discord_SetNoiseCancellationStats", "Discord::SetNoiseCancellationEnableStats"),
+        ("Discord_SetSidechainCompression", "Discord::SetSidechainCompression"),
+        ("Discord_SetHasFullbandPerformance", "Discord::SetHasFullbandPerformance"),
+        ("Discord_SetDuckingPreference", "Discord::SetDuckingPreference"),
+        ("Discord_SetIdleJitterBufferFlush", "Discord::SetIdleJitterBufferFlush"),
+        ("Discord_SetAudioInputEnabled", "Discord::SetAudioInputEnabled"),
+        ("Discord_SetAecDump", "Discord::SetAecDump"),
     ],
 }
 

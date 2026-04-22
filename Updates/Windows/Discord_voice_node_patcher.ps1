@@ -15,44 +15,73 @@ $ProgressPreference = 'SilentlyContinue'
 
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing -ErrorAction SilentlyContinue
 
-# Canonical source (same tree as Stereo Hub / Linux bundle)
+# Prefer modern TLS defaults for GitHub/HTTPS calls on older Windows/PowerShell.
+try {
+    if ([Net.ServicePointManager]::SecurityProtocol -band [Net.SecurityProtocolType]::Tls12 -eq 0) {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    }
+} catch { }
+
+# Upstream source (used for self-update)
 $Script:UPDATE_URL_BASE = "https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Windows/Discord_voice_node_patcher.ps1"
-$Script:SCRIPT_VERSION = "7"
+$Script:SCRIPT_VERSION = "8"
 
 # region Offsets (PASTE HERE)
 # Paste output from: python discord_voice_node_offset_finder_v5.py <path\to\discord_voice.node>
-# Required: exactly these 17 offsets (RVA hex). Copy the "COPY BELOW -> Discord_voice_node_patcher.ps1" block.
+# Required: core 17 + extended Windows offsets (RVA hex). Copy the full block into Discord_voice_node_patcher.ps1.
 
 $Script:OffsetsMeta = @{
-    FinderVersion = "discord_voice_node_offset_finder.py v5.1.2"
-    Build         = "Apr 6 2026"
-    Size          = 14413752
-    MD5           = "9327248682af2f2480c4c3e2b5ab68c9"
+    FinderVersion = "discord_voice_node_offset_finder.py v5.1.3"
+    DiscordAppVersion = "1.0.9233"
+    Size          = 14417336
+    MD5           = "2a46677f5de67901e6ce0116dcfc84ea"
 }
 
 $Script:Offsets = @{
-    CreateAudioFrameStereo            = 0x117291
-    AudioEncoderOpusConfigSetChannels = 0x3AB1B4
-    MonoDownmixer                     = 0xD6DBE
-    EmulateStereoSuccess1             = 0x54B98B
-    EmulateStereoSuccess2             = 0x54B997
-    EmulateBitrateModified            = 0x54BDEA
-    SetsBitrateBitrateValue           = 0x54DC11
-    SetsBitrateBitwiseOr              = 0x54DC19
-    Emulate48Khz                      = 0x54BAF3
-    HighPassFilter                    = 0x557C00
-    HighpassCutoffFilter              = 0x8D3090
-    DcReject                          = 0x8D3270
-    DownmixFunc                       = 0x8CF400
-    AudioEncoderOpusConfigIsOk        = 0x3AB450
-    ThrowError                        = 0x2BCBE0
-    EncoderConfigInit1                = 0x3AB1BE
-    EncoderConfigInit2                = 0x3AAAC7
+    CreateAudioFrameStereo             = 0x117B91
+    AudioEncoderOpusConfigSetChannels  = 0x3AC424
+    MonoDownmixer                      = 0xD744E
+    EmulateStereoSuccess1              = 0x54D8CB
+    EmulateStereoSuccess2              = 0x54D8D7
+    EmulateBitrateModified             = 0x54DD2A
+    SetsBitrateBitrateValue            = 0x54FB51
+    SetsBitrateBitwiseOr               = 0x54FB59
+    Emulate48Khz                       = 0x54DA33
+    HighPassFilter                     = 0x559B40
+    HighpassCutoffFilter               = 0x8D4150
+    DcReject                           = 0x8D4330
+    DownmixFunc                        = 0x8D04C0
+    AudioEncoderOpusConfigIsOk         = 0x3AC6C0
+    ThrowError                         = 0x2BDE60
+    EncoderConfigInit1                 = 0x3AC42E
+    EncoderConfigInit2                 = 0x3ABD37
+    OpusPacketLossCvtt1                = 0x54EF3A
+    OpusPacketLossCvtt2                = 0x54F0A7
+    NetEqDelayMgr_MsPerLossPercent     = 0xA9BF0D
+    Pacer_BlockAudio_Disable           = 0x6E8DD2
+    Discord_SetAutomaticGainControl_1  = 0x8AB60
+    Discord_SetAutomaticGainControl_2  = 0x8AE70
+    Discord_SetNoiseSuppression_1      = 0x8A4B0
+    Discord_SetNoiseSuppression_2      = 0x8A7B0
+    Discord_SetEchoCancellation_1      = 0x89E90
+    Discord_SetEchoCancellation_2      = 0x8A4A0
+    Discord_SetEchoCancellationPre     = 0x8A190
+    Discord_EnableBuiltInAEC           = 0x89B90
+    Discord_SetNoiseCancellation       = 0x8AE80
+    Discord_SetNoiseCancellationAfter  = 0x8BD20
+    Discord_SetNoiseCancellationDuring = 0x8BA10
+    Discord_SetNoiseCancellationStats  = 0x8B700
+    Discord_SetSidechainCompression    = 0xA3500
+    Discord_SetHasFullbandPerformance  = 0xA59D0
+    Discord_SetDuckingPreference       = 0x9B6E0
+    Discord_SetIdleJitterBufferFlush   = 0x89880
+    Discord_SetAudioInputEnabled       = 0xA3200
+    Discord_SetAecDump                 = 0xA0AA0
 }
 
 # endregion Offsets
 
-# Single source of truth: 17 offsets required (order matches finder copy-block)
+# Offsets required for the patcher core (order matches the offset-finder copy block)
 $Script:RequiredOffsetNames = @(
     "CreateAudioFrameStereo", "AudioEncoderOpusConfigSetChannels", "MonoDownmixer",
     "EmulateStereoSuccess1", "EmulateStereoSuccess2", "EmulateBitrateModified",
@@ -91,6 +120,36 @@ $Script:PatchGroups = [ordered]@{
     ENCODER = [ordered]@{
         EncoderConfigInit1 = @{ Name = "EncoderConfigInit1 (32000->384000)"; Hex = "00 DC 05 00" }
         EncoderConfigInit2 = @{ Name = "EncoderConfigInit2 (32000->384000)"; Hex = "00 DC 05 00" }
+    }
+    PACKETLOSS = [ordered]@{
+        OpusPacketLossCvtt1 = @{ Name = "Opus packet loss rate -> 0 (site 1)"; Hex = "31 D2 90 90" }
+        OpusPacketLossCvtt2 = @{ Name = "Opus packet loss rate -> 0 (site 2)"; Hex = "31 D2 90 90" }
+    }
+    NETEQ = [ordered]@{
+        NetEqDelayMgr_MsPerLossPercent = @{ Name = "NetEq delay inflation -> 0 (ms_per_loss_percent)"; Hex = "48 B8 00 00 00 00 00 00 00 00" }
+    }
+    PACING = [ordered]@{
+        Pacer_BlockAudio_Disable = @{ Name = "Pacer BlockAudio -> false"; Hex = "30 DB 90" }
+    }
+    DISCORD_API_LOCK = [ordered]@{
+        Discord_SetAutomaticGainControl_1 = @{ Name = "Discord::SetAutomaticGainControl (variant 1)"; Hex = "C3" }
+        Discord_SetAutomaticGainControl_2 = @{ Name = "Discord::SetAutomaticGainControl (variant 2)"; Hex = "C3" }
+        Discord_SetNoiseSuppression_1     = @{ Name = "Discord::SetNoiseSuppression (variant 1)"; Hex = "C3" }
+        Discord_SetNoiseSuppression_2     = @{ Name = "Discord::SetNoiseSuppression (variant 2)"; Hex = "C3" }
+        Discord_SetEchoCancellation_1     = @{ Name = "Discord::SetEchoCancellation (variant 1)"; Hex = "C3" }
+        Discord_SetEchoCancellation_2     = @{ Name = "Discord::SetEchoCancellation (variant 2)"; Hex = "C3" }
+        Discord_SetEchoCancellationPre    = @{ Name = "Discord::SetEchoCancellationPreEcho"; Hex = "C3" }
+        Discord_SetNoiseCancellation      = @{ Name = "Discord::SetNoiseCancellation"; Hex = "C3" }
+        Discord_SetNoiseCancellationAfter = @{ Name = "Discord::SetNoiseCancellationAfterProcessing"; Hex = "C3" }
+        Discord_SetNoiseCancellationDuring= @{ Name = "Discord::SetNoiseCancellationDuringProcessing"; Hex = "C3" }
+        Discord_SetNoiseCancellationStats = @{ Name = "Discord::SetNoiseCancellationEnableStats"; Hex = "C3" }
+        Discord_SetSidechainCompression   = @{ Name = "Discord::SetSidechainCompression"; Hex = "C3" }
+        Discord_SetHasFullbandPerformance = @{ Name = "Discord::SetHasFullbandPerformance"; Hex = "C3" }
+        Discord_EnableBuiltInAEC          = @{ Name = "Discord::EnableBuiltInAEC"; Hex = "C3" }
+        Discord_SetDuckingPreference      = @{ Name = "Discord::SetDuckingPreference"; Hex = "C3" }
+        Discord_SetIdleJitterBufferFlush  = @{ Name = "Discord::SetIdleJitterBufferFlush"; Hex = "C3" }
+        Discord_SetAudioInputEnabled      = @{ Name = "Discord::SetAudioInputEnabled"; Hex = "C3" }
+        Discord_SetAecDump                = @{ Name = "Discord::SetAecDump"; Hex = "C3" }
     }
 }
 
@@ -137,7 +196,7 @@ if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adm
         if ($Restore) { $arguments += "-Restore" }
         if ($ListBackups) { $arguments += "-ListBackups" }
         if ($FixAll) { $arguments += "-FixAll" }
-        if ($FixClient) { $arguments += "-FixClient", "`"$FixClient`"" }
+        if ($FixClient) { $arguments += "-FixClient", $FixClient }
         if ($PatchLocalOnly) { $arguments += "-PatchLocalOnly" }
         if ($SkipUpdateCheck) { $arguments += "-SkipUpdateCheck" }
         Start-Process powershell.exe -ArgumentList $arguments -Verb RunAs
@@ -159,10 +218,9 @@ $Script:Config = @{
     ModuleName = "discord_voice.node"
     TempDir = "$env:TEMP\DiscordVoicePatcher"; BackupDir = "$env:TEMP\DiscordVoicePatcher\Backups"
     LogFile = "$env:TEMP\DiscordVoicePatcher\patcher.log"; ConfigFile = "$env:TEMP\DiscordVoicePatcher\config.json"
-    # Retention: cap per Discord client + drop anything very old (each backup is ~tens–100+ MB).
+    # Backups can be large; keep only a few per client and prune old ones.
     MaxBackupsPerClient = 3
     MaxBackupAgeDays      = 45
-    # Browser (same folder as VoiceBackupAPI): https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes/Unpatched%20Nodes%20(For%20Patcher)/Windows
     VoiceBackupAPI = "https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/Updates%2FNodes%2FUnpatched%20Nodes%20%28For%20Patcher%29%2FWindows"
     OffsetsMeta = $Script:OffsetsMeta
     Offsets     = $Script:Offsets
@@ -203,10 +261,8 @@ function Get-FileMd5Hex {
 
 function Get-PeFileOffsetAdjustment {
     <#
-    .SYNOPSIS
-        RVA -> on-disk offset uses: fileOffset = rva - (sectionVirtualAddress - sectionRawPointer).
-        Discord's discord_voice.node historically matched 0xC00; linker changes can shift this.
-        Must match offset finder logic (parse_pe .text vaddr - raw_offset).
+    RVA -> file offset uses: fileOffset = rva - (sectionVirtualAddress - sectionRawPointer).
+    Must match the offset-finder logic (PE .text vaddr - raw_offset).
     #>
     param([Parameter(Mandatory)][string]$Path)
     try {
@@ -286,7 +342,18 @@ function Test-DiscordVoiceNodeOffsetAnchors {
     $b48 = & $slice $r48 3
     $bCfg = & $slice $rCfg 4
     $bDm = & $slice $rDm 4
-    if (-not $b48 -or -not $bCfg -or -not $bDm) {
+
+    $rNe = $null; $bNe = $null
+    if ($Offsets.ContainsKey('NetEqDelayMgr_MsPerLossPercent') -and $Offsets.NetEqDelayMgr_MsPerLossPercent) {
+        $rNe = [int]$Offsets.NetEqDelayMgr_MsPerLossPercent
+        $bNe = & $slice $rNe 10
+    }
+    $rPace = $null; $bPace = $null
+    if ($Offsets.ContainsKey('Pacer_BlockAudio_Disable') -and $Offsets.Pacer_BlockAudio_Disable) {
+        $rPace = [int]$Offsets.Pacer_BlockAudio_Disable
+        $bPace = & $slice $rPace 3
+    }
+    if (-not $b48 -or -not $bCfg -or -not $bDm -or ($rNe -and -not $bNe) -or ($rPace -and -not $bPace)) {
         Write-Log "Anchor check: RVA->file offset out of range (FILE_OFFSET_ADJUSTMENT=0x$('{0:X}' -f $FileOffsetAdjustment))." -Level Error
         return $false
     }
@@ -304,13 +371,33 @@ function Test-DiscordVoiceNodeOffsetAnchors {
         ($bDm[0] -eq 0xC3)
     )
 
-    if ($ok48 -and $okCfg -and $okDm) { return $true }
+    $okNe = $true
+    if ($rNe) {
+        # Accept original imm64 (0xC800000014) or patched imm64 (0)
+        $okNe = (
+            ($bNe[0] -eq 0x48 -and $bNe[1] -eq 0xB8 -and $bNe[2] -eq 0x14 -and $bNe[6] -eq 0xC8 -and ($bNe[3..5] | Where-Object { $_ -ne 0 }).Count -eq 0 -and ($bNe[7..9] | Where-Object { $_ -ne 0 }).Count -eq 0) -or
+            ($bNe[0] -eq 0x48 -and $bNe[1] -eq 0xB8 -and ($bNe[2..9] | Where-Object { $_ -ne 0 }).Count -eq 0)
+        )
+    }
+
+    $okPace = $true
+    if ($rPace) {
+        # Accept original setz bl or patched xor bl,bl; nop
+        $okPace = (
+            ($bPace[0] -eq 0x0F -and $bPace[1] -eq 0x94 -and $bPace[2] -eq 0xC3) -or
+            ($bPace[0] -eq 0x30 -and $bPace[1] -eq 0xDB -and $bPace[2] -eq 0x90)
+        )
+    }
+
+    if ($ok48 -and $okCfg -and $okDm -and $okNe -and $okPace) { return $true }
 
     Write-Log "Pre-patch anchor check failed (offsets do not match this discord_voice.node file)." -Level Error
     Write-Log ("  FILE_OFFSET_ADJUSTMENT=0x{0:X} (from PE .text); re-paste the full '# region Offsets' block from the offset finder." -f $FileOffsetAdjustment) -Level Error
     Write-Log ("  Emulate48Khz @0x{0:X} file 0x{1:X}: {2} (expected 0F 42 C1 or 90 90 90)" -f $r48, ($r48 - $FileOffsetAdjustment), (& $hex $b48 3)) -Level Error
     Write-Log ("  ConfigIsOk   @0x{0:X} file 0x{1:X}: {2} (expected 8B 11 31 C0 or 48 C7 C0 01)" -f $rCfg, ($rCfg - $FileOffsetAdjustment), (& $hex $bCfg 4)) -Level Error
     Write-Log ("  DownmixFunc  @0x{0:X} file 0x{1:X}: {2} (expected 41 57 41 56 or C3)" -f $rDm, ($rDm - $FileOffsetAdjustment), (& $hex $bDm 4)) -Level Error
+    if ($rNe) { Write-Log ("  NetEq(ms/loss) @0x{0:X} file 0x{1:X}: {2} (expected 48 B8 14 00 00 00 C8 00 00 00 or 48 B8 00..00)" -f $rNe, ($rNe - $FileOffsetAdjustment), (& $hex $bNe 10)) -Level Error }
+    if ($rPace) { Write-Log ("  Pacer(BlockAudio) @0x{0:X} file 0x{1:X}: {2} (expected 0F 94 C3 or 30 DB 90)" -f $rPace, ($rPace - $FileOffsetAdjustment), (& $hex $bPace 3)) -Level Error }
     return $false
 }
 # endregion Voice Node Helpers
@@ -376,6 +463,23 @@ function Get-UserConfig {
 
 function EnsureDir($p) { if ($p -and -not (Test-Path $p)) { try { [void](New-Item $p -ItemType Directory -Force) } catch { } } }
 
+function Clear-DirectoryContentsSafe {
+    param([Parameter(Mandatory)][string]$Path)
+    try { $full = (Get-Item -LiteralPath $Path -ErrorAction Stop).FullName } catch { return $false }
+    if ([string]::IsNullOrWhiteSpace($full)) { return $false }
+    $full = $full.TrimEnd('\')
+    if ($full.Length -lt 4 -or $full -match '^[A-Za-z]:$') { return $false } # avoid drive root / nonsense
+    try {
+        $children = @(Get-ChildItem -LiteralPath $full -Force -ErrorAction SilentlyContinue)
+        foreach ($c in $children) {
+            Remove-Item -LiteralPath $c.FullName -Force -Recurse -ErrorAction SilentlyContinue
+        }
+        return $true
+    } catch {
+        return $false
+    }
+}
+
 function Get-OffsetsCopyBlock {
     $meta = $Script:OffsetsMeta
     $offs = $Script:Offsets
@@ -386,10 +490,10 @@ function Get-OffsetsCopyBlock {
         "# region Offsets (PASTE HERE)",
         "",
         "`$Script:OffsetsMeta = @{",
-        "    FinderVersion = `"$($meta.FinderVersion)`"",
-        "    Build         = `"$($meta.Build)`"",
-        "    Size          = $($meta.Size)",
-        "    MD5           = `"$($meta.MD5)`"",
+        "    FinderVersion     = `"$($meta.FinderVersion)`"",
+        "    DiscordAppVersion = `"$($meta.DiscordAppVersion)`"",
+        "    Size              = $($meta.Size)",
+        "    MD5               = `"$($meta.MD5)`"",
         "}",
         "",
         "`$Script:Offsets = @{"
@@ -456,7 +560,7 @@ function Get-PatcherRestartHelperScriptContent {
     return $sb.ToString()
 }
 
-function Check-ForUpdate {
+function Test-ScriptUpdateAvailable {
     try {
         Write-Log "Checking for script updates from GitHub (no-cache)..." -Level Info
         if ([string]::IsNullOrEmpty($PSCommandPath)) {
@@ -514,7 +618,7 @@ function Check-ForUpdate {
     }
 }
 
-function Apply-ScriptUpdate {
+function Update-ScriptPatch {
     param([string]$UpdatedScriptPath, [string]$CurrentScriptPath, [switch]$RestartAfter)
     if (-not (Test-Path $UpdatedScriptPath)) { Write-Log "Update file not found: $UpdatedScriptPath" -Level Error; return $false }
     $batchFile = Join-Path $env:TEMP "DiscordVoicePatcher_Update.bat"
@@ -558,20 +662,29 @@ function Apply-ScriptUpdate {
 
 # region Voice Backup Download
 
-function Download-VoiceBackupFiles {
+function Save-VoiceBackupFiles {
     param([string]$DestinationPath)
     Write-Log "Downloading voice backup files from GitHub..." -Level Info
     try {
         if (Test-Path $DestinationPath) {
             Write-Log "  Clearing existing backup folder..." -Level Info
-            Remove-Item "$DestinationPath\*" -Force -Recurse -ErrorAction SilentlyContinue
+            [void](Clear-DirectoryContentsSafe -Path $DestinationPath)
         }
         EnsureDir $DestinationPath
         Write-Log "  Fetching file list from GitHub API..." -Level Info
         try {
-            $response = Invoke-RestMethod -Uri $Script:Config.VoiceBackupAPI -UseBasicParsing -TimeoutSec 30
+            $headers = @{
+                'User-Agent' = 'DiscordVoicePatcher'
+                'Accept'     = 'application/vnd.github+json'
+            }
+            $response = Invoke-RestMethod -Uri $Script:Config.VoiceBackupAPI -UseBasicParsing -TimeoutSec 30 -Headers $headers
         } catch {
-            if ($_.Exception.Response.StatusCode -eq [System.Net.HttpStatusCode]::Forbidden) { throw "GitHub API rate limit exceeded. Please try again later." }
+            try {
+                $resp = $_.Exception.Response
+                if ($resp -and $resp.StatusCode -eq [System.Net.HttpStatusCode]::Forbidden) {
+                    throw "GitHub API rate limit exceeded. Please try again later."
+                }
+            } catch { }
             throw $_
         }
         $response = @($response)
@@ -655,7 +768,7 @@ function Find-DiscordAppPath {
         return $null
     }
     $af = @(Get-ChildItem $BasePath -Filter "app-*" -Directory -ErrorAction SilentlyContinue |
-        Sort-Object { try { if ($_.Name -match "app-([\d\.]+)") { [Version]$matches[1] } else { [Version]"0.0.0" } } catch { [Version]"0.0.0" } } -Descending)
+        Sort-Object { try { if ($_.Name -match "app-\s*([\d\.]+)") { [Version]$matches[1].Trim() } else { [Version]"0.0.0" } } catch { [Version]"0.0.0" } } -Descending)
     $diag = @{
         BasePath = $BasePath; AppFoldersFound = @(); ModulesFolderExists = $false; VoiceModuleExists = $false
         LatestAppFolder = $null; LatestAppVersion = $null; ModulesPath = $null; VoiceModulePath = $null; Error = $null
@@ -663,7 +776,7 @@ function Find-DiscordAppPath {
     if ($af.Count -eq 0) { $diag.Error = "NoAppFolders"; if ($ReturnDiagnostics) { return $diag }; return $null }
     $diag.AppFoldersFound = @($af | ForEach-Object { $_.Name })
     $diag.LatestAppFolder = $af[0].FullName
-    if ($af[0].Name -match "app-([\d\.]+)") { $diag.LatestAppVersion = $matches[1] } else { $diag.LatestAppVersion = $af[0].Name }
+    if ($af[0].Name -match "app-\s*([\d\.]+)") { $diag.LatestAppVersion = $matches[1].Trim() } else { $diag.LatestAppVersion = $af[0].Name }
     foreach ($f in $af) {
         $mp = Join-Path $f.FullName "modules"
         if (Test-Path $mp) {
@@ -687,7 +800,7 @@ function Find-DiscordAppPath {
 function Get-DiscordAppVersion {
     param([string]$AppPath)
     if ([string]::IsNullOrWhiteSpace($AppPath)) { return "Unknown" }
-    if ($AppPath -match "app-([\d\.]+)") { return $matches[1] }
+    if ($AppPath -match "app-\s*([\d\.]+)") { return $matches[1].Trim() }
     try {
         $exe = Get-ChildItem $AppPath -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($exe) { return (Get-Item $exe.FullName).VersionInfo.ProductVersion }
@@ -1207,6 +1320,8 @@ function Show-ConfigurationGUI {
         SAMPLERATE = [Drawing.Color]::FromArgb(87,242,135)
         FILTER     = [Drawing.Color]::FromArgb(254,231,92)
         ENCODER    = [Drawing.Color]::FromArgb(254,231,92)
+        PACKETLOSS = [Drawing.Color]::FromArgb(87,242,135)
+        DISCORD_API_LOCK = [Drawing.Color]::FromArgb(240,71,71)
     }
 
     foreach ($groupName in $Script:PatchGroups.Keys) {
@@ -1380,7 +1495,7 @@ function Initialize-Environment {
     @($Script:Config.TempDir, $Script:Config.BackupDir) | ForEach-Object {
         if ($_ -and -not (Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
     }
-    Cleanup-TempFiles
+    Remove-PatcherTempFiles
     "=== Discord Voice Patcher Log ===`nStarted: $(Get-Date)`nGain: $($Script:Config.AudioGainMultiplier)x`n" | Out-File $Script:Config.LogFile -Force -ErrorAction SilentlyContinue
     Invoke-BackupRetention
 }
@@ -1558,7 +1673,7 @@ function Find-Compiler {
     return $null
 }
 
-function Cleanup-TempFiles {
+function Remove-PatcherTempFiles {
     $tempDir = $Script:Config.TempDir
     if (-not $tempDir -or -not (Test-Path $tempDir)) { return }
     @("patcher.cpp", "amplifier.cpp", "DiscordVoicePatcher.exe", "build.bat", "build.log", "patcher.obj", "amplifier.obj", "patcher_stdout.txt", "patcher_stderr.txt") | ForEach-Object {
@@ -1722,6 +1837,31 @@ namespace Offsets {
     constexpr uint32_t ThrowError = $('0x{0:X}' -f $offsets.ThrowError);
     constexpr uint32_t EncoderConfigInit1 = $('0x{0:X}' -f $offsets.EncoderConfigInit1);
     constexpr uint32_t EncoderConfigInit2 = $('0x{0:X}' -f $offsets.EncoderConfigInit2);
+
+    constexpr uint32_t OpusPacketLossCvtt1 = $('0x{0:X}' -f $offsets.OpusPacketLossCvtt1);
+    constexpr uint32_t OpusPacketLossCvtt2 = $('0x{0:X}' -f $offsets.OpusPacketLossCvtt2);
+
+    constexpr uint32_t NetEqDelayMgr_MsPerLossPercent = $('0x{0:X}' -f $offsets.NetEqDelayMgr_MsPerLossPercent);
+    constexpr uint32_t Pacer_BlockAudio_Disable       = $('0x{0:X}' -f $offsets.Pacer_BlockAudio_Disable);
+
+    constexpr uint32_t Discord_SetAutomaticGainControl_1 = $('0x{0:X}' -f $offsets.Discord_SetAutomaticGainControl_1);
+    constexpr uint32_t Discord_SetAutomaticGainControl_2 = $('0x{0:X}' -f $offsets.Discord_SetAutomaticGainControl_2);
+    constexpr uint32_t Discord_SetNoiseSuppression_1     = $('0x{0:X}' -f $offsets.Discord_SetNoiseSuppression_1);
+    constexpr uint32_t Discord_SetNoiseSuppression_2     = $('0x{0:X}' -f $offsets.Discord_SetNoiseSuppression_2);
+    constexpr uint32_t Discord_SetEchoCancellation_1     = $('0x{0:X}' -f $offsets.Discord_SetEchoCancellation_1);
+    constexpr uint32_t Discord_SetEchoCancellation_2     = $('0x{0:X}' -f $offsets.Discord_SetEchoCancellation_2);
+    constexpr uint32_t Discord_SetEchoCancellationPre    = $('0x{0:X}' -f $offsets.Discord_SetEchoCancellationPre);
+    constexpr uint32_t Discord_EnableBuiltInAEC          = $('0x{0:X}' -f $offsets.Discord_EnableBuiltInAEC);
+    constexpr uint32_t Discord_SetNoiseCancellation      = $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellation);
+    constexpr uint32_t Discord_SetNoiseCancellationAfter = $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellationAfter);
+    constexpr uint32_t Discord_SetNoiseCancellationDuring= $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellationDuring);
+    constexpr uint32_t Discord_SetNoiseCancellationStats = $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellationStats);
+    constexpr uint32_t Discord_SetSidechainCompression   = $('0x{0:X}' -f $offsets.Discord_SetSidechainCompression);
+    constexpr uint32_t Discord_SetHasFullbandPerformance = $('0x{0:X}' -f $offsets.Discord_SetHasFullbandPerformance);
+    constexpr uint32_t Discord_SetDuckingPreference      = $('0x{0:X}' -f $offsets.Discord_SetDuckingPreference);
+    constexpr uint32_t Discord_SetIdleJitterBufferFlush  = $('0x{0:X}' -f $offsets.Discord_SetIdleJitterBufferFlush);
+    constexpr uint32_t Discord_SetAudioInputEnabled      = $('0x{0:X}' -f $offsets.Discord_SetAudioInputEnabled);
+    constexpr uint32_t Discord_SetAecDump                = $('0x{0:X}' -f $offsets.Discord_SetAecDump);
     constexpr uint32_t FILE_OFFSET_ADJUSTMENT = $('0x{0:X}' -f $FileOffsetAdjustment);
 };
 
@@ -1977,6 +2117,182 @@ private:
 #else
         printf("  [ENCODER] EncoderConfigInit2 - SKIPPED\n"); skipCount++;
 #endif
+
+#if PATCH_OpusPacketLossCvtt1
+        printf("  [PACKETLOSS] Force Opus packet loss rate -> 0 (site 1)...\n");
+        if (!PatchBytes(Offsets::OpusPacketLossCvtt1, "\x31\xD2\x90\x90", 4)) return false;
+        patchCount++;
+#else
+        printf("  [PACKETLOSS] Opus packet loss rate (site 1) - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_OpusPacketLossCvtt2
+        printf("  [PACKETLOSS] Force Opus packet loss rate -> 0 (site 2)...\n");
+        if (!PatchBytes(Offsets::OpusPacketLossCvtt2, "\x31\xD2\x90\x90", 4)) return false;
+        patchCount++;
+#else
+        printf("  [PACKETLOSS] Opus packet loss rate (site 2) - SKIPPED\n"); skipCount++;
+#endif
+
+#if PATCH_NetEqDelayMgr_MsPerLossPercent
+        printf("  [NETEQ] NetEq ms_per_loss_percent -> 0...\n");
+        {
+            const unsigned char orig[] = {0x48,0xB8,0x14,0x00,0x00,0x00,0xC8,0x00,0x00,0x00};
+            if (!CheckBytes(Offsets::NetEqDelayMgr_MsPerLossPercent, orig, 10)) {
+                printf("  [NETEQ] NetEq ms_per_loss_percent - SKIPPED (unexpected bytes)\n"); skipCount++;
+            } else {
+                if (!PatchBytes(Offsets::NetEqDelayMgr_MsPerLossPercent, "\x48\xB8\x00\x00\x00\x00\x00\x00\x00\x00", 10)) return false;
+                patchCount++;
+            }
+        }
+#else
+        printf("  [NETEQ] NetEq ms_per_loss_percent - SKIPPED\n"); skipCount++;
+#endif
+
+#if PATCH_Pacer_BlockAudio_Disable
+        printf("  [PACING] Pacer BlockAudio -> false...\n");
+        {
+            const unsigned char orig[] = {0x0F,0x94,0xC3}; // setz bl
+            if (!CheckBytes(Offsets::Pacer_BlockAudio_Disable, orig, 3)) {
+                printf("  [PACING] Pacer BlockAudio - SKIPPED (unexpected bytes)\n"); skipCount++;
+            } else {
+                if (!PatchBytes(Offsets::Pacer_BlockAudio_Disable, "\x30\xDB\x90", 3)) return false;
+                patchCount++;
+            }
+        }
+#else
+        printf("  [PACING] Pacer BlockAudio - SKIPPED\n"); skipCount++;
+#endif
+
+#define RET_STUB "\xC3"
+
+#if PATCH_Discord_SetAutomaticGainControl_1
+        printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl (1) -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetAutomaticGainControl_1, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl (1) - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetAutomaticGainControl_2
+        printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl (2) -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetAutomaticGainControl_2, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl (2) - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetNoiseSuppression_1
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression (1) -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetNoiseSuppression_1, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression (1) - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetNoiseSuppression_2
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression (2) -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetNoiseSuppression_2, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression (2) - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetEchoCancellation_1
+        printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation (1) -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetEchoCancellation_1, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation (1) - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetEchoCancellation_2
+        printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation (2) -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetEchoCancellation_2, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation (2) - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetEchoCancellationPre
+        printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellationPreEcho -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetEchoCancellationPre, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellationPreEcho - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_EnableBuiltInAEC
+        printf("  [DISCORD_API_LOCK] Discord::EnableBuiltInAEC -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_EnableBuiltInAEC, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::EnableBuiltInAEC - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetNoiseCancellation
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellation -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetNoiseCancellation, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellation - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetNoiseCancellationAfter
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationAfterProcessing -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetNoiseCancellationAfter, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationAfterProcessing - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetNoiseCancellationDuring
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationDuringProcessing -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetNoiseCancellationDuring, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationDuringProcessing - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetNoiseCancellationStats
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationEnableStats -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetNoiseCancellationStats, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationEnableStats - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetSidechainCompression
+        printf("  [DISCORD_API_LOCK] Discord::SetSidechainCompression -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetSidechainCompression, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetSidechainCompression - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetHasFullbandPerformance
+        printf("  [DISCORD_API_LOCK] Discord::SetHasFullbandPerformance -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetHasFullbandPerformance, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetHasFullbandPerformance - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetDuckingPreference
+        printf("  [DISCORD_API_LOCK] Discord::SetDuckingPreference -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetDuckingPreference, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetDuckingPreference - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetIdleJitterBufferFlush
+        printf("  [DISCORD_API_LOCK] Discord::SetIdleJitterBufferFlush -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetIdleJitterBufferFlush, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetIdleJitterBufferFlush - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetAudioInputEnabled
+        printf("  [DISCORD_API_LOCK] Discord::SetAudioInputEnabled -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetAudioInputEnabled, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetAudioInputEnabled - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_Discord_SetAecDump
+        printf("  [DISCORD_API_LOCK] Discord::SetAecDump -> RET...\n");
+        if (!PatchBytes(Offsets::Discord_SetAecDump, RET_STUB, 1)) return false;
+        patchCount++;
+#else
+        printf("  [DISCORD_API_LOCK] Discord::SetAecDump - SKIPPED\n"); skipCount++;
+#endif
+
+#undef RET_STUB
 
 #if PATCH_EmulateBitrateModified && PATCH_SetsBitrateBitrateValue
         {
@@ -2332,7 +2648,7 @@ function Get-UniqueClientsByAppPath {
 function Get-PreparedVoiceBackupPath {
     $voiceBackupPath = Join-Path $Script:Config.TempDir "VoiceBackup"
     EnsureDir $voiceBackupPath
-    if (-not (Download-VoiceBackupFiles $voiceBackupPath)) {
+    if (-not (Save-VoiceBackupFiles $voiceBackupPath)) {
         Write-Log "Failed to download voice backup files" -Level Error
         return $null
     }
@@ -2352,7 +2668,9 @@ function Get-PreparedVoiceBackupPath {
 
         $meta = $Script:Config.OffsetsMeta
         if ($meta) {
-            if ($meta.Build) { Write-Log "Offsets build: $($meta.Build)" -Level Info }
+            $tver = $meta.DiscordAppVersion
+            if (-not $tver -and $meta.Build) { $tver = $meta.Build }
+            if ($tver) { Write-Log "Embedded offsets target Discord app: $tver" -Level Info }
             if ($meta.MD5) {
                 $expected = ($meta.MD5.ToString()).ToLowerInvariant()
                 if ($nodeMd5 -ne $expected) {
@@ -2417,7 +2735,13 @@ function Invoke-PatchClients {
             }
 
             $version = Get-DiscordAppVersion $appPath
-            Write-Log "Version: $version" -Level Info
+            Write-Log "Discord app version: $version" -Level Info
+            $targetVer = $null
+            if ($Script:Config.OffsetsMeta) { $targetVer = $Script:Config.OffsetsMeta.DiscordAppVersion }
+            if (-not $targetVer -and $Script:Config.OffsetsMeta.Build) { $targetVer = $Script:Config.OffsetsMeta.Build }
+            if ($targetVer -and $version -ne 'Unknown' -and $version -ne $targetVer) {
+                Write-Log "Installed app ($version) differs from embedded offset target ($targetVer); if patching fails, refresh offsets for your build." -Level Warning
+            }
 
             $voiceInfo = Get-VoiceModulePaths -AppPath $appPath
             if (-not $voiceInfo) {
@@ -2437,12 +2761,15 @@ function Invoke-PatchClients {
             if (-not $PatchLocalOnly) {
                 Write-Log "Removing old voice module files..." -Level Info
                 if (Test-Path $voiceFolderPath) {
-                    Remove-Item "$voiceFolderPath\*" -Recurse -Force -ErrorAction SilentlyContinue
+                    [void](Clear-DirectoryContentsSafe -Path $voiceFolderPath)
                 } else {
                     EnsureDir $voiceFolderPath
                 }
                 Write-Log "Installing compatible voice module..." -Level Info
-                Copy-Item "$VoiceBackupPath\*" $voiceFolderPath -Recurse -Force
+                $srcItems = @(Get-ChildItem -LiteralPath $VoiceBackupPath -Force -ErrorAction Stop)
+                foreach ($it in $srcItems) {
+                    Copy-Item -LiteralPath $it.FullName -Destination $voiceFolderPath -Recurse -Force -ErrorAction Stop
+                }
             }
             if (-not (Test-Path $voiceNodePath)) {
                 throw "discord_voice.node not found. Install voice module first or run without 'Patch local'."
@@ -2473,7 +2800,7 @@ function Invoke-PatchClients {
             Write-Log "Applying binary patches with $($Script:Config.AudioGainMultiplier)x gain setting..." -Level Info
             $patchOut = Join-Path $Script:Config.TempDir "patcher_stdout.txt"
             $patchErr = Join-Path $Script:Config.TempDir "patcher_stderr.txt"
-            $patchProc = Start-Process -FilePath $exe -ArgumentList "`"$voiceNodePath`"" -Wait -PassThru -NoNewWindow -RedirectStandardOutput $patchOut -RedirectStandardError $patchErr
+            $patchProc = Start-Process -FilePath $exe -ArgumentList @($voiceNodePath) -Wait -PassThru -NoNewWindow -RedirectStandardOutput $patchOut -RedirectStandardError $patchErr
             if ($patchProc.ExitCode -eq 0) {
                 Write-Log "Successfully patched $clientName with $($Script:Config.AudioGainMultiplier)x gain!" -Level Success
                 $successCount++
@@ -2488,7 +2815,7 @@ function Invoke-PatchClients {
         }
     }
 
-    Cleanup-TempFiles
+    Remove-PatcherTempFiles
     return @{ Success = $successCount; Failed = @($failedClients); Total = $Clients.Count }
 }
 
@@ -2499,13 +2826,13 @@ function Invoke-PatchClients {
 function Start-Patching {
     Write-Banner
     if (-not $SkipUpdateCheck -and -not [string]::IsNullOrEmpty($PSCommandPath)) {
-        $updateResult = Check-ForUpdate
+        $updateResult = Test-ScriptUpdateAvailable
         if ($updateResult.UpdateAvailable) {
             Write-Host ""
             Write-Host "Updating script from GitHub (v$($updateResult.LocalVersion) -> v$($updateResult.RemoteVersion))..." -ForegroundColor Yellow
             Write-Host ""
             Write-Log "Applying update from GitHub..." -Level Info
-            if (Apply-ScriptUpdate -UpdatedScriptPath $updateResult.TempFile -CurrentScriptPath $PSCommandPath -RestartAfter) {
+            if (Update-ScriptPatch -UpdatedScriptPath $updateResult.TempFile -CurrentScriptPath $PSCommandPath -RestartAfter) {
                 Write-Log "Update applied; restarting with the same launch options..." -Level Success
                 Start-Sleep -Seconds 2; exit 0
             } else {
@@ -2600,9 +2927,27 @@ function Start-Patching {
                     Write-Log "Launching: $($clientInfo.Name.Trim())" -Level Info
                     $discordOut = Join-Path $env:TEMP "DiscordPatcher_discord_out.txt"
                     $discordErr = Join-Path $env:TEMP "DiscordPatcher_discord_err.txt"
-                    Start-Process $updateExe -ArgumentList "--processStart", $clientInfo.Exe -WindowStyle Hidden -RedirectStandardOutput $discordOut -RedirectStandardError $discordErr
+                    try {
+                        $p = Start-Process $updateExe -ArgumentList @("--processStart", $clientInfo.Exe) -WindowStyle Hidden -RedirectStandardOutput $discordOut -RedirectStandardError $discordErr -PassThru -ErrorAction Stop
+                        Write-Log "Discord launch started (Update.exe PID=$($p.Id))." -Level Success
+                    } catch {
+                        Write-Log "Failed to launch via Update.exe: $($_.Exception.Message)" -Level Warning
+                        try {
+                            $exePath = Join-Path $firstClient.AppPath $clientInfo.Exe
+                            if (Test-Path $exePath) {
+                                $p2 = Start-Process $exePath -WindowStyle Hidden -RedirectStandardOutput $discordOut -RedirectStandardError $discordErr -PassThru -ErrorAction Stop
+                                Write-Log "Discord launch started (direct exe PID=$($p2.Id))." -Level Success
+                            } else {
+                                Write-Log "Fallback exe not found: $exePath" -Level Warning
+                            }
+                        } catch {
+                            Write-Log "Fallback launch failed: $($_.Exception.Message). See: $discordErr" -Level Warning
+                        }
+                    }
                 }
             }
+        } else {
+            Write-Log "Auto-relaunch is disabled; Discord was not started automatically." -Level Info
         }
         Save-UserConfig
         Wait-EnterOrTimeout
@@ -2717,18 +3062,30 @@ function Start-Patching {
                 $discordErr = Join-Path $env:TEMP "DiscordPatcher_discord_err.txt"
                 if (Test-Path $updateExe) {
                     Write-Log "Launching via Update.exe..." -Level Info
-                    Start-Process $updateExe -ArgumentList "--processStart", $selectedClientInfo.Exe -WindowStyle Hidden -RedirectStandardOutput $discordOut -RedirectStandardError $discordErr
+                    try {
+                        $p = Start-Process $updateExe -ArgumentList @("--processStart", $selectedClientInfo.Exe) -WindowStyle Hidden -RedirectStandardOutput $discordOut -RedirectStandardError $discordErr -PassThru -ErrorAction Stop
+                        Write-Log "Discord launch started (Update.exe PID=$($p.Id))." -Level Success
+                    } catch {
+                        Write-Log "Failed to launch via Update.exe: $($_.Exception.Message)" -Level Warning
+                    }
                 } else {
-                    $appFolder = Get-ChildItem $discordPath -Directory -Filter "app-*" -ErrorAction SilentlyContinue | Sort-Object { try { if ($_.Name -match "app-([\d\.]+)") { [Version]$matches[1] } else { [Version]"0.0.0" } } catch { [Version]"0.0.0" } } -Descending | Select-Object -First 1
+                    $appFolder = Get-ChildItem $discordPath -Directory -Filter "app-*" -ErrorAction SilentlyContinue | Sort-Object { try { if ($_.Name -match "app-\s*([\d\.]+)") { [Version]$matches[1].Trim() } else { [Version]"0.0.0" } } catch { [Version]"0.0.0" } } -Descending | Select-Object -First 1
                     if ($appFolder) {
                         $exePath = Join-Path $appFolder.FullName $selectedClientInfo.Exe
                         if (Test-Path $exePath) {
                             Write-Log "Launching: $exePath" -Level Info
-                            Start-Process $exePath -WindowStyle Hidden -RedirectStandardOutput $discordOut -RedirectStandardError $discordErr
+                            try {
+                                $p = Start-Process $exePath -WindowStyle Hidden -RedirectStandardOutput $discordOut -RedirectStandardError $discordErr -PassThru -ErrorAction Stop
+                                Write-Log "Discord launch started (PID=$($p.Id))." -Level Success
+                            } catch {
+                                Write-Log "Failed to launch Discord: $($_.Exception.Message). See: $discordErr" -Level Warning
+                            }
                         }
                     }
                 }
             }
+        } else {
+            Write-Log "Auto-relaunch is disabled; Discord was not started automatically." -Level Info
         }
     } else {
         Write-Log "=== PATCHING FAILED ===" -Level Error

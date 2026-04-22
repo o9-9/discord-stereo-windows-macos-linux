@@ -979,6 +979,21 @@ function Apply-ScriptUpdate { param([string]$UpdatedScriptPath, [string]$Current
     Start-Process "cmd.exe" -ArgumentList "/c","`"$bf`"" -WindowStyle Hidden
 }
 
+# Normalize script text so line-ending/BOM differences don't trigger false "updates".
+function Normalize-ScriptTextForCompare {
+    param([string]$Text)
+    if ($null -eq $Text) { return "" }
+    $t = [string]$Text
+    # Strip UTF-8 BOM if present
+    if ($t.Length -gt 0 -and [int][char]$t[0] -eq 0xFEFF) { $t = $t.Substring(1) }
+    # Normalize newlines
+    $t = $t -replace "`r`n", "`n"
+    $t = $t -replace "`r", "`n"
+    # Trim trailing whitespace on each line (git/raw can differ)
+    $t = ($t -split "`n" | ForEach-Object { $_.TrimEnd() }) -join "`n"
+    return $t.Trim()
+}
+
 #endregion
 
 #region SILENT MODE
@@ -1635,7 +1650,9 @@ $btnStart.Add_Click({
                 $currentContent = if (Test-Path $SAVED_SCRIPT_PATH) { Get-Content $SAVED_SCRIPT_PATH -Raw } 
                                   elseif (-not [string]::IsNullOrEmpty($PSCommandPath) -and (Test-Path $PSCommandPath)) { Get-Content $PSCommandPath -Raw }
                                   else { $null }
-                if ($currentContent -and $remoteContent -ne $currentContent) {
+                $remoteNorm = Normalize-ScriptTextForCompare $remoteContent
+                $currentNorm = Normalize-ScriptTextForCompare $currentContent
+                if ($currentContent -and $remoteNorm -and $currentNorm -and $remoteNorm -ne $currentNorm) {
                     Add-Status $statusBox $form "[!] Script update available!" "Yellow"
                     if ($chkAutoUpdate.Checked) {
                         Add-Status $statusBox $form "Auto-applying update..." "Blue"
