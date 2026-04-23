@@ -1,0 +1,5 @@
+# Comment policy (project)
+
+- **Do not add** new comments, section banners, or explanatory docstrings/inline comments unless the user **explicitly** asks for documentation or a standard (e.g. license header) requires them.
+- **After edits**, in **files you changed**, review comments: **shorten or remove** verbose, redundant, or “tutorial” comments. Keep only what is essential (e.g. unavoidable non-obvious constraints, required region markers, or linter-required annotations).
+- Prefer **clear names and structure** over comments.
