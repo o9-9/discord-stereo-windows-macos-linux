@@ -542,14 +542,17 @@ function Get-OffsetsCopyBlock {
     $offsetOrder = $Script:RequiredOffsetNames
     $maxLen = ($offsetOrder | ForEach-Object { $_.Length } | Measure-Object -Maximum).Maximum
     $dab = if ($null -ne $meta.DiscordAppBuild) { $meta.DiscordAppBuild } else { 'unspecified' } # legacy: key absent until re-paste from offset finder
+    $md5 = if ($meta.MD5) { ($meta.MD5.ToString()).ToLowerInvariant() } else { '' }
     $lines = @(
         "# region Offsets (PASTE HERE)",
+        '# Paste output from: python discord_voice_node_offset_finder_v5.py <path\to\discord_voice.node>',
+        "# Required: core 17 + extended Windows offsets (RVA hex). Copy the full block into Discord_voice_node_patcher.ps1.",
         "",
         "`$Script:OffsetsMeta = @{",
-        "    FinderVersion     = `"$($meta.FinderVersion)`"",
+        "    FinderVersion = `"$($meta.FinderVersion)`"",
         "    DiscordAppVersion = `"$($meta.DiscordAppVersion)`"",
-        "    DiscordAppBuild   = `"$dab`"",
-        "    MD5               = `"$($meta.MD5)`"",
+        "    DiscordAppBuild     = `"$dab`"",
+        "    MD5                 = `"$md5`"",
         "}",
         "",
         "`$Script:Offsets = @{"
