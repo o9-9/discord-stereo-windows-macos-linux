@@ -32,7 +32,6 @@ $Script:SCRIPT_VERSION = "8"
 
 $Script:OffsetsMeta = @{
     FinderVersion = "discord_voice_node_offset_finder.py v5.1.3"
-    DiscordAppVersion = "unspecified"
     DiscordAppBuild   = "1.0.9234"
     MD5               = "e4bdf195be0190f210786483cb9373fb"
 }
@@ -528,9 +527,14 @@ function Get-EmbeddedOffsetsTargetAppId {
     if (-not $Meta) { return $null }
     $b = $Meta.DiscordAppBuild
     if ($b -and [string]$b -ne 'unspecified') { return [string]$b }
-    $s = $Meta.DiscordAppVersion
-    if ($s -and [string]$s -ne 'unspecified') { return [string]$s }
-    $legacy = $Meta.Build
+    if ($Meta -is [hashtable] -and $Meta.ContainsKey('DiscordAppVersion')) {
+        $s = $Meta['DiscordAppVersion']
+        if ($s -and [string]$s -ne 'unspecified') { return [string]$s }
+    } elseif ($null -ne $Meta.DiscordAppVersion) {
+        $s = $Meta.DiscordAppVersion
+        if ($s -and [string]$s -ne 'unspecified') { return [string]$s }
+    }
+    $legacy = if ($Meta -is [hashtable] -and $Meta.ContainsKey('Build')) { $Meta['Build'] } else { $Meta.Build }
     if ($legacy) { return [string]$legacy }
     return $null
 }
@@ -550,7 +554,6 @@ function Get-OffsetsCopyBlock {
         "",
         "`$Script:OffsetsMeta = @{",
         "    FinderVersion = `"$($meta.FinderVersion)`"",
-        "    DiscordAppVersion = `"$($meta.DiscordAppVersion)`"",
         "    DiscordAppBuild     = `"$dab`"",
         "    MD5                 = `"$md5`"",
         "}",

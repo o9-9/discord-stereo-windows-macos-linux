@@ -629,7 +629,7 @@ class OffsetFinderGUI:
                 self._append_output_safe("  Cross-validation: clean\n" if not xval else f"  Cross-validation: {len(xval)} issue(s)\n", "pass" if not xval else "warn")
 
             if fmt == "pe" and hasattr(mod, "format_windows_patcher_block"):
-                # Windows copy block: OffsetsMeta includes DiscordAppBuild (from app path) and MD5; ELF still 17 + MultiChannel Opus when present
+                # Windows copy block: OffsetsMeta has FinderVersion, DiscordAppBuild (from app path), MD5; ELF still 17 + MultiChannel Opus when present
                 block = mod.format_windows_patcher_block(results, bin_info, path, file_size)
                 if block:
                     self.last_windows_block = _ascii_safe(block)
