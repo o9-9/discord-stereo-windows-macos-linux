@@ -2,6 +2,7 @@
 """Tk GUI for discord_voice_node_offset_finder_v5.py (copy blocks for Windows/Linux/macOS)."""
 
 import os
+import re
 import sys
 import shutil
 import atexit
@@ -428,7 +429,21 @@ class OffsetFinderGUI:
         fsize = os.path.getsize(path)
         fname = os.path.basename(path)
         self._append_output(f"  File: {fname}\n", "header")
-        self._append_output(f"  Size: {fsize:,} bytes | OS: {self.os_var.get()}\n", "info")
+        is_pe = False
+        with open(path, "rb") as f:
+            is_pe = f.read(2) == b"MZ"
+        if is_pe:
+            m = re.search(r"windows!app-\s*([\d.]+)", path, re.I) or re.search(
+                r"app-\s*([\d.]+)", path, re.I
+            )
+            build = m.group(1).strip() if m else "unspecified"
+            self._append_output(
+                f"  Discord App Build: {build} | OS: {self.os_var.get()}\n", "info"
+            )
+        else:
+            self._append_output(
+                f"  Size: {fsize:,} bytes | OS: {self.os_var.get()}\n", "info"
+            )
         self._append_output(f"  {'-' * 55}\n\n", "info")
 
         thread = threading.Thread(target=self._run_finder_thread, args=(path,), daemon=True)
@@ -614,7 +629,7 @@ class OffsetFinderGUI:
                 self._append_output_safe("  Cross-validation: clean\n" if not xval else f"  Cross-validation: {len(xval)} issue(s)\n", "pass" if not xval else "warn")
 
             if fmt == "pe" and hasattr(mod, "format_windows_patcher_block"):
-                # Finder v5.1.4+: Windows copy block includes DiscordAppVersion (from app-x.y.z in path); ELF still 17 + MultiChannel Opus when present
+                # Windows copy block: OffsetsMeta includes DiscordAppBuild (from app path) and MD5; ELF still 17 + MultiChannel Opus when present
                 block = mod.format_windows_patcher_block(results, bin_info, path, file_size)
                 if block:
                     self.last_windows_block = _ascii_safe(block)

@@ -3914,6 +3914,17 @@ def _infer_discord_app_version_from_path(file_path):
     return m.group(1).strip() if m else "unspecified"
 
 
+def _infer_discord_app_build_from_path(file_path):
+    """Windows desktop build id (e.g. 1.0.9234) from app folder or `windows!app- x.y` dump paths."""
+    if not file_path:
+        return "unspecified"
+    s = os.path.normpath(str(file_path))
+    m = re.search(r'windows!app-\s*([\d.]+)', s, re.I)
+    if m:
+        return m.group(1).strip()
+    return _infer_discord_app_version_from_path(file_path)
+
+
 def format_windows_patcher_block(results, bin_info, file_path, file_size):
     """Windows patcher copy block; order = $Script:RequiredOffsetNames."""
     if not bin_info or not file_path or file_size is None:
@@ -3926,6 +3937,7 @@ def format_windows_patcher_block(results, bin_info, file_path, file_size):
     with open(file_path, 'rb') as f:
         md5 = hashlib.md5(f.read()).hexdigest().lower()
     app_ver = _infer_discord_app_version_from_path(file_path)
+    app_build = _infer_discord_app_build_from_path(file_path)
     lines = [
         "# region Offsets (PASTE HERE)",
         "# Paste output from: python discord_voice_node_offset_finder_v5.py <path\\to\\discord_voice.node>",
@@ -3934,8 +3946,8 @@ def format_windows_patcher_block(results, bin_info, file_path, file_size):
         "$Script:OffsetsMeta = @{",
         '    FinderVersion = "discord_voice_node_offset_finder.py v%s"' % VERSION,
         '    DiscordAppVersion = "%s"' % app_ver,
-        "    Size          = %s" % file_size,
-        '    MD5           = "%s"' % md5,
+        '    DiscordAppBuild     = "%s"' % app_build,
+        '    MD5                 = "%s"' % md5,
         "}",
         "",
         "$Script:Offsets = @{",

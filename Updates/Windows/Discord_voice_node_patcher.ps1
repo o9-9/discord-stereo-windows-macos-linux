@@ -33,8 +33,8 @@ $Script:SCRIPT_VERSION = "8"
 $Script:OffsetsMeta = @{
     FinderVersion = "discord_voice_node_offset_finder.py v5.1.3"
     DiscordAppVersion = "unspecified"
-    Size          = 14411192
-    MD5           = "e4bdf195be0190f210786483cb9373fb"
+    DiscordAppBuild   = "1.0.9234"
+    MD5               = "e4bdf195be0190f210786483cb9373fb"
 }
 
 $Script:Offsets = @{
@@ -523,19 +523,32 @@ function Clear-DirectoryContentsSafe {
     }
 }
 
+function Get-EmbeddedOffsetsTargetAppId {
+    param($Meta)
+    if (-not $Meta) { return $null }
+    $b = $Meta.DiscordAppBuild
+    if ($b -and [string]$b -ne 'unspecified') { return [string]$b }
+    $s = $Meta.DiscordAppVersion
+    if ($s -and [string]$s -ne 'unspecified') { return [string]$s }
+    $legacy = $Meta.Build
+    if ($legacy) { return [string]$legacy }
+    return $null
+}
+
 function Get-OffsetsCopyBlock {
     $meta = $Script:OffsetsMeta
     $offs = $Script:Offsets
     if (-not $meta -or -not $offs) { throw "Offsets not loaded" }
     $offsetOrder = $Script:RequiredOffsetNames
     $maxLen = ($offsetOrder | ForEach-Object { $_.Length } | Measure-Object -Maximum).Maximum
+    $dab = if ($null -ne $meta.DiscordAppBuild) { $meta.DiscordAppBuild } else { 'unspecified' } # legacy: key absent until re-paste from offset finder
     $lines = @(
         "# region Offsets (PASTE HERE)",
         "",
         "`$Script:OffsetsMeta = @{",
         "    FinderVersion     = `"$($meta.FinderVersion)`"",
         "    DiscordAppVersion = `"$($meta.DiscordAppVersion)`"",
-        "    Size              = $($meta.Size)",
+        "    DiscordAppBuild   = `"$dab`"",
         "    MD5               = `"$($meta.MD5)`"",
         "}",
         "",
@@ -2838,9 +2851,8 @@ function Get-PreparedVoiceBackupPath {
 
         $meta = $Script:Config.OffsetsMeta
         if ($meta) {
-            $tver = $meta.DiscordAppVersion
-            if (-not $tver -and $meta.Build) { $tver = $meta.Build }
-            if ($tver) { Write-Log "Embedded offsets target Discord app: $tver" -Level Info }
+            $tver = Get-EmbeddedOffsetsTargetAppId -Meta $meta
+            if ($tver) { Write-Log "Embedded offsets target Discord app build: $tver" -Level Info }
             if ($meta.MD5) {
                 $expected = ($meta.MD5.ToString()).ToLowerInvariant()
                 if ($nodeMd5 -ne $expected) {
@@ -2853,11 +2865,11 @@ function Get-PreparedVoiceBackupPath {
             } else {
                 Write-Log "OffsetsMeta.MD5 is not set - skipping voice node hash check." -Level Warning
             }
-            if ($meta.Size) {
+            if ($null -ne $meta.Size) {
                 try {
                     $expectedSize = [int64]$meta.Size
                     if ($expectedSize -ne $nodeSize) {
-                        Write-Log "Warning: OffsetsMeta.Size ($expectedSize) does not match downloaded node size ($nodeSize)" -Level Warning
+                        Write-Log "Warning: OffsetsMeta.Size (legacy) ($expectedSize) does not match downloaded node size ($nodeSize)" -Level Warning
                     }
                 } catch { }
             }
@@ -2906,9 +2918,7 @@ function Invoke-PatchClients {
 
             $version = Get-DiscordAppVersion $appPath
             Write-Log "Discord app version: $version" -Level Info
-            $targetVer = $null
-            if ($Script:Config.OffsetsMeta) { $targetVer = $Script:Config.OffsetsMeta.DiscordAppVersion }
-            if (-not $targetVer -and $Script:Config.OffsetsMeta.Build) { $targetVer = $Script:Config.OffsetsMeta.Build }
+            $targetVer = if ($Script:Config.OffsetsMeta) { Get-EmbeddedOffsetsTargetAppId -Meta $Script:Config.OffsetsMeta } else { $null }
             if ($targetVer -and $version -ne 'Unknown' -and $version -ne $targetVer) {
                 Write-Log "Installed app ($version) differs from embedded offset target ($targetVer); if patching fails, refresh offsets for your build." -Level Warning
             }
