@@ -3930,9 +3930,7 @@ def format_windows_patcher_block(results, bin_info, file_path, file_size):
         md5 = hashlib.md5(f.read()).hexdigest().lower()
     app_build = _infer_discord_app_build_from_path(file_path)
     lines = [
-        "# region Offsets (PASTE HERE)",
-        "# Paste output from: python discord_voice_node_offset_finder_v5.py <path\\to\\discord_voice.node>",
-        "# Required: core 17 + extended Windows offsets (RVA hex). Copy the full block into Discord_voice_node_patcher.ps1.",
+        "# region Offsets",
         "",
         "$Script:OffsetsMeta = @{",
         '    FinderVersion = "discord_voice_node_offset_finder.py v%s"' % VERSION,
@@ -4690,7 +4688,7 @@ def main():
                 if win_block:
                     print("\n" + "=" * 65)
                     print("  COPY BELOW -> Discord_voice_node_patcher.ps1")
-                    print("  Replace the entire # region Offsets (PASTE HERE) ... # endregion Offsets section")
+                    print("  Replace the # region Offsets ... # endregion section in the patcher script")
                     print("=" * 65)
                     print("")
                     print("--- BEGIN COPY (Windows) ---")

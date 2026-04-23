@@ -26,9 +26,7 @@ try {
 $Script:UPDATE_URL_BASE = "https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Windows/Discord_voice_node_patcher.ps1"
 $Script:SCRIPT_VERSION = "8"
 
-# region Offsets (PASTE HERE)
-# Paste output from: python discord_voice_node_offset_finder_v5.py <path\to\discord_voice.node>
-# Required: core 17 + extended Windows offsets (RVA hex). Copy the full block into Discord_voice_node_patcher.ps1.
+# region Offsets
 
 $Script:OffsetsMeta = @{
     FinderVersion = "discord_voice_node_offset_finder.py v5.1.3"
@@ -432,7 +430,7 @@ function Test-DiscordVoiceNodeOffsetAnchors {
     if ($ok48 -and $okCfg -and $okDm -and $okNe -and $okOp1 -and $okOp2 -and $okPace) { return $true }
 
     Write-Log "Pre-patch anchor check failed (offsets do not match this discord_voice.node file)." -Level Error
-    Write-Log ("  FILE_OFFSET_ADJUSTMENT=0x{0:X} (from PE .text); re-paste the full '# region Offsets' block from the offset finder." -f $FileOffsetAdjustment) -Level Error
+    Write-Log ("  FILE_OFFSET_ADJUSTMENT=0x{0:X} (from PE .text); update # region Offsets in this script (offset finder)." -f $FileOffsetAdjustment) -Level Error
     Write-Log ("  Emulate48Khz @0x{0:X} file 0x{1:X}: {2} (expected 0F 42 C1 or 90 90 90)" -f $r48, ($r48 - $FileOffsetAdjustment), (& $hex $b48 3)) -Level Error
     Write-Log ("  ConfigIsOk   @0x{0:X} file 0x{1:X}: {2} (expected 8B 11 31 C0 or 48 C7 C0 01)" -f $rCfg, ($rCfg - $FileOffsetAdjustment), (& $hex $bCfg 4)) -Level Error
     Write-Log ("  DownmixFunc  @0x{0:X} file 0x{1:X}: {2} (expected 41 57 41 56 or C3)" -f $rDm, ($rDm - $FileOffsetAdjustment), (& $hex $bDm 4)) -Level Error
@@ -545,12 +543,10 @@ function Get-OffsetsCopyBlock {
     if (-not $meta -or -not $offs) { throw "Offsets not loaded" }
     $offsetOrder = $Script:RequiredOffsetNames
     $maxLen = ($offsetOrder | ForEach-Object { $_.Length } | Measure-Object -Maximum).Maximum
-    $dab = if ($null -ne $meta.DiscordAppBuild) { $meta.DiscordAppBuild } else { 'unspecified' } # legacy: key absent until re-paste from offset finder
+    $dab = if ($null -ne $meta.DiscordAppBuild) { $meta.DiscordAppBuild } else { 'unspecified' }
     $md5 = if ($meta.MD5) { ($meta.MD5.ToString()).ToLowerInvariant() } else { '' }
     $lines = @(
-        "# region Offsets (PASTE HERE)",
-        '# Paste output from: python discord_voice_node_offset_finder_v5.py <path\to\discord_voice.node>',
-        "# Required: core 17 + extended Windows offsets (RVA hex). Copy the full block into Discord_voice_node_patcher.ps1.",
+        "# region Offsets",
         "",
         "`$Script:OffsetsMeta = @{",
         "    FinderVersion = `"$($meta.FinderVersion)`"",
@@ -1853,7 +1849,7 @@ function Get-PatcherSourceCode {
     # Require full Windows offset list (core + extended) before generating C++ (avoids null/zero in embedded code)
     $missing = @($Script:RequiredOffsetNames | Where-Object { $null -eq $offsets[$_] -or ($offsets[$_] -is [int] -and $offsets[$_] -eq 0) })
     if ($missing.Count -gt 0) {
-        throw "Missing or zero offset(s) required for patcher: $($missing -join ', '). Paste the full '# region Offsets' block from the offset finder ($($Script:RequiredOffsetNames.Count) entries)."
+        throw "Missing or zero offset(s) for patcher: $($missing -join ', '). Refresh # region Offsets from the offset finder ($($Script:RequiredOffsetNames.Count) entries)."
     }
     $sp = $Script:SelectedPatches
     $bitrateKbps = [Math]::Min(384, [int]$c.Bitrate)
@@ -2865,7 +2861,7 @@ function Get-PreparedVoiceBackupPath {
                     Write-Log "ERROR: Offsets do not match the downloaded discord_voice.node build." -Level Error
                     Write-Log "  Downloaded node MD5: $nodeMd5" -Level Error
                     Write-Log "  OffsetsMeta MD5:     $expected" -Level Error
-                    Write-Log "Paste the new offsets (and MD5) from your offset finder into the '# region Offsets (PASTE HERE)' block." -Level Error
+                    Write-Log "Update offsets and MD5 in # region Offsets (offset finder)." -Level Error
                     return $null
                 }
             } else {
