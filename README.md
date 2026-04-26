@@ -5,7 +5,7 @@
 **Filterless true stereo · High-bitrate Opus · Windows · macOS · Linux**
 
 [![Windows](https://img.shields.io/badge/Windows-Active-00C853?style=flat-square)](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Windows)
-[![macOS](https://img.shields.io/badge/macOS-Active-00C853?style=flat-square)](https://codeberg.org/DiscordStereoPatcher-macOS)
+[![macOS](https://img.shields.io/badge/macOS-Active-00C853?style=flat-square)](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux#macos)
 [![Linux](https://img.shields.io/badge/Linux-Active-00C853?style=flat-square)](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux)
 [![Voice Playground](https://img.shields.io/badge/Voice%20Playground-Labs-white?style=flat-square)](https://discord-voice.xyz/)
 
@@ -33,7 +33,7 @@
 |:---:|:---|:---|
 | 🪟 | **Windows — easiest** | [**Voice Fixer**](#windows-voice-fixer) |
 | 🐧 | **Linux — launcher** | [**Stereo launcher**](#linux-launcher) |
-| 🍎 | **macOS** | [**Codeberg patcher**](#macos) |
+| 🍎 | **macOS** | [**macOS**](#macos) |
 | 🔧 | **Windows — advanced** | [**Advanced patching**](#advanced-windows-patching) |
 
 ---
@@ -43,7 +43,7 @@
 |  |  |
 |:---|:---|
 | 📦 **GitHub Releases** | [**Releases**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases) (bundled installers) |
-| 🍎 **macOS patcher** | [**Codeberg**](https://codeberg.org/DiscordStereoPatcher-macOS) |
+| 🍎 **macOS** | [**macOS**](#macos) |
 | 🔗 **Latest scripts** | **[`Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates)** on `main` (what launchers fetch) |
 
 > **`Updates/`** is always current — handy if you run scripts straight from the repo.
@@ -86,10 +86,10 @@ The `.bat` pulls [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow/Discord
 
 When Discord updates the voice module, run the [Offset Finder](#offset-finder) and **update offsets** in `discord_voice_patcher_linux.sh` (the launcher downloads the latest copy from `main` unless you use `--no-update`).
 
+<a id="linux-voice-patcher"></a>
+
 <details>
 <summary>📝 Run the patcher script directly (no GUI)</summary>
-
-<a id="linux-voice-patcher"></a>
 
 Use [`discord_voice_patcher_linux.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Linux/Updates/discord_voice_patcher_linux.sh) from [`Updates/Linux/Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates) if you prefer the terminal only: install **`g++`**, `chmod +x`, run **`./discord_voice_patcher_linux.sh --help`**.
 
@@ -120,7 +120,7 @@ If offsets in the script don’t match your Discord build, use the [Offset Finde
 
 **Codeberg** is **down**, so the **macOS** build is **moving** to **this GitHub repository**. It remains a **native Swift GUI** for patching and backups (Apple Silicon–friendly), plus signing and related tooling. Huge thanks to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)**.
 
-👉 **[Discord Stereo Patcher — macOS on Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS)** (repos and docs there describe the Swift app and any optional scripts.)
+👉 **[Discord Stereo Patcher — macOS (Codeberg)](https://codeberg.org/DiscordStereoPatcher-macOS)** — full repo and docs when the **Codeberg** host is back.
 
 ---
 
