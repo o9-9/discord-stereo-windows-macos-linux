@@ -75,7 +75,7 @@ The `.bat` pulls [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow/Discord
 
 ## 🐧 Linux — Stereo launcher
 
-**Start here on Linux.** [`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh) downloads **`discord_voice_patcher_linux.sh`**, **`Stereo-Installer-Linux.sh`**, and **`Discord_Stereo_Installer_For_Linux.py`** into **`Linux Stereo Installer/`** next to the launcher, then opens a **GUI** where you **choose installer vs patcher mode**. The UI **warns that installer mode is still a placeholder** (pre-built bundles) — **use patcher mode** for a working path today.
+**Start here on Linux.** [`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh) downloads **`discord_voice_patcher_linux.sh`**, **`Stereo-Installer-Linux.sh`**, and **`Discord_Stereo_Installer_For_Linux.py`** into **`Linux Stereo Installer/`** next to the launcher, then opens a **GUI** where you **choose installer vs patcher mode**. The **Installer** is a **placeholder** for now: the **current** patch is **filterless** only, **not** true **stereo** — **use patcher mode** for a working path today.
 
 ### Quick steps
 
@@ -118,7 +118,7 @@ If offsets in the script don’t match your Discord build, use the [Offset Finde
 
 ## 🍎 macOS
 
-The macOS build lives on **Codeberg**: a **native Swift GUI** for patching and backups (Apple Silicon–friendly), plus signing and related tooling. Huge thanks to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)**.
+**Codeberg** is **down**, so the **macOS** build is **moving** to **this GitHub repository**. It remains a **native Swift GUI** for patching and backups (Apple Silicon–friendly), plus signing and related tooling. Huge thanks to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)**.
 
 👉 **[Discord Stereo Patcher — macOS on Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS)** (repos and docs there describe the Swift app and any optional scripts.)
 
@@ -276,7 +276,7 @@ Some **VPNs** break voice UDP. Disconnect the VPN and test again; try another se
 
 **Advanced Windows patching** ([`Stereo-Node-Patcher-Windows.BAT`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Stereo-Node-Patcher-Windows.BAT) → [`Discord_voice_node_patcher.ps1`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Windows/Discord_voice_node_patcher.ps1)) builds the patcher on your machine and edits the binary. **Needs a C++ compiler.** Use when Voice Fixer isn’t enough — new Discord build, custom offsets, or you want full control.
 
-**Linux:** use the **[stereo launcher](#linux-launcher)** first — it downloads the installer + patcher and lets you pick a mode; **installer mode is still a placeholder.** Patcher mode runs `discord_voice_patcher_linux.sh`. You can also run [`discord_voice_patcher_linux.sh`](#linux-voice-patcher) alone (see collapsible under [Linux — Stereo launcher](#linux-launcher)).
+**Linux:** use the **[stereo launcher](#linux-launcher)** first — it downloads the installer + patcher and lets you pick a mode; **the Installer** is a **placeholder**; the **current** patcher path is **filterless** only, **not** true **stereo**. Patcher mode runs `discord_voice_patcher_linux.sh`. You can also run [`discord_voice_patcher_linux.sh`](#linux-voice-patcher) alone (see collapsible under [Linux — Stereo launcher](#linux-launcher)).
 
 </details>
 
