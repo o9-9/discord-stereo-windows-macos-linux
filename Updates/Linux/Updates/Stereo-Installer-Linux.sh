@@ -231,6 +231,10 @@ declare -a SEARCH_PATHS=(
     "$DETECT_HOME/.config/discordptb"
     "$DETECT_HOME/.config/discorddevelopment"
     "$DETECT_HOME/.var/app/com.discordapp.Discord/config/discord"
+    "$DETECT_HOME/.var/app/com.discordapp.DiscordCanary/config/discordcanary"
+    "$DETECT_HOME/.var/app/com.discordapp.DiscordPTB/config/discordptb"
+    "$DETECT_HOME/.var/app/com.discordapp.DiscordDevelopment/config/discorddevelopment"
+    "$DETECT_HOME/.var/app/org.equicord.equibop/config/discord"
     "/snap/discord/current/usr/share/discord/resources"
     "/opt/discord/resources"
     "/opt/discord-canary/resources"
@@ -244,7 +248,11 @@ declare -a SEARCH_NAMES=(
     "Discord Canary"
     "Discord PTB"
     "Discord Development"
-    "Discord (Flatpak)"
+    "Discord (Flatpak — Stable)"
+    "Discord (Flatpak — Canary)"
+    "Discord (Flatpak — PTB)"
+    "Discord (Flatpak — Development)"
+    "Equibop (Flatpak)"
     "Discord (Snap)"
     "Discord (/opt)"
     "Discord Canary (/opt)"
@@ -254,6 +262,10 @@ declare -a SEARCH_NAMES=(
 )
 
 declare -a SEARCH_PROCESSES=(
+    "Discord"
+    "DiscordCanary"
+    "DiscordPTB"
+    "DiscordDevelopment"
     "Discord"
     "DiscordCanary"
     "DiscordPTB"
@@ -327,6 +339,36 @@ get_node_info() {
     fi
 }
 
+# Pairs "base|label" for org.equicord.* Flatpaks; only whitelisted config subdirs.
+emit_flatpak_org_equicord_bases() {
+    local var_app="${DETECT_HOME}/.var/app"
+    local prev_nullglob
+    prev_nullglob=$(shopt -p nullglob 2>/dev/null || true)
+    shopt -s nullglob 2>/dev/null || true
+    local app_root sub rel label
+    local -a safe_subs=(
+        "config/discord"
+        "config/discordcanary"
+        "config/discordptb"
+        "config/discorddevelopment"
+        "config/equicord"
+        "config/Equicord"
+        "config/equibop"
+        "config/Equibop"
+    )
+    for app_root in "$var_app"/org.equicord.*; do
+        [[ -d "$app_root" ]] || continue
+        rel="${app_root#$DETECT_HOME/.var/app/}"
+        for sub in "${safe_subs[@]}"; do
+            if [[ -d "$app_root/$sub" ]]; then
+                label="Equicord/Equibop (Flatpak: $rel — $sub)"
+                printf '%s|%s\n' "$app_root/$sub" "$label"
+            fi
+        done
+    done
+    [[ -n "$prev_nullglob" ]] && eval "$prev_nullglob" 2>/dev/null || true
+}
+
 find_discord_clients() {
     CLIENT_NAMES=()
     CLIENT_PATHS=()
@@ -382,6 +424,41 @@ find_discord_clients() {
             log_file "INFO" "Found: $name v$version at $voice_path (hash=${hash:0:8}..., ${size} bytes)"
         fi
     done
+
+    # Other org.equicord.* (Equibop et al.): whitelisted config dirs only
+    local fp_line fp_base fp_label
+    while IFS= read -r fp_line; do
+        [[ -n "$fp_line" ]] || continue
+        fp_base="${fp_line%%|*}"
+        fp_label="${fp_line#*|}"
+        [[ -d "$fp_base" ]] || continue
+        local result2
+        if result2=$(find_voice_module "$fp_base"); then
+            local vpath2="${result2%%|*}"
+            local apath2="${result2##*|}"
+            local dup2=false
+            for fvp in "${found_voice_paths[@]}"; do
+                [[ "$fvp" == "$vpath2" ]] && { dup2=true; break; }
+            done
+            $dup2 && continue
+            local version2
+            version2=$(get_app_version "$apath2")
+            local node_info2 hash2 size2
+            node_info2=$(get_node_info "$vpath2")
+            hash2="${node_info2%%|*}"
+            size2="${node_info2##*|}"
+            CLIENT_NAMES+=("$fp_label")
+            CLIENT_PATHS+=("$fp_base")
+            CLIENT_APP_PATHS+=("$apath2")
+            CLIENT_VOICE_PATHS+=("$vpath2")
+            CLIENT_VERSIONS+=("$version2")
+            CLIENT_PROCESS_NAMES+=("Discord")
+            CLIENT_NODE_HASHES+=("$hash2")
+            CLIENT_NODE_SIZES+=("$size2")
+            found_voice_paths+=("$vpath2")
+            log_file "INFO" "Found: $fp_label v$version2 at $vpath2 (hash=${hash2:0:8}..., ${size2} bytes)"
+        fi
+    done < <(emit_flatpak_org_equicord_bases)
 
     return 0
 }
