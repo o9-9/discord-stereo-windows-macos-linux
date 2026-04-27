@@ -159,9 +159,10 @@ Enable **filterless true stereo** at **high bitrates** in Discord — with empha
 | [`Updates/Windows/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Windows) | Voice Fixer, Advanced Windows patching (`.BAT` + PS1) |
 | [`Updates/Linux/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux) | **[`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Linux/discord-stereo-launcher.sh)** (main entry — GUI mode picker); `Updates/Linux/Updates/` — patcher + installer scripts |
 | [`Updates/Offset Finder/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Offset%20Finder) | Offset finder CLI and GUI |
-| [`Updates/Nodes/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes) | Reference nodes for patchers |
+| [`Updates/Nodes/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes) | `Unpatched` / `Patched` reference voice bundles (see subfolders) |
+| — | **macOS** (Swift) is **not** under `Updates/` in this repo — [Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS) (when up) and [**macOS**](#macos) here. |
 
-[`Voice Node Dump/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Voice%20Node%20Dump) — archived modules for research (optional for end users).
+[`Voice Node Dump/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Voice%20Node%20Dump) — at repo root; archived modules for research (optional for end users).
 
 </details>
 
@@ -181,7 +182,7 @@ Discord often ships a new `discord_voice.node`, which moves RVAs. Wait for updat
 
 **Voice Fixer (Windows)** does not need a compiler.
 
-**Advanced Windows patching** and **Linux patcher mode** (`discord_voice_patcher_linux.sh`, including via the [stereo launcher](#linux-launcher)) generate and compile C++ when you run them. Install a toolchain:
+**[Advanced Windows patching](#advanced-windows-patching)** and **Linux patcher mode** (`discord_voice_patcher_linux.sh`, including via the [stereo launcher](#linux-launcher)) generate and compile C++ when you run them. Install a toolchain:
 
 **Windows:** [Visual Studio](https://visualstudio.microsoft.com/) (Desktop development with C++) or [MinGW-w64](https://www.mingw-w64.org/).
 
@@ -260,7 +261,7 @@ A Discord app update also replaces `discord_voice.node` with a fresh copy.
 <details>
 <summary><b>Linux: Flatpak / Snap</b></summary>
 
-**Flatpak:** locate the node, e.g. `find ~/.var/app/com.discordapp.Discord -name "discord_voice.node"`
+**Flatpak:** locate the node, e.g. `find ~/.var/app/com.discordapp.Discord -name "discord_voice.node"`. Other apps use a different id under `~/.var/app/<id>/` (e.g. Equicord/Equibop) — the Linux patcher script searches the usual trees.
 
 **Snap:** `/snap/discord/current/` is often read-only; you may need to copy the file out, patch, and copy back, or use another package format.
 
@@ -317,7 +318,7 @@ Full byte-level detail varies by platform (MSVC vs Clang, register choices, etc.
 
 ### Patching workflow
 
-Read offsets (see the [**Offset Finder**](#offset-finder) section above) → generate C++ → compile → write patches into `discord_voice.node` on disk. **macOS** Swift workflow is on **Codeberg** when that host is up.
+See the [**Offset Finder**](#offset-finder) section → generate C++ → compile → write patches into `discord_voice.node` on disk. **macOS** Swift workflow is on **Codeberg** when that host is up; otherwise see [**macOS**](#macos).
 
 </details>
 
