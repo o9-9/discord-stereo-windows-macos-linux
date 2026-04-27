@@ -11,7 +11,7 @@
 
 </div>
 
-> **v1.0 is releasing soon.** We are polishing installers, launchers, and docs for a stable 1.0 line across Windows, macOS, and Linux. Until then, grab the current bundled tree as **`Updates.zip`** on [**Releases**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases) (**v0.5**), which matches [`Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates) on `main`.
+> **v1.0 Stereo Hub** is **releasing soon** (installers, launchers, docs, one stable line across **Windows, macOS, and Linux**). The **current** download bundle is still **v0.5**: grab **`Updates.zip`** on [**Releases**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases) — it matches [`Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates) on `main`. The **Codeberg** host (macOS Swift app) is **still down**; use [**macOS**](#macos) for migration and status.
 
 ---
 
@@ -121,7 +121,7 @@ When `discord_voice.node` changes, RVAs move — you need **new offsets** in the
 - [`discord_voice_node_offset_finder_v5.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Offset%20Finder/discord_voice_node_offset_finder_v5.py) (CLI)
 - [`offset_finder_gui.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Offset%20Finder/offset_finder_gui.py) (GUI) — in [`Updates/Offset Finder/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Offset%20Finder)
 
-**macOS:** the Swift patcher on **Codeberg** is the usual path when the **Codeberg** service is up; with **Codeberg** down, follow migration notes under [**macOS**](#macos).
+**macOS:** the Swift patcher on **Codeberg** is the usual path when the **Codeberg** service is up; while **Codeberg** is **still down**, use [**macOS**](#macos) and repo issues for migration and status.
 
 ---
 
@@ -129,7 +129,7 @@ When `discord_voice.node` changes, RVAs move — you need **new offsets** in the
 
 ## 🍎 macOS
 
-**Codeberg** is **down**, so the **macOS** build is **moving** to **this GitHub repository**. It remains a **native Swift GUI** for patching and backups (Apple Silicon–friendly), plus signing and related tooling. Huge thanks to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)**.
+**Codeberg** is **still down**, so the **macOS** build is **moving** to **this GitHub repository**. When the site is back, the usual source is a **native Swift GUI** for patching and backups (Apple Silicon–friendly), plus signing and related tooling. Huge thanks to **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)**.
 
 👉 **[Discord Stereo Patcher — macOS (Codeberg)](https://codeberg.org/DiscordStereoPatcher-macOS)** — full repo and docs when the **Codeberg** host is back.
 
@@ -318,7 +318,7 @@ Full byte-level detail varies by platform (MSVC vs Clang, register choices, etc.
 
 ### Patching workflow
 
-See the [**Offset Finder**](#offset-finder) section → generate C++ → compile → write patches into `discord_voice.node` on disk. **macOS** Swift workflow is on **Codeberg** when that host is up; otherwise see [**macOS**](#macos).
+See the [**Offset Finder**](#offset-finder) section → generate C++ → compile → write patches into `discord_voice.node` on disk. **macOS** Swift workflow is on **Codeberg** when that host is up; with **Codeberg** **still down**, see [**macOS**](#macos).
 
 </details>
 
@@ -326,6 +326,10 @@ See the [**Offset Finder**](#offset-finder) section → generate C++ → compile
 
 <details>
 <summary><b>📋 Changelog</b></summary>
+
+### Now (this repo on `main`)
+- **v1.0 Stereo Hub** in progress. **v0.5** [`Updates.zip`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases) (matches [`Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates) on `main`)
+- **Codeberg** (macOS) **still down** — migration toward **this GitHub repo**; see [**macOS**](#macos)
 
 ### Repo layout (Mar 2026)
 - Shipping assets under `Updates/`; `Voice Node Dump/` for archives
