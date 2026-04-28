@@ -17,7 +17,8 @@
 
 ## 👋 Are You New Here?
 
-**Better voice: stereo, bitrate, filterless —** pick a platform, run the tool, then test in a voice channel (scripts may restart Discord when they patch `discord_voice.node`).
+**pick a platform, run the tool, then test in a voice channel** 
+###(scripts may restart Discord when they patch `discord_voice.node`).
 
 | Step | Your guide |
 |:---:|:---|
