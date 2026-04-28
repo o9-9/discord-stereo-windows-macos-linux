@@ -32,7 +32,7 @@
 
 |  | **You want…** | **Jump to** |
 |:---:|:---|:---|
-| 🪟 | **Windows — easiest** | [**Voice Fixer**](#windows-voice-fixer) |
+| 🪟 | **Windows — easiest** | [**Stereo Installer**](#windows-voice-fixer) |
 | 🐧 | **Linux — launcher** | [**Stereo launcher**](#linux-launcher) |
 | 🍎 | **macOS** | [**macOS**](#macos) |
 | 🔧 | **Windows — advanced** | [**Advanced patching**](#advanced-windows-patching) |
@@ -52,7 +52,7 @@
 
 <a id="windows-voice-fixer"></a>
 
-## 🪟 Windows — Voice Fixer
+## 🪟 Windows — Stereo Installer
 
 Drops pre-patched `discord_voice.node` (with backup). **No compiler.**
 
