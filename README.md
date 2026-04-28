@@ -18,7 +18,7 @@
 ## 👋 Are You New Here?
 
 **pick a platform, run the tool, then test in a voice channel** 
-###(scripts may restart Discord when they patch `discord_voice.node`).
+### (scripts may restart Discord when they patch `discord_voice.node`).
 
 | Step | Your guide |
 |:---:|:---|
