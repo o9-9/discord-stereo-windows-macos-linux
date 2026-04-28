@@ -84,8 +84,6 @@ The `.bat` fetches [`DiscordVoiceFixer.ps1`](https://github.com/ProdHallow/Disco
 2. Download **[`discord-stereo-launcher.sh`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/raw/main/Updates/Linux/discord-stereo-launcher.sh)** from [`Updates/Linux/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux).
 3. `chmod +x` and `./discord-stereo-launcher.sh` → **patcher mode** (test installer if you need).
 
-New build → [**Offset Finder**](#offset-finder) → **copy** printed block → **paste** into offsets in `discord_voice_patcher_linux.sh` (launcher fetches from `main` by default; `--no-update` skips).
-
 ### Patcher only (no GUI)
 
 <a id="linux-voice-patcher"></a>
