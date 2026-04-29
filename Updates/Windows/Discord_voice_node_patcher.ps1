@@ -26,54 +26,57 @@ try {
 $Script:UPDATE_URL_BASE = "https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Windows/Discord_voice_node_patcher.ps1"
 $Script:SCRIPT_VERSION = "8"
 
-# region Offsets
+# region Offsets (PASTE HERE)
+# Paste output from: python discord_voice_node_offset_finder_v5.py <path\to\discord_voice.node>
+# Required: core 17 + extended Windows offsets (RVA hex). Copy the full block into Discord_voice_node_patcher.ps1.
 
 $Script:OffsetsMeta = @{
-    FinderVersion = "discord_voice_node_offset_finder.py v5.1.3"
-    DiscordAppBuild   = "1.0.9234"
-    MD5               = "e4bdf195be0190f210786483cb9373fb"
+    FinderVersion = "discord_voice_node_offset_finder.py v5.1.4"
+    DiscordAppVersion = "1.0.9235"
+    Size          = 14455736
+    MD5           = "c11c7f006f336704223263339f9dc95c"
 }
 
 $Script:Offsets = @{
-    CreateAudioFrameStereo             = 0x115BB1
-    AudioEncoderOpusConfigSetChannels  = 0x3A6174
-    MonoDownmixer                      = 0xD533E
-    EmulateStereoSuccess1              = 0x531CCB
-    EmulateStereoSuccess2              = 0x531CD7
-    EmulateBitrateModified             = 0x53212A
-    SetsBitrateBitrateValue            = 0x533F51
-    SetsBitrateBitwiseOr               = 0x533F59
-    Emulate48Khz                       = 0x531E33
-    HighPassFilter                     = 0x53DF40
-    HighpassCutoffFilter               = 0x8D2C50
-    DcReject                           = 0x8D2E30
-    DownmixFunc                        = 0x8CEFC0
-    AudioEncoderOpusConfigIsOk         = 0x3A6410
-    ThrowError                         = 0x2BC7A0
-    EncoderConfigInit1                 = 0x3A617E
-    EncoderConfigInit2                 = 0x3A5A87
-    OpusPacketLossCvtt1                = 0x53333A
-    OpusPacketLossCvtt2                = 0x5334A7
-    NetEqDelayMgr_MsPerLossPercent     = 0xA9A94D
-    Pacer_BlockAudio_Disable           = 0x6D7462
-    Discord_SetAutomaticGainControl_1  = 0x6EF60
-    Discord_SetAutomaticGainControl_2  = 0x6F270
-    Discord_SetNoiseSuppression_1      = 0x6E8B0
-    Discord_SetNoiseSuppression_2      = 0x6EBB0
-    Discord_SetEchoCancellation_1      = 0x6E290
-    Discord_SetEchoCancellation_2      = 0x6E8A0
-    Discord_SetEchoCancellationPre     = 0x6E590
-    Discord_EnableBuiltInAEC           = 0x6DF90
-    Discord_SetNoiseCancellation       = 0x6F280
-    Discord_SetNoiseCancellationAfter  = 0x70120
-    Discord_SetNoiseCancellationDuring = 0x6FE10
-    Discord_SetNoiseCancellationStats  = 0x6FB00
-    Discord_SetSidechainCompression    = 0x87900
-    Discord_SetHasFullbandPerformance  = 0x89DD0
-    Discord_SetDuckingPreference       = 0x7FAE0
-    Discord_SetIdleJitterBufferFlush   = 0x6DC80
-    Discord_SetAudioInputEnabled       = 0x87600
-    Discord_SetAecDump                 = 0x84EA0
+    CreateAudioFrameStereo             = 0x117AC1
+    AudioEncoderOpusConfigSetChannels  = 0x3B0854
+    MonoDownmixer                      = 0xD704E
+    EmulateStereoSuccess1              = 0x53C3CB
+    EmulateStereoSuccess2              = 0x53C3D7
+    EmulateBitrateModified             = 0x53C82A
+    SetsBitrateBitrateValue            = 0x53E651
+    SetsBitrateBitwiseOr               = 0x53E659
+    Emulate48Khz                       = 0x53C533
+    HighPassFilter                     = 0x548640
+    HighpassCutoffFilter               = 0x8DD350
+    DcReject                           = 0x8DD530
+    DownmixFunc                        = 0x8D96C0
+    AudioEncoderOpusConfigIsOk         = 0x3B0AF0
+    ThrowError                         = 0x2C6E80
+    EncoderConfigInit1                 = 0x3B085E
+    EncoderConfigInit2                 = 0x3B0167
+    OpusPacketLossCvtt1                = 0x53DA3A
+    OpusPacketLossCvtt2                = 0x53DBA7
+    NetEqDelayMgr_MsPerLossPercent     = 0xAA4EDD
+    Pacer_BlockAudio_Disable           = 0x6E1B62
+    Discord_SetAutomaticGainControl_1  = 0x79660
+    Discord_SetAutomaticGainControl_2  = 0x79970
+    Discord_SetNoiseSuppression_1      = 0x78FB0
+    Discord_SetNoiseSuppression_2      = 0x792B0
+    Discord_SetEchoCancellation_1      = 0x78990
+    Discord_SetEchoCancellation_2      = 0x78FA0
+    Discord_SetEchoCancellationPre     = 0x78C90
+    Discord_EnableBuiltInAEC           = 0x78690
+    Discord_SetNoiseCancellation       = 0x79980
+    Discord_SetNoiseCancellationAfter  = 0x7A820
+    Discord_SetNoiseCancellationDuring = 0x7A510
+    Discord_SetNoiseCancellationStats  = 0x7A200
+    Discord_SetSidechainCompression    = 0x92000
+    Discord_SetHasFullbandPerformance  = 0x944D0
+    Discord_SetDuckingPreference       = 0x8A1E0
+    Discord_SetIdleJitterBufferFlush   = 0x78380
+    Discord_SetAudioInputEnabled       = 0x91D00
+    Discord_SetAecDump                 = 0x8F5A0
 }
 
 # endregion Offsets
@@ -430,7 +433,7 @@ function Test-DiscordVoiceNodeOffsetAnchors {
     if ($ok48 -and $okCfg -and $okDm -and $okNe -and $okOp1 -and $okOp2 -and $okPace) { return $true }
 
     Write-Log "Pre-patch anchor check failed (offsets do not match this discord_voice.node file)." -Level Error
-    Write-Log ("  FILE_OFFSET_ADJUSTMENT=0x{0:X} (from PE .text); update # region Offsets in this script (offset finder)." -f $FileOffsetAdjustment) -Level Error
+    Write-Log ("  FILE_OFFSET_ADJUSTMENT=0x{0:X} (from PE .text); re-paste the full '# region Offsets' block from the offset finder." -f $FileOffsetAdjustment) -Level Error
     Write-Log ("  Emulate48Khz @0x{0:X} file 0x{1:X}: {2} (expected 0F 42 C1 or 90 90 90)" -f $r48, ($r48 - $FileOffsetAdjustment), (& $hex $b48 3)) -Level Error
     Write-Log ("  ConfigIsOk   @0x{0:X} file 0x{1:X}: {2} (expected 8B 11 31 C0 or 48 C7 C0 01)" -f $rCfg, ($rCfg - $FileOffsetAdjustment), (& $hex $bCfg 4)) -Level Error
     Write-Log ("  DownmixFunc  @0x{0:X} file 0x{1:X}: {2} (expected 41 57 41 56 or C3)" -f $rDm, ($rDm - $FileOffsetAdjustment), (& $hex $bDm 4)) -Level Error
@@ -520,38 +523,20 @@ function Clear-DirectoryContentsSafe {
     }
 }
 
-function Get-EmbeddedOffsetsTargetAppId {
-    param($Meta)
-    if (-not $Meta) { return $null }
-    $b = $Meta.DiscordAppBuild
-    if ($b -and [string]$b -ne 'unspecified') { return [string]$b }
-    if ($Meta -is [hashtable] -and $Meta.ContainsKey('DiscordAppVersion')) {
-        $s = $Meta['DiscordAppVersion']
-        if ($s -and [string]$s -ne 'unspecified') { return [string]$s }
-    } elseif ($null -ne $Meta.DiscordAppVersion) {
-        $s = $Meta.DiscordAppVersion
-        if ($s -and [string]$s -ne 'unspecified') { return [string]$s }
-    }
-    $legacy = if ($Meta -is [hashtable] -and $Meta.ContainsKey('Build')) { $Meta['Build'] } else { $Meta.Build }
-    if ($legacy) { return [string]$legacy }
-    return $null
-}
-
 function Get-OffsetsCopyBlock {
     $meta = $Script:OffsetsMeta
     $offs = $Script:Offsets
     if (-not $meta -or -not $offs) { throw "Offsets not loaded" }
     $offsetOrder = $Script:RequiredOffsetNames
     $maxLen = ($offsetOrder | ForEach-Object { $_.Length } | Measure-Object -Maximum).Maximum
-    $dab = if ($null -ne $meta.DiscordAppBuild) { $meta.DiscordAppBuild } else { 'unspecified' }
-    $md5 = if ($meta.MD5) { ($meta.MD5.ToString()).ToLowerInvariant() } else { '' }
     $lines = @(
-        "# region Offsets",
+        "# region Offsets (PASTE HERE)",
         "",
         "`$Script:OffsetsMeta = @{",
-        "    FinderVersion = `"$($meta.FinderVersion)`"",
-        "    DiscordAppBuild     = `"$dab`"",
-        "    MD5                 = `"$md5`"",
+        "    FinderVersion     = `"$($meta.FinderVersion)`"",
+        "    DiscordAppVersion = `"$($meta.DiscordAppVersion)`"",
+        "    Size              = $($meta.Size)",
+        "    MD5               = `"$($meta.MD5)`"",
         "}",
         "",
         "`$Script:Offsets = @{"
@@ -1747,39 +1732,6 @@ function Remove-PatcherTempFiles {
 
 function Get-AmplifierSourceCode {
     $gain = [int]$Script:Config.AudioGainMultiplier
-    if ($gain -gt 3) {
-        return @"
-#include <cstring>
-
-typedef signed char        int8_t;
-typedef short              int16_t;
-typedef int                int32_t;
-typedef long long          int64_t;
-typedef unsigned char      uint8_t;
-typedef unsigned short     uint16_t;
-typedef unsigned int       uint32_t;
-typedef unsigned long long uint64_t;
-
-static void zero_out_floats(float* p, int len, int channels) {
-    if (len < 0 || channels < 0) return;
-    if (!p) return;
-    const size_t n = (size_t)len * (size_t)channels;
-    if (n) std::memset(p, 0, n * sizeof(float));
-}
-
-extern "C" void __cdecl hp_cutoff(const float* in, int cutoff_Hz, float* out, int* hp_mem, int len, int channels, int Fs, int arch)
-{
-    (void)in; (void)cutoff_Hz; (void)hp_mem; (void)Fs; (void)arch;
-    zero_out_floats(out, len, channels);
-}
-
-extern "C" void __cdecl dc_reject(const float* in, float* out, int* hp_mem, int len, int channels, int Fs)
-{
-    (void)in; (void)hp_mem; (void)Fs;
-    zero_out_floats(out, len, channels);
-}
-"@
-    }
     if ($gain -ge 3) {
         Write-Log "Generating amplifier: 3x+ ONLY -> Multiplier = $($gain - 2) (GUI $gain x)" -Level Info
         $multiplier = $gain - 2
@@ -1882,23 +1834,15 @@ function Get-PatcherSourceCode {
     # Require full Windows offset list (core + extended) before generating C++ (avoids null/zero in embedded code)
     $missing = @($Script:RequiredOffsetNames | Where-Object { $null -eq $offsets[$_] -or ($offsets[$_] -is [int] -and $offsets[$_] -eq 0) })
     if ($missing.Count -gt 0) {
-        throw "Missing or zero offset(s) for patcher: $($missing -join ', '). Refresh # region Offsets from the offset finder ($($Script:RequiredOffsetNames.Count) entries)."
+        throw "Missing or zero offset(s) required for patcher: $($missing -join ', '). Paste the full '# region Offsets' block from the offset finder ($($Script:RequiredOffsetNames.Count) entries)."
     }
     $sp = $Script:SelectedPatches
     $bitrateKbps = [Math]::Min(384, [int]$c.Bitrate)
     if ([int]$c.Bitrate -ne $bitrateKbps) { Write-Log "Bitrate clamped to ${bitrateKbps}kbps for patcher" -Level Warning }
 
-    $patchOverrideOn = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-    if ([int]$c.AudioGainMultiplier -gt 3) {
-        foreach ($fk in @("HighpassCutoffFilter", "DcReject", "HighPassFilter")) { [void]$patchOverrideOn.Add($fk) }
-    }
     $patchDefines = ""
     foreach ($k in $Script:AllPatchKeys) {
-        if ($patchOverrideOn.Contains($k)) {
-            $val = 1
-        } else {
-            $val = if ($sp.ContainsKey($k) -and $sp[$k]) { 1 } else { 0 }
-        }
+        $val = if ($sp.ContainsKey($k) -and $sp[$k]) { 1 } else { 0 }
         $patchDefines += "#define PATCH_$k $val`n"
     }
 
@@ -2491,29 +2435,53 @@ private:
 #endif
 #if PATCH_Discord_SetDuckingPreference
         printf("  [DISCORD_API_LOCK] Discord::SetDuckingPreference -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetDuckingPreference, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetDuckingPreference;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] Ducking - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetDuckingPreference - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetIdleJitterBufferFlush
         printf("  [DISCORD_API_LOCK] Discord::SetIdleJitterBufferFlush -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetIdleJitterBufferFlush, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetIdleJitterBufferFlush;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] IdleJitter - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetIdleJitterBufferFlush - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetAudioInputEnabled
         printf("  [DISCORD_API_LOCK] Discord::SetAudioInputEnabled -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetAudioInputEnabled, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetAudioInputEnabled;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] AudioInput - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetAudioInputEnabled - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetAecDump
         printf("  [DISCORD_API_LOCK] Discord::SetAecDump -> RET...\n");
-        if (!PatchBytes(Offsets::Discord_SetAecDump, RET_STUB, 1)) return false;
-        patchCount++;
+        {
+            uint32_t fs = 0;
+            uint32_t target = Offsets::Discord_SetAecDump;
+            if (!FindPdataFunctionStart(target, fs)) {
+                printf("  [DISCORD_API_LOCK] AecDump - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
+            else patchCount++;
+        }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetAecDump - SKIPPED\n"); skipCount++;
 #endif
@@ -2707,9 +2675,7 @@ function New-SourceFiles {
         [System.IO.File]::WriteAllText($amp, $ampCode, [System.Text.Encoding]::ASCII)
         $ampContent = Get-Content $amp -Raw
         $cfgGain = [int]$Script:Config.AudioGainMultiplier
-        if ($cfgGain -gt 3) {
-            if ($ampContent -match '#define (GAIN_MULTIPLIER|Multiplier)\b') { Write-Log "Amplifier codegen error: >3x path must not define gain macros" -Level Error }
-        } elseif ($cfgGain -ge 3) {
+        if ($cfgGain -ge 3) {
             if ($ampContent -match '#define GAIN_MULTIPLIER') { Write-Log "Amplifier codegen error: 3x+ path must not contain GAIN_MULTIPLIER" -Level Error }
             if ($ampContent -match '#define Multiplier (-?\d+)') {
                 $expectedMult = $cfgGain - 2
@@ -2896,25 +2862,26 @@ function Get-PreparedVoiceBackupPath {
 
         $meta = $Script:Config.OffsetsMeta
         if ($meta) {
-            $tver = Get-EmbeddedOffsetsTargetAppId -Meta $meta
-            if ($tver) { Write-Log "Embedded offsets target Discord app build: $tver" -Level Info }
+            $tver = $meta.DiscordAppVersion
+            if (-not $tver -and $meta.Build) { $tver = $meta.Build }
+            if ($tver) { Write-Log "Embedded offsets target Discord app: $tver" -Level Info }
             if ($meta.MD5) {
                 $expected = ($meta.MD5.ToString()).ToLowerInvariant()
                 if ($nodeMd5 -ne $expected) {
                     Write-Log "ERROR: Offsets do not match the downloaded discord_voice.node build." -Level Error
                     Write-Log "  Downloaded node MD5: $nodeMd5" -Level Error
                     Write-Log "  OffsetsMeta MD5:     $expected" -Level Error
-                    Write-Log "Update offsets and MD5 in # region Offsets (offset finder)." -Level Error
+                    Write-Log "Paste the new offsets (and MD5) from your offset finder into the '# region Offsets (PASTE HERE)' block." -Level Error
                     return $null
                 }
             } else {
                 Write-Log "OffsetsMeta.MD5 is not set - skipping voice node hash check." -Level Warning
             }
-            if ($null -ne $meta.Size) {
+            if ($meta.Size) {
                 try {
                     $expectedSize = [int64]$meta.Size
                     if ($expectedSize -ne $nodeSize) {
-                        Write-Log "Warning: OffsetsMeta.Size (legacy) ($expectedSize) does not match downloaded node size ($nodeSize)" -Level Warning
+                        Write-Log "Warning: OffsetsMeta.Size ($expectedSize) does not match downloaded node size ($nodeSize)" -Level Warning
                     }
                 } catch { }
             }
@@ -2963,7 +2930,9 @@ function Invoke-PatchClients {
 
             $version = Get-DiscordAppVersion $appPath
             Write-Log "Discord app version: $version" -Level Info
-            $targetVer = if ($Script:Config.OffsetsMeta) { Get-EmbeddedOffsetsTargetAppId -Meta $Script:Config.OffsetsMeta } else { $null }
+            $targetVer = $null
+            if ($Script:Config.OffsetsMeta) { $targetVer = $Script:Config.OffsetsMeta.DiscordAppVersion }
+            if (-not $targetVer -and $Script:Config.OffsetsMeta.Build) { $targetVer = $Script:Config.OffsetsMeta.Build }
             if ($targetVer -and $version -ne 'Unknown' -and $version -ne $targetVer) {
                 Write-Log "Installed app ($version) differs from embedded offset target ($targetVer); if patching fails, refresh offsets for your build." -Level Warning
             }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Discord Voice Node Offset Finder v5.1.4 — PE/ELF/Mach-O offset discovery (Windows: 17 core + extended packet-loss/NetEq/Pacer/Discord API RVAs for Discord_voice_node_patcher.ps1; ELF adds Linux-only MultiChannel Opus = 18)."""
+"""discord_voice.node offset finder v5.1.4 (PE / ELF / Mach-O)."""
 
 import sys
 import os
@@ -21,7 +21,7 @@ try:
 except ImportError:
     VIZ_AVAILABLE = False
 
-VERSION = "5.1.3"
+VERSION = "5.1.4"
 
 TARGET_BITRATE_BPS = 384000
 _BITRATE_LE = TARGET_BITRATE_BPS.to_bytes(4, "little")
@@ -29,9 +29,7 @@ BITRATE_PATCH_3 = " ".join(f"{b:02X}" for b in _BITRATE_LE[:3])
 BITRATE_PATCH_4 = " ".join(f"{b:02X}" for b in _BITRATE_LE)
 BITRATE_PATCH_5 = BITRATE_PATCH_4 + " 00"
 
-# Phase-2 relative offsets from anchors (mostly MSVC / PE layout). Used on PE for
-# derivation when scans miss; several keys are meaningless on Clang ELF/Mach-O
-# (see _PHASE2_SKIP_CLANG). Cross-validation of these distances runs on PE only.
+# MSVC PE Phase-2 deltas (_PHASE2_SKIP_CLANG for ELF/Mach-O exceptions).
 DERIVATIONS = {
     "EmulateStereoSuccess2": [
         ("EmulateStereoSuccess1", 0xC),
@@ -63,9 +61,7 @@ DERIVATIONS = {
     ],
 }
 
-# On ELF/Mach-O, ApplySettings→bitrate/48kHz/HP sites are not at MSVC deltas;
-# those entries are resolved via symbols or PHASE 2b. Skipping Phase 2 here
-# avoids a bogus [FAIL] line before heuristics succeed.
+# ELF/Mach-O: skip Phase 2 for these (resolved in 2b / symbols).
 _PHASE2_SKIP_CLANG = frozenset({
     "EmulateBitrateModified",
 })
@@ -74,8 +70,7 @@ SLIDING_WINDOW_DEFAULT = 128
 SLIDING_WINDOW_OVERRIDES = {
     "EmulateStereoSuccess2": 48,
     "EncoderConfigInit1": 48,
-    # macOS/Clang: delta from anchor can be larger; search ±1KB for "00 7D 00"
-    "EmulateBitrateModified": 0x1000,
+    "EmulateBitrateModified": 0x1000,  # Clang: wider search for 00 7D 00
 }
 
 class Signature:
@@ -2219,25 +2214,13 @@ def _estimate_instruction_flow(binary_data, offset, count=8):
 
 
 def run_heuristic_analysis(binary_data, offset, patch_len=4):
-    """Analyze opcode patterns and structural context around offset.
-
-    Performs multiple heuristic checks:
-    - Function boundary proximity (is offset inside a plausible function?)
-    - Instruction flow continuity (do surrounding bytes decode plausibly?)
-    - Common opcode pattern density
-    - Prologue/epilogue proximity
-
-    Returns (ok, score) where score contributes to confidence (max 15).
-    """
+    """Heuristic score (max 15) for patch site plausibility; returns (ok, score)."""
     if offset < 32 or offset + 32 > len(binary_data):
         return False, 0
     score = 0
     pre = binary_data[offset - 24:offset]
     suf = binary_data[offset:offset + 24]
 
-    # --- Check 1: Function boundary detection ---
-    # If we can find a plausible function start before this offset,
-    # it increases confidence that we are in real code.
     bound_start, bound_conf = _detect_function_boundary(binary_data, offset, direction=-1, max_scan=1024)
     if bound_start is not None:
         dist = offset - bound_start
@@ -2249,7 +2232,6 @@ def run_heuristic_analysis(binary_data, offset, patch_len=4):
         if dist < 4096:
             score += 2
 
-    # --- Check 2: Instruction flow continuity ---
     valid_insns, checked = _estimate_instruction_flow(binary_data, max(0, offset - 16), count=6)
     if checked > 0 and valid_insns >= (checked * 2 // 3):
         score += 3
@@ -2257,24 +2239,20 @@ def run_heuristic_analysis(binary_data, offset, patch_len=4):
     if checked_after > 0 and valid_after >= (checked_after * 2 // 3):
         score += 2
 
-    # --- Check 3: Function prologue patterns nearby ---
     if pre[-1] in (0x55, 0x53, 0x56, 0x57):
         score += 2
     if len(pre) >= 3 and pre[-3] == 0x48 and pre[-2] == 0x83 and pre[-1] == 0xEC:
         score += 2
-    # push rbp; mov rbp, rsp (55 48 89 E5)
     for i in range(len(pre) - 4):
         if pre[i:i+4] == b'\x55\x48\x89\xe5':
             score += 2
             break
 
-    # --- Check 4: Common mov/cmp/call patterns ---
     for i in range(len(pre) - 2):
         if pre[i] in (0x48, 0x49, 0x4C) and pre[i + 1] in (0x89, 0x8B, 0xC7, 0x09, 0x01):
             score += 2
             break
 
-    # --- Check 5: Epilogue or control flow in suffix ---
     for i in range(min(16, len(suf) - 1)):
         if suf[i] == 0xC3:
             score += 2
@@ -2283,7 +2261,6 @@ def run_heuristic_analysis(binary_data, offset, patch_len=4):
             score += 1
             break
 
-    # --- Check 6: Opcode density in surrounding region ---
     region = binary_data[max(0, offset - 32):min(len(binary_data), offset + 32)]
     opcode_hits = sum(1 for b in region if b in _COMMON_OPCODES or b in _OPCODE_PREFIXES)
     density = opcode_hits / max(len(region), 1)
@@ -2696,7 +2673,6 @@ def _run_heuristic_scan(data, missing_names, adj, text_start, text_end):
                                      f"Opus config struct @file:0x{m:X}"))
                     break
 
-    # --- Opus string proximity: search near "Opus" strings in binary ---
     if missing_names:
         opus_positions = []
         search_start = text_start
@@ -2711,14 +2687,12 @@ def _run_heuristic_scan(data, missing_names, adj, text_start, text_end):
 
         if opus_positions:
             for name in missing_names:
-                # Only use this for Opus-related offsets
                 if "Encoder" not in name and "Config" not in name:
                     continue
                 for opus_pos in opus_positions[:10]:
                     window_start = max(text_start, opus_pos - 0x400)
                     window_end = min(text_end, opus_pos + 0x400)
-                    # Look for the packed Opus constant nearby
-                    const_pat = Signature._parse("80 BB 00 00")  # 48000 as dword
+                    const_pat = Signature._parse("80 BB 00 00")
                     sub_matches = scan_pattern(data, const_pat, start=window_start, end=window_end)
                     for sm in sub_matches[:3]:
                         hints.append((name, sm, f"near Opus string @file:0x{opus_pos:X}"))
@@ -3023,7 +2997,6 @@ def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, t
     print("  PHASE 2c: Windows Extended (packet loss / NetEq / Pacer / Discord API)")
     print("=" * 65)
 
-    # --- NetEq: movabs imm64 0xC800000014 (ms_per_loss_percent default) ----------------
     pat_ne = bytes.fromhex("48 B8 14 00 00 00 C8 00 00 00")
     ne_hits = []
     idx = text_start
@@ -3043,7 +3016,6 @@ def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, t
     else:
         print(f"  [FAIL] NetEqDelayMgr_MsPerLossPercent: ambiguous ({len(ne_hits)} movabs hits)")
 
-    # --- Pacer BlockAudio: LEA to WebRTC-Pacer-BlockAudio then setz bl (0F 94 C3) -------
     pacer_key = b"WebRTC-Pacer-BlockAudio\x00"
     pk = data.find(pacer_key)
     if pk < 0:
@@ -3084,7 +3056,6 @@ def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, t
                 else:
                     print("  [FAIL] Pacer_BlockAudio_Disable: setz bl not found after LEA")
 
-    # --- Opus packet loss: paired F2 0F 2C D0 with mov rcx/rcx,[reg+0xA8] ---------------
     ess = results["EmulateStereoSuccess1"]
     ess_f = ess - adj
     lo = max(text_start, ess_f - 0x2000)
@@ -3119,7 +3090,6 @@ def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, t
     else:
         print(f"  [FAIL] Opus packet-loss sites: no cvttsd2si pair in cluster (candidates={len(cands)})")
 
-    # --- Discord API: same displacement from EmulateStereoSuccess1 as reference build ---
     ref_ess = WINDOWS_DISCORD_REF_EMULATE_STEREO_SUCCESS1
     new_ess = results["EmulateStereoSuccess1"]
     for name, ref_rva in WINDOWS_DISCORD_OFFSETS_REF.items():
@@ -3264,7 +3234,7 @@ def _discover_offsets_impl(data, bin_info):
             results[sig.name] = config_off
             tiers_used[sig.name] = tier
 
-    # --- Phase 1c: Clang Alternate Patterns (fallback for PE + non-PE when primary failed) -----
+    # Phase 1c: CLANG_ALT_PATTERNS when primary missed
     still_missing = [sig.name for sig in SIGNATURES if sig.name not in results]
     if still_missing:
         print("\n" + "=" * 65)
@@ -3283,9 +3253,7 @@ def _discover_offsets_impl(data, bin_info):
             if len(matches) == 0:
                 continue
 
-            # Try to disambiguate
             resolved = matches
-            # Find the original Signature for expected_original / disambiguator
             orig_sig = None
             for s in SIGNATURES:
                 if s.name == sig_name:
@@ -3326,7 +3294,7 @@ def _discover_offsets_impl(data, bin_info):
         if still_missing:
             print(f"  Still missing after Clang alts: {', '.join(still_missing)}")
 
-    # --- Phase 1b: Patched Binary Fallbacks ------------------------
+    # Phase 1b: patched-binary fallbacks
     patched_fallbacks = []
 
     if "MonoDownmixer" not in results:
@@ -3383,7 +3351,7 @@ def _discover_offsets_impl(data, bin_info):
     if patched_fallbacks:
         print(f"\n  NOTE: Binary appears already patched. Fallback used for: {', '.join(patched_fallbacks)}")
 
-    # --- Phase 2: Derivation (topologically sorted, chain-aware) ---
+    # Phase 2: DERIVATIONS chain
     print("\n" + "=" * 65)
     print("  PHASE 2: Relative Offset Derivation (chain-aware)")
     print("=" * 65)
@@ -3471,7 +3439,7 @@ def _discover_offsets_impl(data, bin_info):
             print(f"  [FAIL] {derived_name}: no anchor available (tried: {tried})")
             errors.append((derived_name, f"no anchor available (tried: {tried})"))
 
-    # --- Phase 2b: Heuristic Recovery ------------------------------
+    # Phase 2b: heuristics
     missing = [n for n in _all_offset_names() if n not in results]
     if missing:
         print("\n" + "=" * 65)
@@ -3902,22 +3870,220 @@ def _validate_pe_offsets_for_patcher(results, bin_info, file_size):
     return True, None
 
 
-# Linux/macOS copy blocks use core Windows names only (no PE-only extended keys).
+# Linux/macOS patch block: core Windows names only (no PE-only keys).
 WINDOWS_PATCHER_OFFSET_ORDER = list(WINDOWS_PATCHER_OFFSET_NAMES)
 
-def _infer_discord_app_build_from_path(file_path):
-    """Windows desktop build id (e.g. 1.0.9234) from app folder or `windows!app- x.y` dump paths."""
-    if not file_path:
-        return "unspecified"
-    s = os.path.normpath(str(file_path))
-    m = re.search(r'windows!app-\s*([\d.]+)', s, re.I)
-    if m:
-        return m.group(1).strip()
-    m = re.search(r'app-\s*([\d.]+)', s, re.I)
-    return m.group(1).strip() if m else "unspecified"
+
+def _read_discord_app_build_sidecar(parent_dir):
+    if not parent_dir:
+        return None
+    pdir = Path(parent_dir)
+    for fname in ("discord_app_build.txt", "discord_app_build", "APP_BUILD.txt"):
+        p = pdir / fname
+        if not p.is_file():
+            continue
+        try:
+            for line in p.read_text(encoding="utf-8", errors="replace").splitlines():
+                s = line.strip()
+                if s and not s.startswith("#"):
+                    return s
+        except OSError:
+            continue
+    return None
 
 
-def format_windows_patcher_block(results, bin_info, file_path, file_size):
+def _app_dir_semver_from_name(dir_name):
+    m = re.match(r"(?i)^app-([\d.]+)$", dir_name)
+    if not m:
+        return None, ()
+    s = m.group(1).strip()
+    parts = []
+    for p in s.split("."):
+        try:
+            parts.append(int(p))
+        except ValueError:
+            return None, ()
+    return s, tuple(parts)
+
+
+def _discord_app_version_matching_install(file_path, data):
+    """Resolve version from an installed app-* tree when this file is byte-identical to that install's voice node."""
+    path = Path(file_path) if file_path else None
+    try:
+        if data is None and path and path.is_file():
+            data = path.read_bytes()
+        if not data:
+            return None
+        sz = len(data)
+        digest = hashlib.md5(data).hexdigest()
+    except OSError:
+        return None
+
+    roots = []
+    if sys.platform == "win32":
+        la = os.environ.get("LOCALAPPDATA", "")
+        if la:
+            roots.extend(
+                Path(la) / c
+                for c in (
+                    "Discord",
+                    "DiscordCanary",
+                    "DiscordPTB",
+                    "DiscordDevelopment",
+                )
+            )
+    elif sys.platform == "darwin":
+        sup = Path.home() / "Library" / "Application Support"
+        for c in ("discord", "discordcanary", "discordptb", "discorddevelopment"):
+            roots.append(sup / c)
+
+    best = None
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for app_dir in root.glob("app-*"):
+            if not app_dir.is_dir():
+                continue
+            ver_str, ver_tuple = _app_dir_semver_from_name(app_dir.name)
+            if not ver_str:
+                continue
+            hit = False
+            for node in app_dir.glob("modules/discord_voice*/discord_voice/discord_voice.node"):
+                try:
+                    if node.stat().st_size != sz:
+                        continue
+                    if hashlib.md5(node.read_bytes()).hexdigest() != digest:
+                        continue
+                except OSError:
+                    continue
+                hit = True
+                break
+            if not hit:
+                continue
+            label = root.name
+            if best is None or ver_tuple > best[0]:
+                best = (ver_tuple, ver_str, label)
+
+    if best:
+        return best[1], f"matching-install:{best[2]}"
+    return None
+
+
+def _read_manifest_discord_app_version(parent_dir):
+    if not parent_dir:
+        return None
+    mf = Path(parent_dir) / "manifest.json"
+    if not mf.is_file():
+        return None
+    try:
+        obj = json.loads(mf.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(obj, dict):
+        return None
+    for key in ("discordAppVersion", "discord_app_version", "appVersion"):
+        v = obj.get(key)
+        if v is None:
+            continue
+        s = str(v).strip()
+        if s and s.lower() != "null":
+            return s
+    return None
+
+
+def _pe_rsrc_blob(data, bin_info):
+    if not data or not bin_info or bin_info.get("format") != "pe":
+        return None
+    for sec in bin_info.get("sections") or []:
+        if sec.get("name") == ".rsrc":
+            ro = sec.get("raw_offset") or 0
+            rs = sec.get("raw_size") or 0
+            if ro > 0 and rs > 0 and ro + rs <= len(data):
+                return data[ro : ro + rs]
+    return None
+
+
+def _utf16_stringfileinfo_value(blob, key_ascii):
+    if not blob or not key_ascii:
+        return None
+    key = (key_ascii + "\0").encode("utf-16le")
+    idx = 0
+    while idx < len(blob):
+        j = blob.find(key, idx)
+        if j < 0:
+            return None
+        pos = j + len(key)
+        while pos < len(blob) and blob[pos] == 0:
+            pos += 1
+        chars = bytearray()
+        while pos + 1 < len(blob):
+            if blob[pos] == 0 and blob[pos + 1] == 0:
+                break
+            chars.append(blob[pos])
+            chars.append(blob[pos + 1])
+            pos += 2
+        try:
+            s = chars.decode("utf-16le").strip()
+        except (UnicodeDecodeError, UnicodeError):
+            idx = j + 1
+            continue
+        if s and re.fullmatch(r"[\d.]+", s):
+            return s
+        idx = j + 1
+    return None
+
+
+def resolve_discord_app_version(file_path, data=None, bin_info=None, cli_version=None):
+    """(version, source) for patcher DiscordAppVersion. Precedence: cli, env, sidecar,
+    manifest keys, app-* in path, same-bytes match under LocalAppData/Library install, PE .rsrc."""
+    path = Path(file_path) if file_path else None
+    parent = path.parent if path else None
+
+    if cli_version:
+        v = str(cli_version).strip()
+        if v:
+            return v, "cli"
+
+    env_v = (os.environ.get("DISCORD_APP_VERSION") or os.environ.get("DISCORD_APP_BUILD") or "").strip()
+    if env_v:
+        return env_v, "environment"
+
+    side = _read_discord_app_build_sidecar(parent)
+    if side:
+        return side, "discord_app_build.txt"
+
+    man = _read_manifest_discord_app_version(parent)
+    if man:
+        return man, "manifest.json"
+
+    if path:
+        for part in path.resolve().parts:
+            m = re.match(r"(?i)^app-([\d.]+)$", part)
+            if m:
+                return m.group(1).strip(), "path"
+        s = os.path.normpath(str(path))
+        m = re.search(r"(?i)app-\s*([\d.]+)", s)
+        if m:
+            return m.group(1).strip(), "path"
+
+    install_ver = _discord_app_version_matching_install(path, data)
+    if install_ver:
+        return install_ver[0], install_ver[1]
+
+    if data is not None and bin_info and bin_info.get("format") == "pe":
+        blob = _pe_rsrc_blob(data, bin_info)
+        if blob:
+            fv = _utf16_stringfileinfo_value(blob, "FileVersion")
+            if fv:
+                return fv, "pe:FileVersion"
+            pv = _utf16_stringfileinfo_value(blob, "ProductVersion")
+            if pv:
+                return pv, "pe:ProductVersion"
+
+    return "unspecified", "none"
+
+
+def format_windows_patcher_block(results, bin_info, file_path, file_size, discord_app_version=None):
     """Windows patcher copy block; order = $Script:RequiredOffsetNames."""
     if not bin_info or not file_path or file_size is None:
         return None
@@ -3927,15 +4093,23 @@ def format_windows_patcher_block(results, bin_info, file_path, file_size):
     if not ok:
         return None
     with open(file_path, 'rb') as f:
-        md5 = hashlib.md5(f.read()).hexdigest().lower()
-    app_build = _infer_discord_app_build_from_path(file_path)
+        raw = f.read()
+    md5 = hashlib.md5(raw).hexdigest().lower()
+    if discord_app_version is None:
+        app_ver, _src = resolve_discord_app_version(
+            Path(file_path), data=raw, bin_info=bin_info, cli_version=None)
+    else:
+        app_ver = str(discord_app_version).strip() or "unspecified"
     lines = [
-        "# region Offsets",
+        "# region Offsets (PASTE HERE)",
+        "# finder <path>  [--discord-version … | manifest | env | matches Local install by file hash]",
+        "# Paste into Discord_voice_node_patcher.ps1",
         "",
         "$Script:OffsetsMeta = @{",
         '    FinderVersion = "discord_voice_node_offset_finder.py v%s"' % VERSION,
-        '    DiscordAppBuild     = "%s"' % app_build,
-        '    MD5                 = "%s"' % md5,
+        '    DiscordAppVersion = "%s"' % app_ver,
+        "    Size          = %s" % file_size,
+        '    MD5           = "%s"' % md5,
         "}",
         "",
         "$Script:Offsets = @{",
@@ -4039,13 +4213,10 @@ def format_linux_patcher_block(results, bin_info, file_path, file_size):
     adj = bin_info.get('file_offset_adjustment', 0)
     md5 = _md5_file_hex(file_path, lower=True)
     lines = [
-        "# --- Build fingerprint (update when targeting a new Discord build) ------------",
-        "# Run: python discord_voice_node_offset_finder_v5.py <path/to/discord_voice.node>",
-        "# Copy the \"COPY BELOW -> discord_voice_patcher_linux.sh\" block here.",
+        "# discord_voice_patcher_linux.sh — EXPECTED_* + OFFSET_* from finder",
         f'EXPECTED_MD5="{md5}"',
         f"EXPECTED_SIZE={file_size}",
         "",
-        "# --- Linux/ELF patch offsets --------------------------------------------------",
     ]
     ordered = WINDOWS_PATCHER_OFFSET_ORDER
     for name in ordered:
@@ -4054,7 +4225,7 @@ def format_linux_patcher_block(results, bin_info, file_path, file_size):
             lines.append(f"OFFSET_{name}=0x{file_off:X}")
         else:
             lines.append(f"OFFSET_{name}=0x0")
-    # Linux-only: MultiChannel Opus config channels initializer (paste after OpusConfigSetChannels).
+    # Linux-only MultiChannel Opus (after OpusConfigSetChannels in script).
     extra_val = 0
     if "AudioEncoderMultiChannelOpusCh" in results:
         extra_val = results["AudioEncoderMultiChannelOpusCh"] - adj
@@ -4138,7 +4309,8 @@ def format_macos_patcher_block(results, bin_info, file_path, file_size,
 
 
 def format_json(results, bin_info, file_path, file_size, adj, tiers_used,
-                arm64_results=None, arm64_info=None, arm64_adj=None, arm64_tiers=None):
+                arm64_results=None, arm64_info=None, arm64_adj=None, arm64_tiers=None,
+                discord_app_version=None, discord_app_version_source=None):
     """Generate machine-readable JSON output."""
     fmt = bin_info.get('format', 'raw') if bin_info else 'pe'
     offsets_only = {name: off for name, off in results.items() if name in ALLOWED_OFFSET_NAMES}
@@ -4155,6 +4327,8 @@ def format_json(results, bin_info, file_path, file_size, adj, tiers_used,
         "resolution_tiers": {k: v for k, v in (tiers_used or {}).items() if k in ALLOWED_OFFSET_NAMES},
         "total_found": len(offsets_only),
         "total_expected": len(ALL_OFFSET_NAMES),
+        "discord_app_version": discord_app_version or "unspecified",
+        "discord_app_version_source": (discord_app_version_source or "none"),
     }
 
     if fmt == 'pe' and bin_info:
@@ -4318,7 +4492,6 @@ def find_discord_node():
                 pass
         return None
 
-    # --- Windows --------------------------------------------------
     if sys.platform == 'win32':
         localappdata = os.environ.get('LOCALAPPDATA', '')
         if localappdata:
@@ -4327,7 +4500,6 @@ def find_discord_node():
                 if found:
                     return found
 
-    # --- macOS ----------------------------------------------------
     elif sys.platform == 'darwin':
         home = Path.home()
 
@@ -4362,7 +4534,6 @@ def find_discord_node():
         print("    /Applications/Discord.app/Contents/Resources/app-*/modules/discord_voice*/")
         print("    ~/Library/Application Support/discord/*/modules/discord_voice*/")
 
-    # --- Linux ----------------------------------------------------
     else:
         home = Path.home()
 
@@ -4447,30 +4618,32 @@ def main():
     created_files = []
     atexit.register(_cleanup_created_files, created_files)
 
-    # Parse CLI: --quiet/-q, --json (stdout JSON only after run), --export <path>
+    # CLI: --export, --discord-version, --json, -q
     json_only = '--json' in sys.argv
-    export_path = None
-    if '--export' in sys.argv:
-        idx = sys.argv.index('--export')
-        if idx + 1 < len(sys.argv):
-            export_path = sys.argv[idx + 1]
     quiet = ('--quiet' in sys.argv or '-q' in sys.argv) or json_only
-
-    skip_next = False
+    export_path = None
+    cli_discord_ver = None
     file_arg = None
-    for a in sys.argv[1:]:
-        if skip_next:
-            skip_next = False
+    i = 1
+    while i < len(sys.argv):
+        a = sys.argv[i]
+        if a == '--export' and i + 1 < len(sys.argv):
+            export_path = sys.argv[i + 1]
+            i += 2
             continue
-        if a == '--export':
-            skip_next = True
+        if a == '--discord-version' and i + 1 < len(sys.argv):
+            cli_discord_ver = sys.argv[i + 1].strip()
+            i += 2
             continue
         if a in ('--json', '--quiet', '-q'):
+            i += 1
             continue
         if a.startswith('-'):
+            i += 1
             continue
-        file_arg = a
-        break
+        if file_arg is None:
+            file_arg = a
+        i += 1
 
     if not quiet:
         print("=" * 65)
@@ -4486,7 +4659,7 @@ def main():
         if file_path:
             print(f"  Found: {file_path}")
         else:
-            print("  Not found. Usage: python discord_voice_node_offset_finder.py <path>")
+            print("  Not found. Usage: python discord_voice_node_offset_finder_v5.py [--discord-version 1.0.xxxx] <path>")
             sys.exit(1)
 
     if not file_path.exists():
@@ -4500,11 +4673,12 @@ def main():
         print(f"  Size: {file_size:,} bytes ({file_size / (1024*1024):.2f} MB)")
         print(f"  MD5:  {hashlib.md5(data).hexdigest()}")
 
-    # --- Format detection ------------------------------------------
     bin_info = detect_binary_format(data)
     fmt = bin_info.get('format', 'raw')
     adj = bin_info.get('file_offset_adjustment', 0)
     arch = bin_info.get('arch', 'unknown')
+    dapp_ver, dapp_src = resolve_discord_app_version(
+        file_path, data=data, bin_info=bin_info, cli_version=cli_discord_ver)
 
     if not quiet:
         print(f"\n  Binary Format:       {fmt.upper()}")
@@ -4534,7 +4708,7 @@ def main():
         has_sym = bin_info.get('has_symbols', False)
         print(f"  Symbol Table:        {'YES' if has_sym else 'NO'} ({n_func} function symbols)")
         if has_sym:
-            print(f"  NOTE: Linux nodes (Stable/PTB/Canary) are not stripped - using symbol table for offset resolution")
+            print(f"  NOTE: Linux nodes usually ship with symbols; resolution uses the symbol table.")
 
     elif fmt == 'macho' and not quiet:
         ts = bin_info.get('text_section')
@@ -4558,17 +4732,17 @@ def main():
     elif fmt == 'raw' and not quiet:
         print(f"  WARNING: Could not parse binary format - using raw scan (adj=0)")
 
-    # --- Backward compat: create pe_info alias for functions that expect it --
+    if not quiet:
+        print(f"  Discord app build:   {dapp_ver}  (source: {dapp_src})")
+
     pe_info = bin_info if fmt == 'pe' else None
 
-    # --- macOS Stereo Patch Finder (fat binary only) ------------------------
     stereo_patches = []
     if fmt == 'macho':
         stereo_patches = find_macos_stereo_patches(data)
         if stereo_patches:
             bin_info["stereo_patches"] = stereo_patches
 
-    # --- Run pipeline ----------------------------------------------
     verbose = not quiet
     emitted_json_text = None
     if quiet:
@@ -4576,6 +4750,10 @@ def main():
         sys.stdout = io.StringIO()
     exit_code = 0
     results, errors, adj, tiers_used = None, [], 0, {}
+    arm64_results = {}
+    arm64_adj = 0
+    arm64_tiers = {}
+    arm64_info = bin_info.get("arm64_info") if bin_info else None
     try:
         results, errors, adj, tiers_used = discover_offsets(data, bin_info, verbose=verbose)
         verified, warnings = validate_offsets(data, results, adj, bin_fmt=fmt)
@@ -4591,7 +4769,6 @@ def main():
                 t_end = len(data)
             run_bitrate_audit_pe(data, results, adj, t_start, t_end)
 
-        # --- Cross-validation ------------------------------------------
         xval_warnings = _cross_validate(results, adj, data, tiers_used=tiers_used, bin_fmt=fmt)
         if xval_warnings:
             print("\n" + "=" * 65)
@@ -4600,14 +4777,7 @@ def main():
             for w in xval_warnings:
                 print(f"  [XVAL] {w}")
 
-        # --- ARM64 Offset Discovery (fat binary with arm64 slice) ------
-        arm64_results = {}
-        arm64_errors = []
-        arm64_adj = 0
-        arm64_tiers = {}
-        arm64_info = bin_info.get('arm64_info') if bin_info else None
-
-        if arm64_info and arm64_info.get('arch') == 'arm64':
+        if arm64_info and arm64_info.get("arch") == "arm64":
             print("\n" + "=" * 65)
             print("  ARM64 OFFSET DISCOVERY (Apple Silicon)")
             print("=" * 65)
@@ -4617,17 +4787,15 @@ def main():
             print(f"  arm64 symbols: {n_arm64_sym} functions  "
                   f"adjustment=0x{arm64_info.get('file_offset_adjustment', 0):X}")
 
-            arm64_results, arm64_errors, arm64_adj, arm64_tiers = \
+            arm64_results, _arm64_errors, arm64_adj, arm64_tiers = \
                 discover_offsets_arm64(data, arm64_info)
 
-        # --- Visualization ---------------------------------------------
         if len(results) >= 10:
             viz_path = generate_viz_graph(results, file_path.parent)
             if viz_path:
                 created_files.append(viz_path)
                 print(f"\n  Dependency graph saved: {viz_path}")
 
-        # --- Summary ---------------------------------------------------
         print("\n" + "=" * 65)
         print("  RESULTS SUMMARY")
         print("=" * 65)
@@ -4646,7 +4814,6 @@ def main():
         if arm64_info:
             print(f"  arm64 found:      {len(arm64_results)} / {len(ALL_OFFSET_NAMES)}")
 
-        # Show resolution tier breakdown
         tier_counts = {}
         for name, tier in tiers_used.items():
             bucket = tier.split('(')[0].split('-')[0]
@@ -4659,7 +4826,6 @@ def main():
             for name, err in errors:
                 print(f"    {name}: {err}")
 
-        # --- Results Table (dual offset for ELF only; macOS uses the copy block) ---
         if results and fmt == 'elf':
             print("\n" + "=" * 65)
             print("  OFFSET TABLE (config VA / file offset)")
@@ -4676,11 +4842,9 @@ def main():
                     print(f"  {name:<45s} {'NOT FOUND':>12s}")
             print(f"\n  # Note: on Linux use the 'file_offset' values for direct binary patching")
 
-        # --- Output ----------------------------------------------------
         if results:
-            # For Windows (PE), print the exact patcher block first so users copy the right thing
             if fmt == 'pe':
-                win_block = format_windows_patcher_block(results, bin_info, file_path, file_size)
+                win_block = format_windows_patcher_block(results, bin_info, file_path, file_size, discord_app_version=dapp_ver)
                 if not win_block and bin_info and file_size is not None:
                     ok, err = _validate_pe_offsets_for_patcher(results, bin_info, file_size)
                     if not ok:
@@ -4688,7 +4852,7 @@ def main():
                 if win_block:
                     print("\n" + "=" * 65)
                     print("  COPY BELOW -> Discord_voice_node_patcher.ps1")
-                    print("  Replace the # region Offsets ... # endregion section in the patcher script")
+                    print("  Replace the entire # region Offsets (PASTE HERE) ... # endregion Offsets section")
                     print("=" * 65)
                     print("")
                     print("--- BEGIN COPY (Windows) ---")
@@ -4757,7 +4921,7 @@ def main():
             # Save offsets.txt
             script_dir = Path(__file__).resolve().parent
             if fmt == 'pe':
-                wb = format_windows_patcher_block(results, bin_info, file_path, file_size)
+                wb = format_windows_patcher_block(results, bin_info, file_path, file_size, discord_app_version=dapp_ver)
                 file_content = [wb] if wb else []
             elif fmt == 'macho':
                 mb = format_macos_patcher_block(
@@ -4790,7 +4954,9 @@ def main():
                     arm64_results=arm64_results if arm64_results else None,
                     arm64_info=arm64_info,
                     arm64_adj=arm64_adj if arm64_results else None,
-                    arm64_tiers=arm64_tiers if arm64_results else None)
+                    arm64_tiers=arm64_tiers if arm64_results else None,
+                    discord_app_version=dapp_ver,
+                    discord_app_version_source=dapp_src)
                 emitted_json_text = json_text
                 if json_only:
                     pass  # printed in finally after restoring real stdout
@@ -4806,7 +4972,6 @@ def main():
             except Exception:
                 pass
 
-        # --- Exit code -------------------------------------------------
         total_x86 = len(results)
         total_arm64 = len(arm64_results) if arm64_results else -1
         patcher_hits, n_pk = count_patcher_offsets_found(results or {})
@@ -4857,7 +5022,7 @@ def main():
                 else:
                     print("  *** PARTIAL: {}/{} ***".format(patcher_count, n_q))
                 print("  Cross-validation: clean" if not xval else "  Cross-validation: {} issue(s)".format(len(xval)))
-                win_block = format_windows_patcher_block(results, bin_info, file_path, file_size)
+                win_block = format_windows_patcher_block(results, bin_info, file_path, file_size, discord_app_version=dapp_ver)
                 if win_block:
                     print("")
                     print("--- BEGIN COPY (Windows) ---")

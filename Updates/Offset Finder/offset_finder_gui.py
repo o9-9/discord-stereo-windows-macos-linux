@@ -2,7 +2,6 @@
 """Tk GUI for discord_voice_node_offset_finder_v5.py (copy blocks for Windows/Linux/macOS)."""
 
 import os
-import re
 import sys
 import shutil
 import atexit
@@ -37,7 +36,7 @@ atexit.register(_cleanup_pycache)
 
 
 def _hub_scripts_cache_dir() -> Path | None:
-    """If Stereo Hub synced the finder, it may live here (same layout as discord_stereo_hub_gui.hub_scripts_dir)."""
+    """If Stereo Hub synced the finder, it may live here (same layout as discord_stereo_hub_DEV.hub_scripts_dir)."""
     try:
         if sys.platform == "win32":
             base = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
@@ -429,21 +428,7 @@ class OffsetFinderGUI:
         fsize = os.path.getsize(path)
         fname = os.path.basename(path)
         self._append_output(f"  File: {fname}\n", "header")
-        is_pe = False
-        with open(path, "rb") as f:
-            is_pe = f.read(2) == b"MZ"
-        if is_pe:
-            m = re.search(r"windows!app-\s*([\d.]+)", path, re.I) or re.search(
-                r"app-\s*([\d.]+)", path, re.I
-            )
-            build = m.group(1).strip() if m else "unspecified"
-            self._append_output(
-                f"  Discord App Build: {build} | OS: {self.os_var.get()}\n", "info"
-            )
-        else:
-            self._append_output(
-                f"  Size: {fsize:,} bytes | OS: {self.os_var.get()}\n", "info"
-            )
+        self._append_output(f"  Size: {fsize:,} bytes | OS: {self.os_var.get()}\n", "info")
         self._append_output(f"  {'-' * 55}\n\n", "info")
 
         thread = threading.Thread(target=self._run_finder_thread, args=(path,), daemon=True)

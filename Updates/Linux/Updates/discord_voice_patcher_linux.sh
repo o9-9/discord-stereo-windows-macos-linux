@@ -557,88 +557,6 @@ terminate_discord() {
 declare -a CLIENT_NAMES=()
 declare -a CLIENT_NODES=()
 
-# Emit "base|label" for Equicord/Equibop Flatpaks (~/.var/app/org.equicord.*/config/...).
-# Only whitelisted subdirs under each app id (no unbounded find across Flatpak).
-emit_flatpak_org_equicord_bases() {
-    local var_app="${DETECT_HOME}/.var/app"
-    local prev_nullglob
-    prev_nullglob=$(shopt -p nullglob 2>/dev/null || true)
-    shopt -s nullglob 2>/dev/null || true
-    local app_root sub rel label
-    local -a safe_subs=(
-        "config/discord"
-        "config/discordcanary"
-        "config/discordptb"
-        "config/discorddevelopment"
-        "config/equicord"
-        "config/Equicord"
-        "config/equibop"
-        "config/Equibop"
-    )
-    for app_root in "$var_app"/org.equicord.*; do
-        [[ -d "$app_root" ]] || continue
-        rel="${app_root#$DETECT_HOME/.var/app/}"
-        for sub in "${safe_subs[@]}"; do
-            if [[ -d "$app_root/$sub" ]]; then
-                label="Equicord/Equibop (Flatpak: $rel — $sub)"
-                printf '%s|%s\n' "$app_root/$sub" "$label"
-            fi
-        done
-    done
-    [[ -n "$prev_nullglob" ]] && eval "$prev_nullglob" 2>/dev/null || true
-}
-
-# Deduplication list for this scan (bash 4.2-safe; avoid nameref for older distros)
-__DISCORD_SCAN_FOUND=()
-
-# If base contains discord_voice.node, add one client (deduplicated by resolved path).
-try_add_client_from_base() {
-    local base="$1"
-    local name="$2"
-
-    [[ -d "$base" ]] || return 1
-
-    local found_nodes
-    found_nodes=$(find "$base" -maxdepth 10 -name "discord_voice.node" -type f 2>/dev/null | head -5 || true)
-
-    [[ -z "$found_nodes" ]] && return 1
-
-    local latest
-    latest=$(echo "$found_nodes" | while read -r f; do
-        stat -c '%Y %n' "$f" 2>/dev/null || echo "0 $f"
-    done | sort -rn | head -1 | cut -d' ' -f2-)
-
-    if [[ -z "$latest" || ! -f "$latest" ]]; then
-        return 1
-    fi
-
-    local resolved
-    resolved=$(readlink -f "$latest" 2>/dev/null || echo "$latest")
-    local fp
-    for fp in "${__DISCORD_SCAN_FOUND[@]+"${__DISCORD_SCAN_FOUND[@]}"}"; do
-        [[ "$fp" == "$resolved" ]] && return 0
-    done
-
-    if [[ ! -r "$latest" ]]; then
-        log_warn "Found but unreadable: $latest"
-        return 1
-    fi
-    local fsize
-    fsize=$(stat -c%s "$latest" 2>/dev/null || echo "0")
-    if (( fsize == 0 )); then
-        log_warn "Found but empty (0 bytes): $latest"
-        return 1
-    fi
-
-    CLIENT_NAMES+=("$name")
-    CLIENT_NODES+=("$latest")
-    __DISCORD_SCAN_FOUND+=("$resolved")
-    log_ok "Found: $name"
-    log_info "  Path: $latest"
-    log_info "  Size: $(numfmt --to=iec "$fsize" 2>/dev/null || echo "${fsize} bytes")"
-    return 0
-}
-
 find_discord_clients() {
     log_info "Scanning for Discord installations..."
 
@@ -646,7 +564,6 @@ find_discord_clients() {
     # discord_voice.node lives inside per-user config dirs in
     # app-*/modules/discord_voice*/discord_voice/
     # System paths (/opt, /usr/share, /usr/lib, /snap) also searched.
-    # Flatpak: official com.discordapp.* plus org.equicord.* (Equibop, etc.); see emit_flatpak_org_equicord_bases.
     local search_bases=(
         "$DETECT_HOME/.config/discord"
         "$DETECT_HOME/.config/discordcanary"
@@ -654,9 +571,6 @@ find_discord_clients() {
         "$DETECT_HOME/.config/discorddevelopment"
         "$DETECT_HOME/.var/app/com.discordapp.Discord/config/discord"
         "$DETECT_HOME/.var/app/com.discordapp.DiscordCanary/config/discordcanary"
-        "$DETECT_HOME/.var/app/com.discordapp.DiscordPTB/config/discordptb"
-        "$DETECT_HOME/.var/app/com.discordapp.DiscordDevelopment/config/discorddevelopment"
-        "$DETECT_HOME/.var/app/org.equicord.equibop/config/discord"
         "/snap/discord/current/usr/share/discord/resources"
         "/opt/discord/resources"
         "/opt/discord-canary/resources"
@@ -669,11 +583,8 @@ find_discord_clients() {
         "Discord Canary"
         "Discord PTB"
         "Discord Development"
-        "Discord (Flatpak — Stable)"
-        "Discord (Flatpak — Canary)"
-        "Discord (Flatpak — PTB)"
-        "Discord (Flatpak — Development)"
-        "Equibop (Flatpak)"
+        "Discord (Flatpak)"
+        "Discord Canary (Flatpak)"
         "Discord (Snap)"
         "Discord (/opt)"
         "Discord Canary (/opt)"
@@ -682,19 +593,56 @@ find_discord_clients() {
         "Discord (/usr/lib)"
     )
 
-    __DISCORD_SCAN_FOUND=()
-    for i in "${!search_bases[@]}"; do
-        try_add_client_from_base "${search_bases[$i]}" "${search_names[$i]}" || true
-    done
+    local found_paths=()
 
-    # Other org.equicord.* Flatpaks: only under ~/.var/app/org.equicord.*/(whitelist)
-    local fp_line fp_base fp_label
-    while IFS= read -r fp_line; do
-        [[ -n "$fp_line" ]] || continue
-        fp_base="${fp_line%%|*}"
-        fp_label="${fp_line#*|}"
-        try_add_client_from_base "$fp_base" "$fp_label" || true
-    done < <(emit_flatpak_org_equicord_bases)
+    for i in "${!search_bases[@]}"; do
+        local base="${search_bases[$i]}"
+        local name="${search_names[$i]}"
+
+        [[ -d "$base" ]] || continue
+
+        # Find discord_voice.node (up to depth 10 for system installs)
+        local found_nodes
+        found_nodes=$(find "$base" -maxdepth 10 -name "discord_voice.node" -type f 2>/dev/null | head -5 || true)
+
+        [[ -z "$found_nodes" ]] && continue
+
+        # Pick the most recent version
+        local latest
+        latest=$(echo "$found_nodes" | while read -r f; do
+            stat -c '%Y %n' "$f" 2>/dev/null || echo "0 $f"
+        done | sort -rn | head -1 | cut -d' ' -f2-)
+
+        if [[ -n "$latest" && -f "$latest" ]]; then
+            # Deduplicate by resolved path
+            local resolved
+            resolved=$(readlink -f "$latest" 2>/dev/null || echo "$latest")
+            local dup=false
+            for fp in "${found_paths[@]+"${found_paths[@]}"}"; do
+                [[ "$fp" == "$resolved" ]] && { dup=true; break; }
+            done
+            $dup && continue
+
+            # Validate file is actually readable and non-zero
+            if [[ ! -r "$latest" ]]; then
+                log_warn "Found but unreadable: $latest"
+                continue
+            fi
+            local fsize
+            fsize=$(stat -c%s "$latest" 2>/dev/null || echo "0")
+            if (( fsize == 0 )); then
+                log_warn "Found but empty (0 bytes): $latest"
+                continue
+            fi
+
+            CLIENT_NAMES+=("$name")
+            CLIENT_NODES+=("$latest")
+            found_paths+=("$resolved")
+            log_ok "Found: $name"
+            log_info "  Path: $latest"
+            log_info "  Size: $(numfmt --to=iec "$fsize" 2>/dev/null || echo "${fsize} bytes")"
+        fi
+    done
 
     if [[ ${#CLIENT_NAMES[@]} -eq 0 ]]; then
         log_error "No Discord installations found!"
@@ -704,7 +652,7 @@ find_discord_clients() {
         echo "  ~/.config/discordcanary/app-*/modules/discord_voice-*/discord_voice/"
         echo "  ~/.config/discordptb/app-*/modules/discord_voice-*/discord_voice/"
         echo "  ~/.config/discorddevelopment/app-*/modules/discord_voice-*/discord_voice/"
-        echo "  ~/.var/app/com.discordapp.Discord/...  ~/.var/app/com.discordapp.DiscordPTB/...  org.equicord.*/config/..."
+        echo "  ~/.var/app/com.discordapp.Discord/config/discord/..."
         echo "  /opt/discord/... /usr/share/discord/... /snap/discord/..."
         echo ""
         echo "Make sure Discord has been opened and you've joined a voice channel"
