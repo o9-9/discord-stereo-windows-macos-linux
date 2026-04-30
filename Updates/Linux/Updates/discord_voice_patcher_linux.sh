@@ -3,6 +3,44 @@
 # Discord Voice Quality Patcher - Linux
 # 48 kHz | 384 kbps | Stereo
 # Made by: Oracle | Shaun | Hallow | Ascend | Sentry | Sikimzo | Cypher
+#
+# v8.2 (Discord 0.0.135 / discord_voice.node MD5 fb6684...649a9):
+#   * Bumped amplifier injection size 0x100 -> 0x180 (256 -> 384 bytes).
+#     Empirically, gcc/clang -O2 produce hp_cutoff/dc_reject bodies of
+#     ~250-320 bytes - the old 256-byte cap could truncate the function's
+#     `ret` and let execution fall through into the original opus body.
+#     0x180 fits both target slots (hp_cutoff=431 B, dc_reject=398 B).
+#   * Final IDA pass against MD5 fb6684...649a9 confirmed all 14 patch
+#     sites still match stock signatures and disassemble to the expected
+#     instructions. No additional patches required for stereo/bitrate/SR.
+#
+# v8.1 (Discord 0.0.135 / discord_voice.node MD5 fb6684...649a9):
+#   * Re-introduced MonoDownmixer patch in CapturedAudioProcessor::Process
+#     (NOP sled + JMP rel32 at 0x35ECFC, 13 bytes). This was the missing piece
+#     that caused the previous build to still come through as mono - without
+#     it the captured mic audio was downmixed to mono BEFORE reaching
+#     CreateAudioFrameToProcess, defeating the other stereo patches.
+#   * Cross-validated every offset against IDA Pro decompilation:
+#       - EmulateStereoSuccess1 @ 0x39C300 -> CommitAudioCodec stereo SDP cmp imm
+#       - EmulateStereoSuccess2 @ 0x398665 -> CreateAudioStream stereo SDP cmp imm
+#       - CreateAudioFrameStereo @ 0x390070 -> EngineAudioTransport channel clamp
+#       - MonoDownmixer @ 0x35ECFC -> CapturedAudioProcessor mono-collapse path
+#       - Emulate48Khz @ 0x39005A -> sample rate constant in CreateAudioFrameToProcess
+#       - HighPassFilter @ 0x71F110 -> webrtc::HighPassFilter::Process
+#       - HighpassCutoffFilter @ 0x762640 -> opus hp_cutoff()
+#       - DcReject @ 0x7627F0 -> opus dc_reject()
+#       - DownmixFunc @ 0x98E420 -> opus downmix_and_resample()
+#       - AudioEncoderOpusConfig {SetChannels @ 0x7699D5, EncoderConfigInit1 @ 0x7699DF}
+#       - AudioEncoderMultiChannelOpus  {Ch @ 0x7693AE, EncoderConfigInit2 @ 0x7693B8}
+#       - AudioEncoderOpusConfigIsOk @ 0x769B70
+#
+# v8.0 (initial 0.0.135 rewrite):
+#   * AudioFrame.num_channels_ forced to 2 via 7-byte mov r12, 2.
+#   * SDP "stereo=1" flipped via cmp imm 0x02 -> 0x00 (CommitAudioCodec +
+#     CreateAudioStream).
+#   * Encoder ctor bitrate (32k -> 384k) and channels (1 -> 2) patched in both
+#     AudioEncoderOpusConfig and AudioEncoderMultiChannelOpus.
+#   * 48 kHz floor patches the default sample rate immediate (32k -> 48k).
 ###############################################################################
 
 # Re-exec under bash if invoked via sh/dash/zsh.
@@ -12,7 +50,7 @@ fi
 
 set -euo pipefail
 
-SCRIPT_VERSION="7.4"
+SCRIPT_VERSION="8.2"
 SKIP_BACKUP=false
 RESTORE_MODE=false
 
@@ -47,51 +85,93 @@ VOICE_BACKUP_API="${VOICE_BACKUP_API:-https://api.github.com/repos/ProdHallow/Di
 # endregion Config
 
 # --- Build fingerprint (update when targeting a new Discord build) ------------
-# Run: python discord_voice_node_offset_finder_v5.py <path/to/discord_voice.node>
-# Copy the "COPY BELOW -> discord_voice_patcher_linux.sh" block here.
-EXPECTED_MD5="60eb8fb70999b092c1f2be1ac0f286ce"
-EXPECTED_SIZE=103869656
+# Linux Stable 0.0.135 (discord_voice.node)
+# Verified MD5 / size from `md5sum` & `stat -c%s` on the GitHub bundle node.
+EXPECTED_MD5="fb6684a550a7b5c0fdfe65ec954649a9"
+EXPECTED_SIZE=104160072
 
-# --- Linux/ELF patch offsets --------------------------------------------------
-OFFSET_CreateAudioFrameStereo=0x38F4A3
-OFFSET_AudioEncoderOpusConfigSetChannels=0x7654D5
-OFFSET_AudioEncoderMultiChannelOpusCh=0x764EAE
-OFFSET_MonoDownmixer=0x35E40C
-OFFSET_EmulateStereoSuccess1=0x39BB89
-OFFSET_EmulateStereoSuccess2=0x39C55F
-OFFSET_EmulateBitrateModified=0x38F48C
-OFFSET_SetsBitrateBitrateValue=0x355255
-OFFSET_SetsBitrateBitwiseOr=0x35525D
-OFFSET_Emulate48Khz=0x39AD1F
-OFFSET_HighPassFilter=0x700070
-OFFSET_HighpassCutoffFilter=0x75E140
-OFFSET_DcReject=0x75E2F0
-OFFSET_DownmixFunc=0x989F20
-OFFSET_AudioEncoderOpusConfigIsOk=0x765670
-OFFSET_ThrowError=0x2D3B30
-OFFSET_EncoderConfigInit1=0x7654DF
-OFFSET_EncoderConfigInit2=0x764EB8
+# --- Linux/ELF patch offsets (Discord 0.0.135) -------------------------------
+# Stereo channel signaling (CommitAudioCodec + CreateAudioStream):
+#   These are the immediate byte of `cmp dword [rbx+0xF0], 2` followed by
+#   `cmovnb rdx, rax` that picks the "stereo=1" SDP fmtp string.
+#   Patching imm 0x02 -> 0x00 makes the comparison "always >= 0", so the
+#   stereo branch is always taken (SDP advertises stereo=1).
+OFFSET_EmulateStereoSuccess1=0x39C300   # CommitAudioCodec cmp imm  -> 0x00
+OFFSET_EmulateStereoSuccess2=0x398665   # CreateAudioStream cmp imm -> 0x00
+
+# AudioFrame channel-count clamp in CreateAudioFrameToProcess:
+#   cmp r12, rax ; cmovnb r12, rax     (clamps stream-channels to mic-channels)
+#   We replace the whole 7-byte sequence with `mov r12, 2` so that
+#   AudioFrame.num_channels_ is forced to 2 regardless of mic input.
+#   webrtc::voe::RemixAndResample then transparently upmixes mono->stereo.
+OFFSET_CreateAudioFrameStereo=0x390070
+
+# Mono-downmix bypass in CapturedAudioProcessor::Process:
+#   test al, al ; jz +0xD ; cmp dword [rbx+0x80], 9 ; jg +0xB3
+#   We replace the 13-byte block with 12 NOPs + JMP rel32 (E9 8F B3 00 00...
+#   wait, the disp32 of the JMP is left as the original jg's disp, so the
+#   jmp lands on the same target as the original jg). This unconditionally
+#   takes the "skip mono downmix" branch so captured audio stays multi-channel
+#   all the way through to the Opus encoder.
+OFFSET_MonoDownmixer=0x35ECFC
+
+# Opus encoder default channels (constructor field at +8):
+OFFSET_AudioEncoderOpusConfigSetChannels=0x7699D5   # byte 0x01 -> 0x02
+OFFSET_AudioEncoderMultiChannelOpusCh=0x7693AE      # byte 0x01 -> 0x02
+
+# Opus encoder default bitrate (high dword of `mov rax, 0x7D0000000000`):
+OFFSET_EncoderConfigInit1=0x7699DF    # 00 7D 00 00 (32k) -> 00 DC 05 00 (384k)
+OFFSET_EncoderConfigInit2=0x7693B8    # 00 7D 00 00 (32k) -> 00 DC 05 00 (384k)
+
+# Sample rate floor in CreateAudioFrameToProcess (default 32k -> default 48k):
+OFFSET_Emulate48Khz=0x39005A          # mov r13d, 7D00h -> mov r13d, 0BB80h
+
+# WebRTC HighPassFilter::Process (in-place high-pass) -> ret immediately:
+OFFSET_HighPassFilter=0x71F110
+
+# Custom amplifier injection (replaces upstream Opus hp_cutoff & dc_reject):
+OFFSET_HighpassCutoffFilter=0x762640  # opus hp_cutoff()
+OFFSET_DcReject=0x7627F0              # opus dc_reject()
+
+# Opus mono-downmix path inside `tonality_analysis` -> ret immediately:
+OFFSET_DownmixFunc=0x98E420           # downmix_and_resample()
+
+# Opus encoder config validator -> always returns true (skips error throw):
+OFFSET_AudioEncoderOpusConfigIsOk=0x769B70
+
 FILE_OFFSET_ADJUSTMENT=0
 
-# Required offset names (17 Windows-aligned + Linux MultiChannel Opus); validate before build.
+# Required offset names; validate before build.
 REQUIRED_OFFSET_NAMES=(
-    CreateAudioFrameStereo AudioEncoderOpusConfigSetChannels AudioEncoderMultiChannelOpusCh MonoDownmixer
-    EmulateStereoSuccess1 EmulateStereoSuccess2 EmulateBitrateModified
-    SetsBitrateBitrateValue SetsBitrateBitwiseOr Emulate48Khz
-    HighPassFilter HighpassCutoffFilter DcReject DownmixFunc
-    AudioEncoderOpusConfigIsOk ThrowError
+    EmulateStereoSuccess1 EmulateStereoSuccess2
+    CreateAudioFrameStereo
+    MonoDownmixer
+    AudioEncoderOpusConfigSetChannels AudioEncoderMultiChannelOpusCh
     EncoderConfigInit1 EncoderConfigInit2
+    Emulate48Khz
+    HighPassFilter HighpassCutoffFilter DcReject DownmixFunc
+    AudioEncoderOpusConfigIsOk
 )
 
 # region Validation bytes (anchors)
-# Emulate48Khz: Clang x86_64 uses REX.W + CMOVNB (4 bytes). Do not use 3 NOPs (MSVC cmovb).
-ORIG_Emulate48Khz='{0x48, 0x0F, 0x43, 0xD0}'
+# CreateAudioFrameStereo: cmp r12,rax ; cmovnb r12,rax (Clang ELF, REX.W).
+ORIG_CreateAudioFrameStereo='{0x49, 0x39, 0xC4, 0x4C, 0x0F, 0x43, 0xE0}'
+# MonoDownmixer: test al,al ; jz +0xD ; cmp dword [rbx+0x80], 9 ; jg rel32 (start).
+# We validate the first 13 bytes (test+jz+cmp+jg-opcode) — the patch overwrites
+# bytes 0..12, leaving the jg's disp32 in place to act as the JMP rel32 disp.
+ORIG_MonoDownmixer='{0x84, 0xC0, 0x74, 0x0D, 0x83, 0xBB, 0x80, 0x00, 0x00, 0x00, 0x09, 0x0F, 0x8F}'
+# Emulate48Khz: mov r13d, 7D00h (default sample rate = 32 kHz).
+ORIG_Emulate48Khz='{0x41, 0xBD, 0x00, 0x7D, 0x00, 0x00}'
+# AudioEncoderOpusConfigIsOk prologue (Clang).
 ORIG_AudioEncoderOpusConfigIsOk='{0x55, 0x48, 0x89, 0xE5, 0x8B, 0x0F, 0x31, 0xC0}'
+# downmix_and_resample prologue (Clang, push rbp; mov rbp,rsp; push r15; push r14).
 ORIG_DownmixFunc='{0x55, 0x48, 0x89, 0xE5, 0x41, 0x57, 0x41, 0x56}'
-# Clang prologues: first 4 bytes 55 48 89 E5 (match longer ORIG_* where used)
-ORIG_HighPassFilter='{0x55, 0x48, 0x89, 0xE5}'
+# HighPassFilter::Process prologue (Clang).
+ORIG_HighPassFilter='{0x55, 0x48, 0x89, 0xE5, 0x41, 0x57, 0x41, 0x56}'
+# Generic Clang prologue match for hp_cutoff / dc_reject targets.
 ORIG_HighpassCutoffFilter='{0x55, 0x48, 0x89, 0xE5}'
 ORIG_DcReject='{0x55, 0x48, 0x89, 0xE5}'
+# Encoder bitrate immediate (00 7D 00 00 = 32000 bps in LE high dword of mov rax, imm64).
 ORIG_EncoderConfigInit1='{0x00, 0x7D, 0x00, 0x00}'
 ORIG_EncoderConfigInit2='{0x00, 0x7D, 0x00, 0x00}'
 # endregion Validation bytes (anchors)
@@ -951,7 +1031,7 @@ validate_required_offsets() {
     done
     if [[ ${#missing[@]} -gt 0 ]]; then
         log_error "Missing or empty required offset(s): ${missing[*]}"
-        log_error "Paste the full offset block from the offset finder (18 OFFSET_* lines including MultiChannel)."
+        log_error "Refresh the build fingerprint block at the top of this script."
         return 1
     fi
     return 0
@@ -978,24 +1058,20 @@ extern "C" void dc_reject(const float*, float*, int*, int, int, int);
 extern "C" void hp_cutoff(const float*, int, float*, int*, int, int, int, int);
 
 namespace Offsets {
-    constexpr uint32_t CreateAudioFrameStereo            = OFFSET_VAL_CreateAudioFrameStereo;
-    constexpr uint32_t AudioEncoderOpusConfigSetChannels = OFFSET_VAL_AudioEncoderOpusConfigSetChannels;
-    constexpr uint32_t AudioEncoderMultiChannelOpusCh    = OFFSET_VAL_AudioEncoderMultiChannelOpusCh;
-    constexpr uint32_t MonoDownmixer                     = OFFSET_VAL_MonoDownmixer;
     constexpr uint32_t EmulateStereoSuccess1             = OFFSET_VAL_EmulateStereoSuccess1;
     constexpr uint32_t EmulateStereoSuccess2             = OFFSET_VAL_EmulateStereoSuccess2;
-    constexpr uint32_t EmulateBitrateModified            = OFFSET_VAL_EmulateBitrateModified;
-    constexpr uint32_t SetsBitrateBitrateValue           = OFFSET_VAL_SetsBitrateBitrateValue;
-    constexpr uint32_t SetsBitrateBitwiseOr              = OFFSET_VAL_SetsBitrateBitwiseOr;
+    constexpr uint32_t CreateAudioFrameStereo            = OFFSET_VAL_CreateAudioFrameStereo;
+    constexpr uint32_t MonoDownmixer                     = OFFSET_VAL_MonoDownmixer;
+    constexpr uint32_t AudioEncoderOpusConfigSetChannels = OFFSET_VAL_AudioEncoderOpusConfigSetChannels;
+    constexpr uint32_t AudioEncoderMultiChannelOpusCh    = OFFSET_VAL_AudioEncoderMultiChannelOpusCh;
+    constexpr uint32_t EncoderConfigInit1                = OFFSET_VAL_EncoderConfigInit1;
+    constexpr uint32_t EncoderConfigInit2                = OFFSET_VAL_EncoderConfigInit2;
     constexpr uint32_t Emulate48Khz                      = OFFSET_VAL_Emulate48Khz;
     constexpr uint32_t HighPassFilter                    = OFFSET_VAL_HighPassFilter;
     constexpr uint32_t HighpassCutoffFilter              = OFFSET_VAL_HighpassCutoffFilter;
     constexpr uint32_t DcReject                          = OFFSET_VAL_DcReject;
     constexpr uint32_t DownmixFunc                       = OFFSET_VAL_DownmixFunc;
     constexpr uint32_t AudioEncoderOpusConfigIsOk        = OFFSET_VAL_AudioEncoderOpusConfigIsOk;
-    constexpr uint32_t ThrowError                        = OFFSET_VAL_ThrowError;
-    constexpr uint32_t EncoderConfigInit1                = OFFSET_VAL_EncoderConfigInit1;
-    constexpr uint32_t EncoderConfigInit2                = OFFSET_VAL_EncoderConfigInit2;
     constexpr uint32_t FILE_OFFSET_ADJUSTMENT            = OFFSET_VAL_FileAdjustment;
 };
 
@@ -1039,124 +1115,86 @@ private:
             return true;
         };
 
-        // Pre-patch validation
-        const unsigned char orig_emulate48[]  = ORIG_VAL_Emulate48Khz;
-        const unsigned char orig_configisok[] = ORIG_VAL_AudioEncoderOpusConfigIsOk;
-        const unsigned char orig_downmix[]    = ORIG_VAL_DownmixFunc;
-        const unsigned char orig_hpfilter[]   = ORIG_VAL_HighPassFilter;
-        const unsigned char orig_hpcutoff[]   = ORIG_VAL_HighpassCutoffFilter;
-        const unsigned char orig_dcreject[]   = ORIG_VAL_DcReject;
-        const unsigned char orig_encconf1[]   = ORIG_VAL_EncoderConfigInit1;
-        const unsigned char orig_encconf2[]   = ORIG_VAL_EncoderConfigInit2;
-
-        // Stock or already-patched bytes per site
-        const unsigned char patched_48khz[]    = {0x90, 0x90, 0x90, 0x90};
-        const unsigned char patched_configok[] = {0x48, 0xC7, 0xC0, 0x01, 0x00, 0x00, 0x00, 0xC3};
-        const unsigned char patched_downmix[]  = {0xC3};
-        const unsigned char patched_hp_ret[]   = {0xC3};
-        const unsigned char patched_enc384[]   = {0x00, 0xDC, 0x05, 0x00};
-        constexpr size_t injProbe = 24;
-
         auto OrigOrAlt = [&](uint32_t off,
                              const unsigned char* orig, size_t origLen,
                              const unsigned char* alt, size_t altLen) -> bool {
             return CheckBytes(off, orig, origLen) || CheckBytes(off, alt, altLen);
         };
 
-        bool o1 = OrigOrAlt(Offsets::Emulate48Khz, orig_emulate48, sizeof(orig_emulate48),
-                             patched_48khz, sizeof(patched_48khz));
-        bool o2 = OrigOrAlt(Offsets::AudioEncoderOpusConfigIsOk, orig_configisok, sizeof(orig_configisok),
-                             patched_configok, sizeof(patched_configok));
-        bool o3 = OrigOrAlt(Offsets::DownmixFunc, orig_downmix, sizeof(orig_downmix),
-                             patched_downmix, sizeof(patched_downmix));
-        bool o4 = OrigOrAlt(Offsets::HighPassFilter, orig_hpfilter, sizeof(orig_hpfilter),
-                             patched_hp_ret, sizeof(patched_hp_ret));
-        bool o5 = CheckBytes(Offsets::HighpassCutoffFilter, orig_hpcutoff, sizeof(orig_hpcutoff))
-               || CheckBytes(Offsets::HighpassCutoffFilter, (const unsigned char*)hp_cutoff, injProbe);
-        bool o6 = CheckBytes(Offsets::DcReject, orig_dcreject, sizeof(orig_dcreject))
-               || CheckBytes(Offsets::DcReject, (const unsigned char*)dc_reject, injProbe);
-        bool o7 = OrigOrAlt(Offsets::EncoderConfigInit1, orig_encconf1, sizeof(orig_encconf1),
-                             patched_enc384, sizeof(patched_enc384));
-        bool o8 = OrigOrAlt(Offsets::EncoderConfigInit2, orig_encconf2, sizeof(orig_encconf2),
-                             patched_enc384, sizeof(patched_enc384));
+        // ---- Pre-patch validation: each site must be either stock or already-patched ----
+        const unsigned char orig_caf[]      = ORIG_VAL_CreateAudioFrameStereo;
+        const unsigned char patch_caf[]     = {0x49, 0xC7, 0xC4, 0x02, 0x00, 0x00, 0x00};   // mov r12, 2
 
-        // Clang ELF: channel path is cmovnb r12,rax (4C 0F 43 E0) -> mov r12,rax; nop (49 89 C4 90). Not MSVC r13/C5.
-        const unsigned char orig_caf[]   = {0x4C, 0x0F, 0x43, 0xE0};
-        const unsigned char patch_caf[]  = {0x49, 0x89, 0xC4, 0x90};
-        bool o9 = OrigOrAlt(Offsets::CreateAudioFrameStereo, orig_caf, 4, patch_caf, 4);
+        // MonoDownmixer: 12 NOPs + JMP rel32 opcode (E9). The disp32 at [+13..+16]
+        // is left untouched - it holds the original jg's disp, so the JMP lands
+        // on the same target the original jg would have (the "skip downmix" path).
+        const unsigned char orig_mdm[]      = ORIG_VAL_MonoDownmixer;
+        const unsigned char patch_mdm[]     = {0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+                                               0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0xE9};
 
-        bool ess1_ok = false;
-        {
-            uint32_t fo = Offsets::EmulateStereoSuccess1 - Offsets::FILE_OFFSET_ADJUSTMENT;
-            if ((long long)(fo + 1) <= fileSize) {
-                unsigned char b = ((unsigned char*)fileData)[fo];
-                ess1_ok = (b == 0x00 || b == 0x02);
-            }
-        }
-        bool ess2_ok = false;
-        {
-            uint32_t fo = Offsets::EmulateStereoSuccess2 - Offsets::FILE_OFFSET_ADJUSTMENT;
-            if ((long long)(fo + 6) <= fileSize) {
-                unsigned char* p = (unsigned char*)fileData + fo;
-                if (p[0] == 0x0F && (p[1] == 0x84 || p[1] == 0x85))
-                    ess2_ok = true;
-                else if (p[0] == 0x74 || p[0] == 0x75 || p[0] == 0xEB)
-                    ess2_ok = true;
-                else {
-                    bool n6 = true;
-                    for (int i = 0; i < 6; i++)
-                        if (p[i] != 0x90) n6 = false;
-                    ess2_ok = n6;
-                }
-            }
-        }
+        const unsigned char orig_48[]       = ORIG_VAL_Emulate48Khz;
+        const unsigned char patch_48[]      = {0x41, 0xBD, 0x80, 0xBB, 0x00, 0x00};         // mov r13d, 48000
 
-        const unsigned char orig_setch[]  = {0x01};
-        const unsigned char patch_setch[] = {0x02};
-        bool o10 = OrigOrAlt(Offsets::AudioEncoderOpusConfigSetChannels, orig_setch, 1, patch_setch, 1);
+        const unsigned char orig_isok[]     = ORIG_VAL_AudioEncoderOpusConfigIsOk;
+        const unsigned char patch_isok[]    = {0x48, 0xC7, 0xC0, 0x01, 0x00, 0x00, 0x00, 0xC3};
 
-        const unsigned char orig_mcopus[]  = {0x01};
-        const unsigned char patch_mcopus[] = {0x02};
-        bool o10b = OrigOrAlt(Offsets::AudioEncoderMultiChannelOpusCh, orig_mcopus, 1, patch_mcopus, 1);
+        const unsigned char orig_dnmix[]    = ORIG_VAL_DownmixFunc;
+        const unsigned char patch_ret[]     = {0xC3};
 
-        const unsigned char orig_ebm[]   = {0x00, 0x7D, 0x00};
-        const unsigned char patch_ebm[]  = {0x00, 0xDC, 0x05};
-        bool o11 = OrigOrAlt(Offsets::EmulateBitrateModified, orig_ebm, 3, patch_ebm, 3);
+        const unsigned char orig_hp[]       = ORIG_VAL_HighPassFilter;
 
-        const unsigned char orig_sbor[]   = {0x48, 0x09, 0xC1};
-        const unsigned char patch_sbor[]  = {0x90, 0x90, 0x90};
-        bool o12 = OrigOrAlt(Offsets::SetsBitrateBitwiseOr, orig_sbor, 3, patch_sbor, 3);
+        const unsigned char orig_hpcut[]    = ORIG_VAL_HighpassCutoffFilter;
+        const unsigned char orig_dcrej[]    = ORIG_VAL_DcReject;
 
-        const unsigned char orig_mono2[]  = {0x84, 0xC0};
-        const unsigned char patch_mono2[] = {0x90, 0x90};
-        const unsigned char patch_mono_jmp[] = {0xE9};
-        bool o13 = OrigOrAlt(Offsets::MonoDownmixer, orig_mono2, 2, patch_mono2, 2)
-                || CheckBytes(Offsets::MonoDownmixer, patch_mono_jmp, 1);
+        const unsigned char orig_enc1[]     = ORIG_VAL_EncoderConfigInit1;
+        const unsigned char orig_enc2[]     = ORIG_VAL_EncoderConfigInit2;
+        const unsigned char patch_enc384[]  = {0x00, 0xDC, 0x05, 0x00};                     // 384000 LE
 
-        const unsigned char orig_throw1[] = {0x41};
-        const unsigned char patch_throw[] = {0xC3};
-        bool o14 = OrigOrAlt(Offsets::ThrowError, orig_throw1, 1, patch_throw, 1);
+        const unsigned char orig_ch_one[]   = {0x01};
+        const unsigned char patch_ch_two[]  = {0x02};
 
-        printf("  Emulate48Khz           (0x%06X): %s\n", Offsets::Emulate48Khz, o1 ? "OK" : "MISMATCH");
-        printf("  AudioEncoderConfigIsOk (0x%06X): %s\n", Offsets::AudioEncoderOpusConfigIsOk, o2 ? "OK" : "MISMATCH");
-        printf("  DownmixFunc            (0x%06X): %s\n", Offsets::DownmixFunc, o3 ? "OK" : "MISMATCH");
-        printf("  HighPassFilter         (0x%06X): %s\n", Offsets::HighPassFilter, o4 ? "OK" : "MISMATCH");
-        printf("  HighpassCutoffFilter   (0x%06X): %s\n", Offsets::HighpassCutoffFilter, o5 ? "OK" : "MISMATCH");
-        printf("  DcReject               (0x%06X): %s\n", Offsets::DcReject, o6 ? "OK" : "MISMATCH");
-        printf("  EncoderConfigInit1     (0x%06X): %s\n", Offsets::EncoderConfigInit1, o7 ? "OK" : "MISMATCH");
-        printf("  EncoderConfigInit2     (0x%06X): %s\n", Offsets::EncoderConfigInit2, o8 ? "OK" : "MISMATCH");
-        printf("  CreateAudioFrameStereo (0x%06X): %s\n", Offsets::CreateAudioFrameStereo, o9 ? "OK" : "MISMATCH");
-        printf("  EmulateStereoSuccess1  (0x%06X): %s\n", Offsets::EmulateStereoSuccess1, ess1_ok ? "OK" : "MISMATCH");
-        printf("  EmulateStereoSuccess2  (0x%06X): %s\n", Offsets::EmulateStereoSuccess2, ess2_ok ? "OK" : "MISMATCH");
-        printf("  OpusConfigSetChannels  (0x%06X): %s\n", Offsets::AudioEncoderOpusConfigSetChannels, o10 ? "OK" : "MISMATCH");
-        printf("  MultiChannelOpusCh     (0x%06X): %s\n", Offsets::AudioEncoderMultiChannelOpusCh, o10b ? "OK" : "MISMATCH");
-        printf("  EmulateBitrateModified (0x%06X): %s\n", Offsets::EmulateBitrateModified, o11 ? "OK" : "MISMATCH");
-        printf("  SetsBitrateBitwiseOr   (0x%06X): %s\n", Offsets::SetsBitrateBitwiseOr, o12 ? "OK" : "MISMATCH");
-        printf("  MonoDownmixer (prefix) (0x%06X): %s\n", Offsets::MonoDownmixer, o13 ? "OK" : "MISMATCH");
-        printf("  ThrowError             (0x%06X): %s\n", Offsets::ThrowError, o14 ? "OK" : "MISMATCH");
+        // SDP "stereo=1": cmp imm byte (0x02 -> 0x00)
+        const unsigned char orig_sdp[]      = {0x02};
+        const unsigned char patch_sdp[]     = {0x00};
 
-        if (!o1 || !o2 || !o3 || !o4 || !o5 || !o6 || !o7 || !o8
-            || !o9 || !ess1_ok || !ess2_ok || !o10 || !o10b || !o11 || !o12 || !o13 || !o14) {
+        // First 24 bytes of compiled hp_cutoff / dc_reject act as a probe for
+        // detecting an already-injected node (size+md5 already match patched one).
+        constexpr size_t injProbe = 24;
+
+        bool o_caf  = OrigOrAlt(Offsets::CreateAudioFrameStereo, orig_caf, sizeof(orig_caf), patch_caf, sizeof(patch_caf));
+        bool o_mdm  = OrigOrAlt(Offsets::MonoDownmixer, orig_mdm, sizeof(orig_mdm), patch_mdm, sizeof(patch_mdm));
+        bool o_48   = OrigOrAlt(Offsets::Emulate48Khz, orig_48, sizeof(orig_48), patch_48, sizeof(patch_48));
+        bool o_isok = OrigOrAlt(Offsets::AudioEncoderOpusConfigIsOk, orig_isok, sizeof(orig_isok), patch_isok, sizeof(patch_isok));
+        bool o_dn   = OrigOrAlt(Offsets::DownmixFunc, orig_dnmix, sizeof(orig_dnmix), patch_ret, sizeof(patch_ret));
+        bool o_hp   = OrigOrAlt(Offsets::HighPassFilter, orig_hp, sizeof(orig_hp), patch_ret, sizeof(patch_ret));
+        bool o_hpc  = CheckBytes(Offsets::HighpassCutoffFilter, orig_hpcut, sizeof(orig_hpcut))
+                   || CheckBytes(Offsets::HighpassCutoffFilter, (const unsigned char*)hp_cutoff, injProbe);
+        bool o_dcr  = CheckBytes(Offsets::DcReject, orig_dcrej, sizeof(orig_dcrej))
+                   || CheckBytes(Offsets::DcReject, (const unsigned char*)dc_reject, injProbe);
+        bool o_e1   = OrigOrAlt(Offsets::EncoderConfigInit1, orig_enc1, sizeof(orig_enc1), patch_enc384, sizeof(patch_enc384));
+        bool o_e2   = OrigOrAlt(Offsets::EncoderConfigInit2, orig_enc2, sizeof(orig_enc2), patch_enc384, sizeof(patch_enc384));
+        bool o_ch1  = OrigOrAlt(Offsets::AudioEncoderOpusConfigSetChannels, orig_ch_one, 1, patch_ch_two, 1);
+        bool o_ch2  = OrigOrAlt(Offsets::AudioEncoderMultiChannelOpusCh, orig_ch_one, 1, patch_ch_two, 1);
+        bool o_ess1 = OrigOrAlt(Offsets::EmulateStereoSuccess1, orig_sdp, 1, patch_sdp, 1);
+        bool o_ess2 = OrigOrAlt(Offsets::EmulateStereoSuccess2, orig_sdp, 1, patch_sdp, 1);
+
+        printf("  CreateAudioFrameStereo (0x%06X): %s\n", Offsets::CreateAudioFrameStereo, o_caf ? "OK" : "MISMATCH");
+        printf("  MonoDownmixer          (0x%06X): %s\n", Offsets::MonoDownmixer, o_mdm ? "OK" : "MISMATCH");
+        printf("  Emulate48Khz           (0x%06X): %s\n", Offsets::Emulate48Khz, o_48 ? "OK" : "MISMATCH");
+        printf("  AudioEncoderConfigIsOk (0x%06X): %s\n", Offsets::AudioEncoderOpusConfigIsOk, o_isok ? "OK" : "MISMATCH");
+        printf("  DownmixFunc            (0x%06X): %s\n", Offsets::DownmixFunc, o_dn ? "OK" : "MISMATCH");
+        printf("  HighPassFilter         (0x%06X): %s\n", Offsets::HighPassFilter, o_hp ? "OK" : "MISMATCH");
+        printf("  HighpassCutoffFilter   (0x%06X): %s\n", Offsets::HighpassCutoffFilter, o_hpc ? "OK" : "MISMATCH");
+        printf("  DcReject               (0x%06X): %s\n", Offsets::DcReject, o_dcr ? "OK" : "MISMATCH");
+        printf("  EncoderConfigInit1     (0x%06X): %s\n", Offsets::EncoderConfigInit1, o_e1 ? "OK" : "MISMATCH");
+        printf("  EncoderConfigInit2     (0x%06X): %s\n", Offsets::EncoderConfigInit2, o_e2 ? "OK" : "MISMATCH");
+        printf("  OpusConfigSetChannels  (0x%06X): %s\n", Offsets::AudioEncoderOpusConfigSetChannels, o_ch1 ? "OK" : "MISMATCH");
+        printf("  MultiChannelOpusCh     (0x%06X): %s\n", Offsets::AudioEncoderMultiChannelOpusCh, o_ch2 ? "OK" : "MISMATCH");
+        printf("  EmulateStereoSuccess1  (0x%06X): %s\n", Offsets::EmulateStereoSuccess1, o_ess1 ? "OK" : "MISMATCH");
+        printf("  EmulateStereoSuccess2  (0x%06X): %s\n", Offsets::EmulateStereoSuccess2, o_ess2 ? "OK" : "MISMATCH");
+
+        if (!o_caf || !o_mdm || !o_48 || !o_isok || !o_dn || !o_hp || !o_hpc || !o_dcr ||
+            !o_e1 || !o_e2 || !o_ch1 || !o_ch2 || !o_ess1 || !o_ess2) {
             printf("\nERROR: Binary validation FAILED - unexpected bytes at patch sites.\n");
             printf("This discord_voice.node does not match the expected build.\n");
             printf("These offsets cannot be safely applied to a different version.\n");
@@ -1168,172 +1206,91 @@ private:
         printf("Applying patches...\n");
 
         printf("  [1/5] Enabling stereo audio...\n");
-        if (!PatchBytes(Offsets::EmulateStereoSuccess1, "\x02", 1)) return false;
+        // SDP fmtp "stereo=1" in CommitAudioCodec / CreateAudioStream:
+        //   cmp dword [rbx+0xF0], 2 ; cmovnb rdx, rax (where rax = "1", rdx = "0")
+        //   Patching imm 0x02 -> 0x00 makes it cmp X, 0 which is always >=, so
+        //   the "1" branch is always taken.
+        if (!PatchBytes(Offsets::EmulateStereoSuccess1, "\x00", 1)) return false;
         patchCount++;
-        // Clang ApplySettings: after cmp imm8, the next insn is often jcc short (74/75 xx).
-        // Patching only the immediate leaves jne/jz that still skips stereo; EB xx = jmp same rel8.
-        {
-            uint32_t fo = Offsets::EmulateStereoSuccess1 - Offsets::FILE_OFFSET_ADJUSTMENT;
-            if ((long long)(fo + 2) <= fileSize) {
-                unsigned char* p = (unsigned char*)fileData + fo + 1;
-                if (*p == 0x74 || *p == 0x75) {
-                    *p = 0xEB;
-                    patchCount++;
-                }
-            }
-        }
-        // EmulateStereoSuccess2: older builds use jcc short (74/75 -> EB). Clang uses jz/jnz rel32 (0F 84/85);
-        // writing a single EB on the first byte corrupts the 6-byte insn and can crash. NOP all 6 bytes = always
-        // fall through (same as legacy "force branch" intent for the short form).
-        {
-            uint32_t fo = Offsets::EmulateStereoSuccess2 - Offsets::FILE_OFFSET_ADJUSTMENT;
-            if ((long long)(fo + 6) > fileSize) {
-                printf("ERROR: EmulateStereoSuccess2 site exceeds file size.\n");
-                return false;
-            }
-            unsigned char* p = (unsigned char*)fileData + fo;
-            if (p[0] == 0x0F && (p[1] == 0x84 || p[1] == 0x85)) {
-                if (!PatchBytes(Offsets::EmulateStereoSuccess2, "\x90\x90\x90\x90\x90\x90", 6)) return false;
-            } else if (p[0] == 0x74 || p[0] == 0x75) {
-                if (!PatchBytes(Offsets::EmulateStereoSuccess2, "\xEB", 1)) return false;
-            } else if (p[0] == 0xEB) {
-                /* already short-patched */
-            } else {
-                bool n6 = true;
-                for (int i = 0; i < 6; i++)
-                    if (p[i] != 0x90) n6 = false;
-                if (!n6) {
-                    printf("ERROR: EmulateStereoSuccess2: unexpected bytes (need jcc short, jz/jnz near, or 6x NOP).\n");
-                    return false;
-                }
-            }
-        }
+        if (!PatchBytes(Offsets::EmulateStereoSuccess2, "\x00", 1)) return false;
         patchCount++;
-        if (!PatchBytes(Offsets::CreateAudioFrameStereo, "\x49\x89\xC4\x90", 4)) return false;
+        // Force AudioFrame.num_channels_ = 2 in CreateAudioFrameToProcess:
+        //   cmp r12, rax ; cmovnb r12, rax  -> mov r12, 2 (7-byte replacement).
+        //   webrtc::voe::RemixAndResample then upmixes mono->stereo when needed.
+        if (!PatchBytes(Offsets::CreateAudioFrameStereo, "\x49\xC7\xC4\x02\x00\x00\x00", 7)) return false;
         patchCount++;
+        // Bypass mono-collapse in CapturedAudioProcessor::Process:
+        //   test al,al ; jz +D ; cmp [rbx+0x80], 9 ; jg +B3
+        //   -> 12 NOPs + jmp rel32 (using the original jg disp) so the
+        //   "skip downmix" branch is unconditionally taken. Without this,
+        //   the captured mic audio is downmixed to mono before reaching the
+        //   AudioFrame, defeating the CreateAudioFrameStereo patch above.
+        if (!PatchBytes(Offsets::MonoDownmixer,
+                        "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\xE9", 13)) return false;
+        patchCount++;
+        // Opus encoder default channels = 2 (constructor field at this+8 imm8).
         if (!PatchBytes(Offsets::AudioEncoderOpusConfigSetChannels, "\x02", 1)) return false;
         patchCount++;
         if (!PatchBytes(Offsets::AudioEncoderMultiChannelOpusCh, "\x02", 1)) return false;
         patchCount++;
-        // MonoDownmixer: NOP the test+jz+cmp, then convert jg to JMP.
-        // Layout varies between MSVC (7-byte cmp dword [rsi+disp32]) and
-        // Clang (4-byte cmp dword [rbx+disp8]).  Detect the jg opcode
-        // dynamically so the NOP sled length is always correct.
-        {
-            uint32_t fo = Offsets::MonoDownmixer - Offsets::FILE_OFFSET_ADJUSTMENT;
-            unsigned char* p = (unsigned char*)fileData + fo;
-            // p[0..1] = test al,al (84 C0)
-            // p[2..3] = jz rel8   (74 xx)
-            // p[4]    = cmp opcode (83)
-            if (p[4] != 0x83) {
-                printf("ERROR: MonoDownmixer: expected cmp (0x83) at +4, got 0x%02X\n", p[4]);
-                return false;
-            }
-            int cmp_mod = p[5] >> 6;
-            int cmp_len;  // total bytes of the cmp instruction
-            if (cmp_mod == 1)      cmp_len = 4;  // cmp [reg+disp8], imm8
-            else if (cmp_mod == 2) cmp_len = 7;  // cmp [reg+disp32], imm8
-            else {
-                printf("ERROR: MonoDownmixer: unexpected cmp mod=%d\n", cmp_mod);
-                return false;
-            }
-            int jg_off = 4 + cmp_len;  // offset of jg from p
-            unsigned char jg0 = p[jg_off];
-            int32_t jmp_target_abs;  // absolute offset from p of the jg target
-            if (jg0 == 0x0F && (p[jg_off+1] == 0x8F || p[jg_off+1] == 0x8D)) {
-                // near jg/jge: 6-byte insn (0F 8F/8D + rel32)
-                int32_t rel32;
-                memcpy(&rel32, p + jg_off + 2, 4);
-                jmp_target_abs = jg_off + 6 + rel32;
-            } else if (jg0 == 0x7F || jg0 == 0x7D) {
-                // short jg/jge: 2-byte insn (7F/7D + rel8)
-                int8_t rel8 = (int8_t)p[jg_off + 1];
-                jmp_target_abs = jg_off + 2 + rel8;
-            } else {
-                printf("ERROR: MonoDownmixer: expected jg (0F 8F / 7F) at +%d, got 0x%02X\n", jg_off, jg0);
-                return false;
-            }
-            // NOP everything from p[0] to where we place our JMP
-            // We place a 5-byte JMP (E9 + rel32) such that it jumps to the
-            // same target as the original jg.
-            // Place JMP at offset 0 after NOPping the block.
-            int total_orig_len = (jg0 == 0x0F) ? (jg_off + 6) : (jg_off + 2);
-            // NOP the entire block first
-            memset(p, 0x90, total_orig_len);
-            // Write JMP rel32 at the start: E9 <rel32>
-            // JMP target relative to (p + 5): rel32 = jmp_target_abs - 5
-            int32_t jmp_rel32 = jmp_target_abs - 5;
-            p[0] = 0xE9;
-            memcpy(p + 1, &jmp_rel32, 4);
-        }
+
+        printf("  [2/5] Enabling 48kHz sample rate...\n");
+        // Default sample rate floor 32000 -> 48000 in CreateAudioFrameToProcess.
+        if (!PatchBytes(Offsets::Emulate48Khz, "\x41\xBD\x80\xBB\x00\x00", 6)) return false;
         patchCount++;
 
-        printf("  [2/5] Setting bitrate to %dkbps...\n", BITRATE);
-        if (!PatchBytes(Offsets::EmulateBitrateModified, "\x00\xDC\x05", 3)) return false;
-        patchCount++;
-        if (!PatchBytes(Offsets::SetsBitrateBitrateValue, "\x00\xDC\x05\x00\x00", 5)) return false;
-        patchCount++;
-        if (!PatchBytes(Offsets::SetsBitrateBitwiseOr, "\x90\x90\x90", 3)) return false;
-        patchCount++;
-
-        printf("  [3/5] Enabling 48kHz sample rate...\n");
-        if (!PatchBytes(Offsets::Emulate48Khz, "\x90\x90\x90\x90", 4)) return false;
-        patchCount++;
-
-        printf("  [4/5] Injecting audio processing...\n");
-        // HighPassFilter: ret (void function, safe)
-        if (!PatchBytes(Offsets::HighPassFilter, "\xC3", 1)) return false;
-        patchCount++;
-        // Inject compiled hp_cutoff and dc_reject function bodies
-        if (!PatchBytes(Offsets::HighpassCutoffFilter, (const char*)hp_cutoff, 0x100)) return false;
-        patchCount++;
-        if (!PatchBytes(Offsets::DcReject, (const char*)dc_reject, 0x1B6)) return false;
-        patchCount++;
-        // DownmixFunc: ret (void function, safe)
-        if (!PatchBytes(Offsets::DownmixFunc, "\xC3", 1)) return false;
-        patchCount++;
-        // AudioEncoderOpusConfigIsOk returns bool - must return TRUE (1)
-        if (!PatchBytes(Offsets::AudioEncoderOpusConfigIsOk,
-            "\x48\xC7\xC0\x01\x00\x00\x00\xC3", 8)) return false;
-        patchCount++;
-        // ThrowError: ret (prevents error throws from crashing)
-        if (!PatchBytes(Offsets::ThrowError, "\xC3", 1)) return false;
-        patchCount++;
-
-        printf("  [5/5] Patching encoder config (%dkbps at creation)...\n", BITRATE);
+        printf("  [3/5] Setting bitrate to %dkbps...\n", BITRATE);
+        // Opus encoder default bitrate = 384000 (high dword of mov rax, imm64).
         if (!PatchBytes(Offsets::EncoderConfigInit1, "\x00\xDC\x05\x00", 4)) return false;
         patchCount++;
         if (!PatchBytes(Offsets::EncoderConfigInit2, "\x00\xDC\x05\x00", 4)) return false;
         patchCount++;
 
-        // Post-patch verification (matching Windows patcher behavior)
+        printf("  [4/5] Disabling audio filters...\n");
+        // webrtc::HighPassFilter::Process -> ret (void function, safe).
+        if (!PatchBytes(Offsets::HighPassFilter, "\xC3", 1)) return false;
+        patchCount++;
+        // discord uses opus's tonality_analysis -> downmix_and_resample; ret early.
+        if (!PatchBytes(Offsets::DownmixFunc, "\xC3", 1)) return false;
+        patchCount++;
+        // Opus encoder validator -> always returns true (skips error throws).
+        if (!PatchBytes(Offsets::AudioEncoderOpusConfigIsOk, "\x48\xC7\xC0\x01\x00\x00\x00\xC3", 8)) return false;
+        patchCount++;
+
+        printf("  [5/5] Injecting amplifier (1x gain, channel-normalized)...\n");
+        // Replace opus hp_cutoff & dc_reject with our amplifier bodies.
+        // Empirical compiled sizes: gcc/clang -O2 emit ~250-320 B per function.
+        // 0x180 (384 B) is large enough to capture the full body+ret for any
+        // reasonable compiler output, and still safely within both target slots:
+        //   hp_cutoff: 431 B available (47 B safety margin)
+        //   dc_reject: 398 B available (14 B safety margin)
+        // Bytes copied past the function's own `ret` are harmless (never executed).
+        if (!PatchBytes(Offsets::HighpassCutoffFilter, (const char*)hp_cutoff, 0x180)) return false;
+        patchCount++;
+        if (!PatchBytes(Offsets::DcReject, (const char*)dc_reject, 0x180)) return false;
+        patchCount++;
+
+        // ---- Post-patch verification ----
         {
-            const unsigned char bps384_3[] = {0x00, 0xDC, 0x05};
-            const unsigned char bps384_5[] = {0x00, 0xDC, 0x05, 0x00, 0x00};
-            if (!CheckBytes(Offsets::EmulateBitrateModified, bps384_3, 3) ||
-                !CheckBytes(Offsets::SetsBitrateBitrateValue, bps384_5, 5)) {
-                printf("ERROR: Post-patch bitrate verification failed!\n");
-                return false;
-            }
-            uint32_t setBitrateValue = 0;
-            if (!ReadU32LE(Offsets::SetsBitrateBitrateValue, setBitrateValue)) {
+            uint32_t bitrate1 = 0, bitrate2 = 0;
+            if (!ReadU32LE(Offsets::EncoderConfigInit1, bitrate1) ||
+                !ReadU32LE(Offsets::EncoderConfigInit2, bitrate2)) {
                 printf("ERROR: Failed to read back bitrate value for verification.\n");
                 return false;
             }
-            if (setBitrateValue != 384000) {
-                printf("ERROR: Bitrate mismatch after patching (got %u, expected 384000)\n", setBitrateValue);
+            if (bitrate1 != 384000 || bitrate2 != 384000) {
+                printf("ERROR: Bitrate mismatch after patching (got %u / %u, expected 384000)\n",
+                       bitrate1, bitrate2);
                 return false;
             }
-            printf("  Verified bitrate: %u bps\n", setBitrateValue);
+            printf("  Verified bitrate (Opus & MultiChannelOpus): %u / %u bps\n", bitrate1, bitrate2);
         }
-
-        // Stereo channel verification (quick sanity check for "still mono" reports)
         {
             uint32_t ch1 = 0, ch2 = 0;
-            bool ok1 = ReadU32LE(Offsets::AudioEncoderOpusConfigSetChannels, ch1);
-            bool ok2 = ReadU32LE(Offsets::AudioEncoderMultiChannelOpusCh, ch2);
-            if (ok1) printf("  OpusConfig channels byte: 0x%02X\n", (unsigned int)(ch1 & 0xFF));
-            if (ok2) printf("  MultiChannel Opus channels byte: 0x%02X\n", (unsigned int)(ch2 & 0xFF));
+            (void)ReadU32LE(Offsets::AudioEncoderOpusConfigSetChannels, ch1);
+            (void)ReadU32LE(Offsets::AudioEncoderMultiChannelOpusCh, ch2);
+            printf("  Verified Opus channels byte: 0x%02X\n", (unsigned)(ch1 & 0xFF));
+            printf("  Verified MultiChannel Opus channels byte: 0x%02X\n", (unsigned)(ch2 & 0xFF));
         }
 
         printf("\n  Applied %d patches successfully!\n", patchCount);
@@ -1414,27 +1371,25 @@ PATCHEOF
     # Substitute values into the generated source.
     sed -i "s/SAMPLERATE_VAL/$SAMPLE_RATE/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/BITRATE_VAL/$BITRATE/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/OFFSET_VAL_CreateAudioFrameStereo/${OFFSET_CreateAudioFrameStereo}/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/OFFSET_VAL_AudioEncoderOpusConfigSetChannels/${OFFSET_AudioEncoderOpusConfigSetChannels}/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/OFFSET_VAL_AudioEncoderMultiChannelOpusCh/${OFFSET_AudioEncoderMultiChannelOpusCh}/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/OFFSET_VAL_MonoDownmixer/${OFFSET_MonoDownmixer}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_EmulateStereoSuccess1/${OFFSET_EmulateStereoSuccess1}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_EmulateStereoSuccess2/${OFFSET_EmulateStereoSuccess2}/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/OFFSET_VAL_EmulateBitrateModified/${OFFSET_EmulateBitrateModified}/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/OFFSET_VAL_SetsBitrateBitrateValue/${OFFSET_SetsBitrateBitrateValue}/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/OFFSET_VAL_SetsBitrateBitwiseOr/${OFFSET_SetsBitrateBitwiseOr}/g" "$TEMP_DIR/patcher.cpp"
+    sed -i "s/OFFSET_VAL_CreateAudioFrameStereo/${OFFSET_CreateAudioFrameStereo}/g" "$TEMP_DIR/patcher.cpp"
+    sed -i "s/OFFSET_VAL_MonoDownmixer/${OFFSET_MonoDownmixer}/g" "$TEMP_DIR/patcher.cpp"
+    sed -i "s/OFFSET_VAL_AudioEncoderOpusConfigSetChannels/${OFFSET_AudioEncoderOpusConfigSetChannels}/g" "$TEMP_DIR/patcher.cpp"
+    sed -i "s/OFFSET_VAL_AudioEncoderMultiChannelOpusCh/${OFFSET_AudioEncoderMultiChannelOpusCh}/g" "$TEMP_DIR/patcher.cpp"
+    sed -i "s/OFFSET_VAL_EncoderConfigInit1/${OFFSET_EncoderConfigInit1}/g" "$TEMP_DIR/patcher.cpp"
+    sed -i "s/OFFSET_VAL_EncoderConfigInit2/${OFFSET_EncoderConfigInit2}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_Emulate48Khz/${OFFSET_Emulate48Khz}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_HighPassFilter/${OFFSET_HighPassFilter}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_HighpassCutoffFilter/${OFFSET_HighpassCutoffFilter}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_DcReject/${OFFSET_DcReject}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_DownmixFunc/${OFFSET_DownmixFunc}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_AudioEncoderOpusConfigIsOk/${OFFSET_AudioEncoderOpusConfigIsOk}/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/OFFSET_VAL_ThrowError/${OFFSET_ThrowError}/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/OFFSET_VAL_EncoderConfigInit1/${OFFSET_EncoderConfigInit1}/g" "$TEMP_DIR/patcher.cpp"
-    sed -i "s/OFFSET_VAL_EncoderConfigInit2/${OFFSET_EncoderConfigInit2}/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/OFFSET_VAL_FileAdjustment/$FILE_OFFSET_ADJUSTMENT/g" "$TEMP_DIR/patcher.cpp"
 
     # Substitute original-byte validation arrays
+    sed -i "s/ORIG_VAL_CreateAudioFrameStereo/$ORIG_CreateAudioFrameStereo/g" "$TEMP_DIR/patcher.cpp"
+    sed -i "s/ORIG_VAL_MonoDownmixer/$ORIG_MonoDownmixer/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/ORIG_VAL_Emulate48Khz/$ORIG_Emulate48Khz/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/ORIG_VAL_AudioEncoderOpusConfigIsOk/$ORIG_AudioEncoderOpusConfigIsOk/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/ORIG_VAL_DownmixFunc/$ORIG_DownmixFunc/g" "$TEMP_DIR/patcher.cpp"
