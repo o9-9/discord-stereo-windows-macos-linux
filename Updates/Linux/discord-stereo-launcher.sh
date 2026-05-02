@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ################################################################################
 # Discord Stereo Linux Launcher
-# Payloads: https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Linux/Updates
+# Payloads: https://github.com/o9-9/discord-stereo-windows-macos-linux/tree/main/Updates/Linux/Updates
 # Installs three files under Linux Stereo Installer/, then runs the Python GUI.
 ################################################################################
 
@@ -13,7 +13,7 @@ set -euo pipefail
 
 # region Configuration
 INSTALL_DIR_NAME="Linux Stereo Installer"
-REPO_RAW_LINUX_UPDATES="https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Linux/Updates"
+REPO_RAW_LINUX_UPDATES="https://raw.githubusercontent.com/o9-9/discord-stereo-windows-macos-linux/main/Updates/Linux/Updates"
 
 FILES=(
     "Discord_Stereo_Installer_For_Linux.py|${REPO_RAW_LINUX_UPDATES}/Discord_Stereo_Installer_For_Linux.py"

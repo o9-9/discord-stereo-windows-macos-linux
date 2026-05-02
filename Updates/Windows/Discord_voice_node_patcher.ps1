@@ -25,7 +25,7 @@ try {
 } catch { }
 
 # Self-update URL (raw script on GitHub).
-$Script:UPDATE_URL_BASE = "https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Windows/Discord_voice_node_patcher.ps1"
+$Script:UPDATE_URL_BASE = "https://raw.githubusercontent.com/o9-9/discord-stereo-windows-macos-linux/main/Updates/Windows/Discord_voice_node_patcher.ps1"
 $Script:SCRIPT_VERSION = "8"
 
 # region Offsets (PASTE HERE)
@@ -238,7 +238,7 @@ $Script:Config = @{
     # Backups can be large; keep only a few per client and prune old ones.
     MaxBackupsPerClient = 3
     MaxBackupAgeDays      = 45
-    VoiceBackupAPI = "https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/Updates%2FNodes%2FUnpatched%20Nodes%20%28For%20Patcher%29%2FWindows"
+    VoiceBackupAPI = "https://api.github.com/repos/o9-9/discord-stereo-windows-macos-linux/contents/Updates%2FNodes%2FUnpatched%20Nodes%20%28For%20Patcher%29%2FWindows"
     OffsetsMeta = $Script:OffsetsMeta
     Offsets     = $Script:Offsets
 }
