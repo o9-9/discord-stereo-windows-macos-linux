@@ -125,15 +125,7 @@ Run [`Stereo-Node-Patcher-Windows.BAT`](https://github.com/ProdHallow/Discord-St
 ## 🧰 Offset Finder
 
 Point the **Offset Finder** at **your** `discord_voice.node` → **copy the block** it prints → **paste the offsets** into the **offsets** section in your patcher script: **`Discord_voice_node_patcher.ps1`** (Windows) or **`discord_voice_patcher_linux.sh`** (Linux), then re-run the patcher.  
-Scripts: [CLI `discord_voice_node_offset_finder_v5.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Offset%20Finder/discord_voice_node_offset_finder_v5.py) · [GUI `offset_finder_gui.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Offset%20Finder/offset_finder_gui.py) in [`Updates/Offset Finder/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Offset%20Finder) · **macOS (Swift):** [Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS) if up, else [**macOS**](#macos).
-
----
-
-<a id="macos"></a>
-
-## 🍎 macOS
-
-**Codeberg** is **still down**; the **macOS** build is **moving** here. When it’s up: **Swift GUI** (patch, backup, Apple Silicon, signing) — [repo](https://codeberg.org/DiscordStereoPatcher-macOS) · thanks **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)**.
+Scripts: [CLI `discord_voice_node_offset_finder_v5.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Offset%20Finder/discord_voice_node_offset_finder_v5.py) · [GUI `offset_finder_gui.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/Updates/Offset%20Finder/offset_finder_gui.py) in [`Updates/Offset Finder/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Offset%20Finder) · **macOS (Swift):** [Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS) if up, else **[macOS](#macos)** (section below, outside this toggle).
 
 ---
 
@@ -213,6 +205,12 @@ Tags: **[v1.0](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/
 </details>
 
 </details>
+
+<a id="macos"></a>
+
+## 🍎 macOS
+
+**Codeberg** is **still down**; the **macOS** build is **moving** here. When it’s up: **Swift GUI** (patch, backup, Apple Silicon, signing) — [repo](https://codeberg.org/DiscordStereoPatcher-macOS) · thanks **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)**.
 
 ---
 
