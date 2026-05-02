@@ -13,9 +13,9 @@
 
 <a id="stereo-hub"></a>
 
-## 📢 Stereo Hub v1.0
+## 📢 Stereo Hub v1.0 — released
 
-**Stereo Hub** is **[released as v1.0](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v1.0)**. Download **`discord_stereo_hub.py`** from that release (or use [`STEREO HUB/discord_stereo_hub.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/STEREO%20HUB/discord_stereo_hub.py) on `main`) and run with **Python 3** — that is the supported path for everyone now. **Codeberg** (macOS) is still down — [**macOS**](#macos).
+**Stereo Hub** is out as **[v1.0 on GitHub Releases](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v1.0)**. Download **`discord_stereo_hub.py`** from that page (same file as [`STEREO HUB/discord_stereo_hub.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/STEREO%20HUB/discord_stereo_hub.py) on `main`) and run it with **Python 3** — this is the supported entry for everyone. **Codeberg** (macOS) is still down — see [**macOS**](#macos).
 
 ---
 
@@ -25,12 +25,6 @@
 |:------:|:-----:|
 | [![Before](https://i.ibb.co/j9x89156/before.png)](https://ibb.co/XfdWfv42) | [![After](https://i.ibb.co/WvqZ9n22/after.png)](https://ibb.co/jkBmKhrr) |
 | *Original Discord Audio* | *99.9% Filterless Audio* |
-
----
-
-## ⬇️ Get the latest release
-
-**Stereo Hub v1.0** — [**Releases → v1.0**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v1.0) — download **`discord_stereo_hub.py`**. On `main`: [`STEREO HUB/discord_stereo_hub.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/STEREO%20HUB/discord_stereo_hub.py) · run with **Python 3**.
 
 ---
 
@@ -202,7 +196,7 @@ MSVC / Clang and register choices differ per build.
 <summary><b>📋 Changelog</b></summary>
 
 ### `main` (now)
-**Stereo Hub v1.0** on [Releases](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v1.0) (`discord_stereo_hub.py`). Legacy **v0.5** bundle still on [v0.5](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v0.5). **Codeberg** (macOS) down → [**macOS**](#macos)
+Tags: **[v1.0](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v1.0)** (`discord_stereo_hub.py`), legacy **[v0.5](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v0.5)** (`Updates.zip`). **Codeberg** (macOS) down → [**macOS**](#macos)
 
 ### Repo layout (Mar 2026)
 - Shipping assets under `Updates/`; `Voice Node Dump/` for archives
@@ -222,10 +216,8 @@ MSVC / Clang and register choices differ per build.
 
 ---
 
-## ❓ FAQ
-
 <details>
-<summary><b>❓ FAQ — tap to expand</b></summary>
+<summary><b>❓ FAQ</b></summary>
 
 <details>
 <summary><b>Discord updated and the patcher stopped working</b></summary>
