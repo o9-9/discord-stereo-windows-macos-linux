@@ -28,6 +28,12 @@
 
 ---
 
+## ⬇️ Get the latest release
+
+**Stereo Hub v1.0** — [**Releases → v1.0**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v1.0) — download **`discord_stereo_hub.py`**. On `main`: [`STEREO HUB/discord_stereo_hub.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/STEREO%20HUB/discord_stereo_hub.py) · run with **Python 3**.
+
+---
+
 <details>
 <summary><b>Advanced / legacy patch methods</b></summary>
 
@@ -67,10 +73,6 @@
 | 📦 **GitHub Releases** | [**Releases**](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases) (Stereo Hub **v1.0** + older bundles) |
 | 🍎 **macOS** | [**macOS**](#macos) |
 | 🔗 **Latest scripts** | **[`Updates/`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates)** on `main` |
-
-</details>
-
----
 
 <a id="windows-voice-fixer"></a>
 
@@ -172,9 +174,58 @@ Enable **filterless true stereo** at **high bitrates** in Discord — with empha
 
 </details>
 
+<details>
+<summary><b>🔬 Technical deep dive</b></summary>
+
+### Architecture
+
+Patches `discord_voice.node` (PE / ELF / Mach-O).
+
+`offsets → C++ build → write binary`
+
+### Patch targets (summary)
+
+| # | Target | Role |
+|---|--------|------|
+| 1–3 | Stereo / channels / mono path | Force stereo, skip mono downmix |
+| 4–9 | Bitrate / 48 kHz | Raise limits, restore sample rate where patched |
+| 10–13 | Filters / downmix | Replace or skip DSP as implemented |
+| 14–17 | Config / errors | Validation and error paths |
+
+MSVC / Clang and register choices differ per build.
+
+**Workflow:** [**Offset Finder**](#offset-finder) (copy **offset block** into patcher) → C++ build → write `discord_voice.node`. **macOS (Swift):** [Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS) if up, else [**macOS**](#macos).
+
+</details>
+
+<details>
+<summary><b>📋 Changelog</b></summary>
+
+### `main` (now)
+**Stereo Hub v1.0** on [Releases](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v1.0) (`discord_stereo_hub.py`). Legacy **v0.5** bundle still on [v0.5](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v0.5). **Codeberg** (macOS) down → [**macOS**](#macos)
+
+### Repo layout (Mar 2026)
+- Shipping assets under `Updates/`; `Voice Node Dump/` for archives
+
+### v6.0 (Feb 2026)
+- macOS **Swift** GUI on Codeberg; Linux bash patcher; platform-specific bytes; mmap I/O on Unix
+
+### v5.0 (Feb 2026)
+- Multi-client GUI, backups, auto-update hooks
+
+### v4.0–v1.0
+- Encoder init patches, stereo pipeline, early patcher and PoC
+
+</details>
+
+</details>
+
 ---
 
 ## ❓ FAQ
+
+<details>
+<summary><b>❓ FAQ — tap to expand</b></summary>
 
 <details>
 <summary><b>Discord updated and the patcher stopped working</b></summary>
@@ -287,52 +338,6 @@ Some **VPNs** break voice UDP. Disconnect the VPN and test again; try another se
 **Linux:** [stereo launcher](#linux-launcher) → **patcher** (installer = placeholder; patch = **filterless** only, not true **stereo**). Or [CLI `discord_voice_patcher_linux.sh`](#linux-voice-patcher).
 
 </details>
-
----
-
-<details>
-<summary><b>🔬 Technical deep dive</b></summary>
-
-### Architecture
-
-Patches `discord_voice.node` (PE / ELF / Mach-O).
-
-`offsets → C++ build → write binary`
-
-### Patch targets (summary)
-
-| # | Target | Role |
-|---|--------|------|
-| 1–3 | Stereo / channels / mono path | Force stereo, skip mono downmix |
-| 4–9 | Bitrate / 48 kHz | Raise limits, restore sample rate where patched |
-| 10–13 | Filters / downmix | Replace or skip DSP as implemented |
-| 14–17 | Config / errors | Validation and error paths |
-
-MSVC / Clang and register choices differ per build.
-
-**Workflow:** [**Offset Finder**](#offset-finder) (copy **offset block** into patcher) → C++ build → write `discord_voice.node`. **macOS (Swift):** [Codeberg](https://codeberg.org/DiscordStereoPatcher-macOS) if up, else [**macOS**](#macos).
-
-</details>
-
----
-
-<details>
-<summary><b>📋 Changelog</b></summary>
-
-### `main` (now)
-**Stereo Hub v1.0** on [Releases](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v1.0) (`discord_stereo_hub.py`). Legacy **v0.5** bundle still on [v0.5](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v0.5). **Codeberg** (macOS) down → [**macOS**](#macos)
-
-### Repo layout (Mar 2026)
-- Shipping assets under `Updates/`; `Voice Node Dump/` for archives
-
-### v6.0 (Feb 2026)
-- macOS **Swift** GUI on Codeberg; Linux bash patcher; platform-specific bytes; mmap I/O on Unix
-
-### v5.0 (Feb 2026)
-- Multi-client GUI, backups, auto-update hooks
-
-### v4.0–v1.0
-- Encoder init patches, stereo pipeline, early patcher and PoC
 
 </details>
 
