@@ -365,16 +365,31 @@ class OffsetFinderGUI:
 
     def _load_finder(self):
         finder_path = None
+        self_name = Path(__file__).name
         for search_dir in _finder_script_search_dirs():
             if not search_dir.is_dir():
                 continue
+
+            # Prefer canonical filename match (newest version sorts last with reverse=True).
+            named = sorted(
+                (f for f in search_dir.glob("discord_voice_node_offset_finder*.py")
+                 if f.name != self_name),
+                reverse=True,
+            )
+            if named:
+                finder_path = named[0]
+                break
+
+            # Fallback: content sniff across the whole file (markers can sit deep in v5+).
             for f in sorted(search_dir.glob("*.py"), reverse=True):
-                if f.name == Path(__file__).name:
+                if f.name == self_name:
                     continue
                 try:
-                    text = f.read_text(encoding="utf-8", errors="ignore")[:4000]
-                    if "Discord Voice Node Offset Finder" in text or (
-                        "SIGNATURES" in text and "VERSION" in text
+                    text = f.read_text(encoding="utf-8", errors="ignore")
+                    if (
+                        "Discord Voice Node Offset Finder" in text
+                        or "discord_voice.node offset finder" in text
+                        or ("SIGNATURES" in text and "VERSION" in text and "discover_offsets" in text)
                     ):
                         finder_path = f
                         break
