@@ -15,6 +15,15 @@
 
 ---
 
+## 📷 Before & after
+
+| Before | After |
+|:------:|:-----:|
+| [![Before](https://i.ibb.co/j9x89156/before.png)](https://ibb.co/XfdWfv42) | [![After](https://i.ibb.co/WvqZ9n22/after.png)](https://ibb.co/jkBmKhrr) |
+| *Original Discord Audio* | *99.9% Filterless Audio* |
+
+---
+
 ## 👋 Are You New Here?
 
 **pick a platform, run the tool, then test in a voice channel** 
