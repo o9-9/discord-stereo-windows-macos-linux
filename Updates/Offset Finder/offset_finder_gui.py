@@ -198,8 +198,6 @@ class OffsetFinderGUI:
         opt_frame.pack(fill="x", padx=16, pady=(10, 0), ipady=4)
 
         self.save_json = tk.BooleanVar(value=True)
-        self.save_ps = tk.BooleanVar(value=True)
-        self.show_graph = tk.BooleanVar(value=False)
         self.verbose = tk.BooleanVar(value=False)
 
         opts_inner = tk.Frame(opt_frame, bg=BG_LIGHT)
@@ -212,8 +210,6 @@ class OffsetFinderGUI:
 
         for var, text, parent in [
             (self.save_json, "Save JSON offsets file", left_opts),
-            (self.save_ps, "Save PowerShell config", left_opts),
-            (self.show_graph, "Generate dependency graph", right_opts),
             (self.verbose, "Verbose output", right_opts),
         ]:
             cb = tk.Checkbutton(parent, text=text, variable=var,
@@ -551,7 +547,7 @@ class OffsetFinderGUI:
                 arm64_capture = io.StringIO()
                 sys.stdout = arm64_capture
                 try:
-                    arm64_results, arm64_errors, arm64_adj, arm64_tiers = \
+                    arm64_results, _arm64_errors, arm64_adj, arm64_tiers = \
                         mod.discover_offsets_arm64(data, arm64_info)
                 finally:
                     sys.stdout = old_stdout

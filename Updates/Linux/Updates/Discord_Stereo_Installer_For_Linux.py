@@ -255,7 +255,6 @@ class DiscordVoiceFixerGUI:
             width = self.root.winfo_width()
             if width < 100:
                 return
-            wrap = max(260, width - 72)
             for lbl, pad in self._wrap_labels:
                 try:
                     if lbl.winfo_exists():

@@ -48,8 +48,10 @@ $DiscordClients = [ordered]@{
 }
 
 $UPDATE_URL = "https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Windows/DiscordVoiceFixer.ps1"
-# Patched Windows voice bundle (installer): https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes/Patched%20Nodes%20(for%20Installer)/Windows
-$VOICE_BACKUP_API = "https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/Updates%2FNodes%2FPatched%20Nodes%20%28for%20Installer%29%2FWindows"
+# Patched Windows voice bundle (installer). ?ref=main pins to the default branch
+# regardless of any future repo default-branch changes; matches Linux installer.
+#   Browse: https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes/Patched%20Nodes%20(for%20Installer)/Windows
+$VOICE_BACKUP_API = "https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/Updates%2FNodes%2FPatched%20Nodes%20%28for%20Installer%29%2FWindows?ref=main"
 $SETTINGS_JSON_URL = "https://raw.githubusercontent.com/ProdHallow/voice-backup/main/settings.json"
 $DISCORD_SETUP_URL = "https://discord.com/api/downloads/distributions/app/installers/latest?channel=stable&platform=win&arch=x64"
 
@@ -355,6 +357,19 @@ function Stop-DiscordProcesses { param([string[]]$ProcessNames)
     foreach ($upId in $updatePids) {
         try { & taskkill /F /PID $upId 2>$null | Out-Null } catch { }
     }
+    # Final verification: report failure if Discord-side processes are still alive
+    # so callers can surface a warning / retry instead of assuming success.
+    Start-Sleep -Milliseconds 200
+    $stillRunning = Get-Process -Name $checkNames -ErrorAction SilentlyContinue
+    if ($stillRunning) {
+        foreach ($r in $stillRunning) {
+            if ($r.Name -ne "Update") { return $false }
+            try {
+                $cim = Get-CimInstance Win32_Process -Filter "ProcessId=$($r.Id)" -ErrorAction SilentlyContinue
+                if ($cim -and $cim.ExecutablePath -match $discordPathRegex) { return $false }
+            } catch { return $false }
+        }
+    }
     return $true
 }
 
@@ -599,12 +614,16 @@ function Repair-DiscordClient {
 # Downloads voice backup files from GitHub
 function Save-VoiceBackupFiles { param([string]$DestinationPath, [System.Windows.Forms.RichTextBox]$StatusBox, [System.Windows.Forms.Form]$Form)
     $maxRetries = 3; $retryDelay = 2
+    # API listing is tiny JSON; per-file timeout must accommodate the ~100 MB
+    # discord_voice.node on slow links. Linux installer uses 600s; mirror that.
+    $apiTimeoutSec = 60
+    $fileTimeoutSec = 600
     for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
         try {
             EnsureDir $DestinationPath
             if ($attempt -gt 1) { Add-Status $StatusBox $Form "  Retry attempt $attempt of $maxRetries..." "Yellow"; Start-Sleep -Seconds $retryDelay }
             Add-Status $StatusBox $Form "  Fetching file list from GitHub..." "Cyan"
-            try { $r = Invoke-RestMethod -Uri $VOICE_BACKUP_API -UseBasicParsing -TimeoutSec 30 }
+            try { $r = Invoke-RestMethod -Uri $VOICE_BACKUP_API -UseBasicParsing -TimeoutSec $apiTimeoutSec }
             catch {
                 $statusCode = Get-HttpStatusCode $_
                 if ($statusCode -eq 403) { throw "GitHub API Rate Limit exceeded. Please try again later." }
@@ -618,7 +637,7 @@ function Save-VoiceBackupFiles { param([string]$DestinationPath, [System.Windows
                     $fp = Join-Path $DestinationPath $f.name
                     Add-Status $StatusBox $Form "  Downloading: $($f.name)" "Cyan"
                     try {
-                        Invoke-WebRequest -Uri $f.download_url -OutFile $fp -UseBasicParsing -TimeoutSec 30 | Out-Null
+                        Invoke-WebRequest -Uri $f.download_url -OutFile $fp -UseBasicParsing -TimeoutSec $fileTimeoutSec | Out-Null
                         if (-not (Test-Path $fp)) { throw "File was not created" }
                         $fileInfo = Get-Item $fp
                         if ($fileInfo.Length -eq 0) { throw "Downloaded file is empty" }
@@ -1026,7 +1045,8 @@ if ($Silent -or $CheckOnly) {
             try {
                 $allProcs = @("Discord","DiscordCanary","DiscordPTB","DiscordDevelopment","Lightcord","BetterVencord","Equicord","Vencord","Update")
                 Stop-DiscordProcesses $allProcs | Out-Null
-                Start-Process "taskkill" -ArgumentList "/F","/IM","Discord*.exe" -WindowStyle Hidden -Wait -ErrorAction SilentlyContinue
+                # Stop-DiscordProcesses already iterates each name; taskkill /IM does
+                # not support `*` wildcards, so a follow-up "Discord*.exe" call is a no-op.
                 Start-Sleep -Seconds 2
                 $appFolders = Get-ChildItem $corrupt.Path -Filter "app-*" -Directory -ErrorAction SilentlyContinue
                 foreach ($folder in $appFolders) { Remove-Item $folder.FullName -Recurse -Force -ErrorAction SilentlyContinue }

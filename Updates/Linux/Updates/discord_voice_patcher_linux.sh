@@ -502,28 +502,22 @@ install_linux_voice_bundle_for_client() {
 DISCORD_PIDS=""
 
 check_discord_running() {
-    # Match only actual Discord electron processes, not this script or grep
     DISCORD_PIDS=""
-    local pids
+    local pids pid cmdline filtered_pids=""
     pids=$(pgrep -f '[D]iscord' 2>/dev/null | head -50 || true)
+    [[ -z "$pids" ]] && return 1
 
-    if [[ -z "$pids" ]]; then
-        return 1
-    fi
-
-    # Filter to only actual Discord processes (not this script, not grep, not unrelated matches)
-    local filtered_pids=""
     while IFS= read -r pid; do
         [[ -z "$pid" ]] && continue
-        # Read the process command line
-        local cmdline
         cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)
         [[ -z "$cmdline" ]] && continue
 
-        # Match only real Discord binaries (Discord, DiscordCanary, DiscordPTB, DiscordDevelopment)
-        # Exclude: this script, grep, editors, etc.
+        # Skip our own patcher invocation - pgrep '[D]iscord' picked it up because
+        # it has "discord" in its filename.
+        [[ "$cmdline" =~ discord_voice_patcher ]] && continue
+
+        # Match real Discord electron clients (any channel) and known install layouts.
         if [[ "$cmdline" =~ (^|/)(Discord|DiscordCanary|DiscordPTB|DiscordDevelopment)(/| |$) ]] ||
-           [[ "$cmdline" =~ discord_voice_patcher ]] && false ||
            [[ "$cmdline" =~ /opt/discord[^_] ]] ||
            [[ "$cmdline" =~ /usr/(share|lib)/discord ]] ||
            [[ "$cmdline" =~ com\.discordapp\.Discord ]] ||
@@ -589,8 +583,7 @@ handle_discord_running() {
 terminate_discord() {
     log_info "Closing Discord processes..."
 
-    # Send SIGTERM first (graceful shutdown)
-    local killed=false
+    local pid killed=false
     if check_discord_running && [[ -n "$DISCORD_PIDS" ]]; then
         for pid in $DISCORD_PIDS; do
             kill "$pid" 2>/dev/null && killed=true || true
@@ -602,19 +595,18 @@ terminate_discord() {
         return 0
     fi
 
-    # Wait up to 10 seconds for graceful shutdown
+    # Wait up to 10 seconds for graceful SIGTERM.
     local attempts=0
     while (( attempts < 20 )); do
         if ! check_discord_running; then
             log_ok "Discord closed successfully"
-            sleep 1  # Brief settle time
+            sleep 1
             return 0
         fi
         sleep 0.5
         attempts=$(( attempts + 1 ))
     done
 
-    # If still running, try SIGKILL
     log_warn "Discord didn't shut down gracefully, forcing..."
     if check_discord_running && [[ -n "$DISCORD_PIDS" ]]; then
         for pid in $DISCORD_PIDS; do
@@ -633,7 +625,7 @@ terminate_discord() {
     return 0
 }
 
-# --- Discord Client Detection ------------------------------------------------
+# region Discord Client Detection
 declare -a CLIENT_NAMES=()
 declare -a CLIENT_NODES=()
 
@@ -674,41 +666,35 @@ find_discord_clients() {
     )
 
     local found_paths=()
+    local i base name found_nodes latest resolved dup fp fsize
 
     for i in "${!search_bases[@]}"; do
-        local base="${search_bases[$i]}"
-        local name="${search_names[$i]}"
+        base="${search_bases[$i]}"
+        name="${search_names[$i]}"
 
         [[ -d "$base" ]] || continue
 
-        # Find discord_voice.node (up to depth 10 for system installs)
-        local found_nodes
+        # Search up to depth 10 for system-wide install layouts.
         found_nodes=$(find "$base" -maxdepth 10 -name "discord_voice.node" -type f 2>/dev/null | head -5 || true)
-
         [[ -z "$found_nodes" ]] && continue
 
-        # Pick the most recent version
-        local latest
+        # Pick the most recently modified hit (newest install).
         latest=$(echo "$found_nodes" | while read -r f; do
             stat -c '%Y %n' "$f" 2>/dev/null || echo "0 $f"
         done | sort -rn | head -1 | cut -d' ' -f2-)
 
         if [[ -n "$latest" && -f "$latest" ]]; then
-            # Deduplicate by resolved path
-            local resolved
             resolved=$(readlink -f "$latest" 2>/dev/null || echo "$latest")
-            local dup=false
+            dup=false
             for fp in "${found_paths[@]+"${found_paths[@]}"}"; do
                 [[ "$fp" == "$resolved" ]] && { dup=true; break; }
             done
             $dup && continue
 
-            # Validate file is actually readable and non-zero
             if [[ ! -r "$latest" ]]; then
                 log_warn "Found but unreadable: $latest"
                 continue
             fi
-            local fsize
             fsize=$(stat -c%s "$latest" 2>/dev/null || echo "0")
             if (( fsize == 0 )); then
                 log_warn "Found but empty (0 bytes): $latest"
@@ -748,8 +734,10 @@ find_discord_clients() {
     log_ok "Found ${#CLIENT_NAMES[@]} client(s)"
     return 0
 }
+# endregion Discord Client Detection
 
-# --- Binary Verification -----------------------------------------------------
+
+# region Binary Verification
 verify_binary() {
     local node_path="$1"
     local name="$2"
@@ -805,8 +793,10 @@ verify_binary() {
     log_warn "MD5 != stock (often already patched). Continuing; patcher validates sites."
     return 0
 }
+# endregion Binary Verification
 
-# --- Backup Management -------------------------------------------------------
+
+# region Backup Management
 backup_node() {
     local source="$1"
     local client_name="$2"
@@ -939,8 +929,10 @@ restore_from_backup() {
     log_ok "Restored successfully! Restart Discord to apply."
     exit 0
 }
+# endregion Backup Management
 
-# --- Compiler Detection ------------------------------------------------------
+
+# region Compiler Detection
 COMPILER=""
 COMPILER_TYPE=""
 
@@ -970,8 +962,10 @@ find_compiler() {
     echo "  openSUSE:       sudo zypper install gcc-c++"
     return 1
 }
+# endregion Compiler Detection
 
-# --- Source Code Generation --------------------------------------------------
+
+# region Source Code Generation
 
 # 1x gain amplifier matching the Windows patcher's 1x/2x path.
 # Uses SSE rsqrt for channel normalization: out = in * 1 * (1/sqrt(channels))
@@ -1399,8 +1393,10 @@ PATCHEOF
     sed -i "s/ORIG_VAL_EncoderConfigInit1/$ORIG_EncoderConfigInit1/g" "$TEMP_DIR/patcher.cpp"
     sed -i "s/ORIG_VAL_EncoderConfigInit2/$ORIG_EncoderConfigInit2/g" "$TEMP_DIR/patcher.cpp"
 }
+# endregion Source Code Generation
 
-# --- Compilation -------------------------------------------------------------
+
+# region Compilation
 compile_patcher() {
     # All log output goes to stderr so stdout is ONLY the exe path
     log_info "Compiling patcher with $COMPILER_TYPE..." >&2
@@ -1439,8 +1435,10 @@ compile_patcher() {
     echo "$exe"
     return 0
 }
+# endregion Compilation
 
-# --- Client Selection --------------------------------------------------------
+
+# region Client Selection
 SELECTED_CLIENTS=""  # "all" or space-separated indices
 
 select_clients() {
@@ -1474,8 +1472,10 @@ select_clients() {
         *) log_error "Invalid selection"; exit 1 ;;
     esac
 }
+# endregion Client Selection
 
-# --- Patch a single client ---------------------------------------------------
+
+# region Patch a single client
 patch_client() {
     local idx="$1"
     local name="${CLIENT_NAMES[$idx]}"
@@ -1548,8 +1548,10 @@ patch_client() {
         return 1
     fi
 }
+# endregion Patch a single client
 
-# --- Cleanup -----------------------------------------------------------------
+
+# region Cleanup
 cleanup() {
     # Guard: don't clean if temp dir was never created
     [[ -d "${TEMP_DIR:-}" ]] || return 0
@@ -1563,8 +1565,10 @@ cleanup() {
         rm -f "$TEMP_DIR/DiscordVoicePatcher" 2>/dev/null
     fi
 }
+# endregion Cleanup
 
-# --- Main --------------------------------------------------------------------
+
+# region Main
 main() {
     banner
 
@@ -1601,9 +1605,9 @@ main() {
     local success=0
     local failed=0
     local total=0
+    local i
 
     if [[ "$SELECTED_CLIENTS" == "all" ]]; then
-        # Patch all
         total=${#CLIENT_NAMES[@]}
         for i in "${!CLIENT_NAMES[@]}"; do
             if patch_client "$i"; then
@@ -1641,3 +1645,4 @@ main() {
 
 trap cleanup EXIT
 main "$@"
+# endregion Main

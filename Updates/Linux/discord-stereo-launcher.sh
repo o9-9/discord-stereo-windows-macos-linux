@@ -11,10 +11,7 @@ fi
 
 set -euo pipefail
 
-# ------------------------------------------------------------------------------
-# Configuration
-# ------------------------------------------------------------------------------
-
+# region Configuration
 INSTALL_DIR_NAME="Linux Stereo Installer"
 REPO_RAW_LINUX_UPDATES="https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Linux/Updates"
 
@@ -23,10 +20,9 @@ FILES=(
     "Stereo-Installer-Linux.sh|${REPO_RAW_LINUX_UPDATES}/Stereo-Installer-Linux.sh"
     "discord_voice_patcher_linux.sh|${REPO_RAW_LINUX_UPDATES}/discord_voice_patcher_linux.sh"
 )
+# endregion Configuration
 
-# ------------------------------------------------------------------------------
-# Colors (ANSI; no Unicode)
-# ------------------------------------------------------------------------------
+# region Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -34,16 +30,14 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 DIM='\033[0;90m'
 NC='\033[0m'
+# endregion Colors
 
-# ------------------------------------------------------------------------------
-# Flags
-# ------------------------------------------------------------------------------
+# region Flags
 NO_UPDATE=false
 FORCE=false
+# endregion Flags
 
-# ------------------------------------------------------------------------------
-# Usage
-# ------------------------------------------------------------------------------
+# region CLI
 usage() {
     echo -e "${BOLD}Discord Stereo Linux Launcher${NC}"
     echo ""
@@ -70,13 +64,11 @@ for arg in "$@"; do
     esac
 done
 
-# Script directory (works with symlinks and any cwd)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_DIR="${SCRIPT_DIR}/${INSTALL_DIR_NAME}"
+# endregion CLI
 
-# ------------------------------------------------------------------------------
-# Hash helper (sha256sum on most distros; shasum -a 256 on Alpine/macOS)
-# ------------------------------------------------------------------------------
+# region Hash helper (sha256sum or shasum -a 256)
 get_sha256() {
     local file="$1"
     if command -v sha256sum >/dev/null 2>&1; then
@@ -87,10 +79,9 @@ get_sha256() {
         echo ""
     fi
 }
+# endregion Hash helper
 
-# ------------------------------------------------------------------------------
-# Download with retries; validate size and content before replacing
-# ------------------------------------------------------------------------------
+# region Download (retries + payload validation)
 CURL_CONNECT_TIMEOUT=15
 CURL_MAX_TIME=120
 CURL_RETRIES=3
@@ -114,7 +105,7 @@ download_file() {
     return $ret
 }
 
-# Validate: non-empty, minimum size, not an HTML error page.
+# Reject empty / too-small / HTML payloads before replacing files.
 validate_download() {
     local tmp="$1"
     local filename="$2"
@@ -132,10 +123,9 @@ validate_download() {
     esac
     return 0
 }
+# endregion Download
 
-# ------------------------------------------------------------------------------
-# Banner
-# ------------------------------------------------------------------------------
+# region Banner
 echo ""
 echo -e "${CYAN}${BOLD}===== Discord Stereo Linux Launcher =====${NC}"
 echo -e "${DIM}48 kHz | 384 kbps | Stereo${NC}"
@@ -147,10 +137,9 @@ if ! [ -w "$INSTALL_DIR" ]; then
     echo -e "  Fix permissions or run from a directory you can write to."
     exit 1
 fi
+# endregion Banner
 
-# ------------------------------------------------------------------------------
-# Update step (unless --no-update)
-# ------------------------------------------------------------------------------
+# region Update step (skipped by --no-update)
 if $NO_UPDATE; then
     echo -e "${DIM}[--no-update] Skipping update check.${NC}"
 else
@@ -161,6 +150,7 @@ else
 
     for entry in "${FILES[@]}"; do
         IFS='|' read -r filename url <<< "$entry"
+        # Cache-bust so CDN edges don't serve a stale copy of a just-pushed script.
         if [[ "$url" == *\?* ]]; then
             url="${url}&_t=$(date +%s)_${RANDOM}"
         else
@@ -168,7 +158,6 @@ else
         fi
         dest="${INSTALL_DIR}/${filename}"
 
-        # Portable temp file (Linux: mktemp; fallback for older systems)
         tmp=""
         if tmp=$(mktemp 2>/dev/null); then
             :
@@ -227,11 +216,11 @@ else
     fi
     echo ""
 fi
+# endregion Update step
 
-# ------------------------------------------------------------------------------
-# Local fallback: if any required file is missing, try copying from Updates/
-# (makes cloned repo work offline when launcher and Updates/ are side-by-side)
-# ------------------------------------------------------------------------------
+# region Local fallback (offline / cloned-repo support)
+# Fills any missing payload from a sibling ./Updates/ folder so a fresh clone
+# works without network access.
 copy_from_local_updates() {
     local src_dir="${SCRIPT_DIR}/Updates"
     local copied=0
@@ -266,11 +255,10 @@ if [ "$MISSING_ANY" = true ]; then
         echo ""
     fi
 fi
+# endregion Local fallback
 
-# ------------------------------------------------------------------------------
-# Launch (run from install dir so Python finds the two .sh scripts)
-# ------------------------------------------------------------------------------
-
+# region Launch
+# cd into INSTALL_DIR so the Python GUI can resolve sibling .sh paths via __file__.
 cd "$INSTALL_DIR"
 
 if [ ! -f "Discord_Stereo_Installer_For_Linux.py" ]; then
@@ -302,3 +290,4 @@ fi
 echo -e "${CYAN}Launching GUI...${NC}"
 echo ""
 exec python3 Discord_Stereo_Installer_For_Linux.py "$@"
+# endregion Launch

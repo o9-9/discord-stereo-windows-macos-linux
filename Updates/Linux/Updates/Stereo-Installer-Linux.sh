@@ -4,11 +4,26 @@
 # Downloads and installs pre-patched stereo voice modules.
 # Usage: ./Stereo-Installer-Linux.sh [--silent] [--check] [--restore] [--help]
 # Made by: Oracle | Shaun | Hallow | Ascend | Sentry | Sikimzo | Cypher
+#
+# v2.2 (2026-04):
+#   * Switched module source to the Hub-style "Patched Nodes (for Installer)/Linux"
+#     folder under Updates/Nodes/ on the repo. Mirrors the encoding scheme used
+#     by STEREO_HUB/discord_stereo_hub.py so a single source of truth applies
+#     across the Hub GUI and this CLI installer.
+#   * Added optional GitHub auth (DISCORD_STEREO_GITHUB_TOKEN / GITHUB_TOKEN /
+#     GH_TOKEN) and a User-Agent on every request - silently lifts API rate
+#     limits from 60/hr to 5000/hr without changing default behavior.
+#   * Added an offline / local-bundle fallback: if the network call fails (or
+#     DISCORD_STEREO_SKIP_REMOTE=1 is set), the installer copies from
+#     ./Updates/Nodes/Patched Nodes (for Installer)/Linux/ next to this script
+#     when the repo is checked out locally - mirrors hub_data_dir() behavior.
+#   * Hardened per-file downloads: explicit --max-time for the ~100 MB .node,
+#     User-Agent + Accept headers, HTML-error-page detection on payloads.
 ###############################################################################
 
 set -euo pipefail
 
-SCRIPT_VERSION="2.1"
+SCRIPT_VERSION="2.2"
 
 # region Configuration
 # With sudo, use invoking user's home for config/cache so we find their Discord.
@@ -19,8 +34,45 @@ if [[ -n "${SUDO_USER:-}" ]] && [[ "$(id -u 2>/dev/null)" -eq 0 ]]; then
 fi
 [[ -z "${DETECT_HOME:-}" ]] && DETECT_HOME="${HOME:-}"
 
-VOICE_BACKUP_API="https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/Linux%20Patcher%20and%20Installer/discord_voice"
+# Module source: pre-patched Linux discord_voice bundle.
+# Mirrors the URL scheme used by STEREO_HUB/discord_stereo_hub.py
+# (PATCHED_WINDOWS_GITHUB_CONTENTS_API) so the Hub GUI and this CLI installer
+# pull from the same canonical folder. Path is URL-encoded (spaces=%20,
+# parens=%28/%29, slashes=%2F) - GitHub's API accepts either form, but encoding
+# matches the Hub byte-for-byte for grep-ability.
+#   Browse:  https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes/Patched%20Nodes%20(for%20Installer)/Linux
+VOICE_BACKUP_API="https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/Updates%2FNodes%2FPatched%20Nodes%20%28for%20Installer%29%2FLinux"
+VOICE_BACKUP_API_REF="main"
 UPDATE_URL="https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Linux/Updates/Stereo-Installer-Linux.sh"
+
+# Local offline fallback (relative to this script) - same layout the Hub uses.
+LOCAL_PATCHED_BUNDLE_REL="Updates/Nodes/Patched Nodes (for Installer)/Linux"
+
+# Networking knobs (override via environment when needed)
+CURL_CONNECT_TIMEOUT="${CURL_CONNECT_TIMEOUT:-15}"
+CURL_API_TIMEOUT="${CURL_API_TIMEOUT:-60}"      # GitHub contents listing
+CURL_FILE_TIMEOUT="${CURL_FILE_TIMEOUT:-600}"   # Per-file download (.node ~100 MB)
+INSTALLER_USER_AGENT="${INSTALLER_USER_AGENT:-DiscordStereoInstallerLinux/${SCRIPT_VERSION}}"
+
+# Optional GitHub token: lifts API rate limits from 60/hr -> 5000/hr.
+# Honors the same env var names the Hub and gh CLI accept (in priority order).
+_resolve_github_token() {
+    local t="${DISCORD_STEREO_GITHUB_TOKEN:-${GITHUB_TOKEN:-${GH_TOKEN:-}}}"
+    [[ -n "$t" ]] && printf '%s' "$t"
+}
+
+# Build curl auth header args ("" when no token is set).
+_github_auth_args() {
+    local tok scheme
+    tok=$(_resolve_github_token || true)
+    [[ -z "$tok" ]] && return 0
+    if [[ "$tok" == github_pat_* ]]; then
+        scheme="Bearer $tok"
+    else
+        scheme="token $tok"
+    fi
+    printf -- '-H\nAuthorization: %s\n' "$scheme"
+}
 
 APP_DATA_ROOT="$DETECT_HOME/.cache/DiscordVoiceFixer"
 BACKUP_ROOT="$APP_DATA_ROOT/backups"
@@ -83,6 +135,15 @@ for arg in "$@"; do
             echo "  --start-discord     Start Discord and exit (for use by Python GUI after fix/restore)"
             echo "  --skip-self-update  Skip GitHub self-update on startup"
             echo "  --help, -h          Show this help"
+            echo ""
+            echo "Module source:"
+            echo "  ${VOICE_BACKUP_API}"
+            echo ""
+            echo "Environment variables:"
+            echo "  DISCORD_STEREO_SKIP_REMOTE=1   Skip GitHub; use local patched bundle if present"
+            echo "  DISCORD_STEREO_GITHUB_TOKEN    Optional GitHub token (lifts 60/hr API rate limit)"
+            echo "  GITHUB_TOKEN / GH_TOKEN        Same as above (compat with gh CLI / CI)"
+            echo "  CURL_FILE_TIMEOUT=<secs>       Per-file download timeout (default: 600s)"
             echo ""
             echo "Examples:"
             echo "  $0                  # Launch Python GUI; if not found, terminal menu"
@@ -923,9 +984,112 @@ restore_from_backup() {
 }
 
 # --- Download Voice Backup Files ---------------------------------------------
+
+# Detect HTML/error payloads that GitHub serves on rate-limit / outage.
+# Mirrors validate_download_payload() in STEREO_HUB/discord_stereo_hub.py.
+_payload_looks_like_html() {
+    local f="$1"
+    [[ -f "$f" ]] || return 1
+    local head
+    head=$(head -c 256 "$f" 2>/dev/null | tr -d '\r' | tr '[:upper:]' '[:lower:]' || true)
+    [[ "$head" == *"<!doctype html"* ]] || [[ "$head" == *"<html"* ]] || [[ "$head" == *"<title>"* ]]
+}
+
+# Locate a sibling local patched bundle (offline / development fallback).
+# Mirrors _local_patched_bundle_dir_for_platform() in the Hub.
+_local_patched_bundle_dir() {
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || return 1
+    # Walk up to 4 ancestors looking for a checkout containing the bundle.
+    local d="$script_dir" i
+    for (( i=0; i<5; i++ )); do
+        if [[ -d "$d/$LOCAL_PATCHED_BUNDLE_REL" ]]; then
+            printf '%s\n' "$d/$LOCAL_PATCHED_BUNDLE_REL"
+            return 0
+        fi
+        local parent
+        parent="$(dirname "$d")"
+        [[ "$parent" == "$d" ]] && break
+        d="$parent"
+    done
+    return 1
+}
+
+# Copy local patched bundle to destination. Validates output looks reasonable.
+_copy_local_bundle_to() {
+    local dest_path="$1" src
+    src="$(_local_patched_bundle_dir)" || return 1
+    [[ -d "$src" ]] || return 1
+
+    status "  Using local patched bundle: $src" magenta
+    log_file "INFO" "Local fallback bundle: $src"
+    ensure_dir "$dest_path"
+
+    local copied=0 total_bytes=0
+    while IFS= read -r -d '' f; do
+        local fname fsize
+        fname="$(basename "$f")"
+        # Skip dotfiles / metadata
+        [[ "$fname" == .* ]] && continue
+        if cp -f "$f" "$dest_path/$fname" 2>/dev/null; then
+            fsize=$(stat -c%s "$dest_path/$fname" 2>/dev/null || echo "0")
+            (( copied++ )) || true
+            (( total_bytes += fsize )) || true
+        fi
+    done < <(find "$src" -maxdepth 1 -type f -print0 2>/dev/null)
+
+    if [[ $copied -eq 0 ]]; then
+        status "  [X] Local bundle exists but contains no files" red
+        return 1
+    fi
+
+    # Sanity: must contain a non-trivial .node
+    local nodef
+    nodef=$(find "$dest_path" -maxdepth 1 -name '*.node' -type f 2>/dev/null | head -1 || true)
+    if [[ -z "$nodef" ]] || [[ "$(stat -c%s "$nodef" 2>/dev/null || echo 0)" -lt 1024 ]]; then
+        status "  [X] Local bundle missing or has tiny .node file" red
+        return 1
+    fi
+
+    local total_fmt
+    if [[ $total_bytes -gt 1048576 ]]; then
+        total_fmt="$(( total_bytes / 1048576 )) MB"
+    else
+        total_fmt="$(( total_bytes / 1024 )) KB"
+    fi
+    status "  [OK] Copied $copied file(s) from local bundle ($total_fmt total)" green
+    return 0
+}
+
+# Pull the patched module from GitHub. Falls back to local bundle if the
+# network round-trip fails or DISCORD_STEREO_SKIP_REMOTE=1.
 download_voice_files() {
     local dest_path="$1"
     local max_retries=3
+
+    # Offline / dev override - skip the network entirely.
+    if [[ "${DISCORD_STEREO_SKIP_REMOTE:-0}" == "1" ]]; then
+        status "  DISCORD_STEREO_SKIP_REMOTE=1 - using local bundle only" magenta
+        if _copy_local_bundle_to "$dest_path"; then
+            return 0
+        fi
+        status "  [X] DISCORD_STEREO_SKIP_REMOTE=1 set but no local bundle was found." red
+        status "      Expected at: <repo>/$LOCAL_PATCHED_BUNDLE_REL/" dim
+        return 1
+    fi
+
+    # Build optional GitHub auth header line(s) once.
+    local _auth_hdr=""
+    local _tok
+    _tok=$(_resolve_github_token || true)
+    if [[ -n "$_tok" ]]; then
+        if [[ "$_tok" == github_pat_* ]]; then
+            _auth_hdr="Authorization: Bearer $_tok"
+        else
+            _auth_hdr="Authorization: token $_tok"
+        fi
+        log_file "INFO" "GitHub auth: enabled (5000/hr rate limit)"
+    fi
 
     for (( attempt=1; attempt<=max_retries; attempt++ )); do
         if [[ $attempt -gt 1 ]]; then
@@ -936,34 +1100,75 @@ download_voice_files() {
         status "  Fetching file list from GitHub..." cyan
         log_file "INFO" "Download attempt $attempt: $VOICE_BACKUP_API"
 
+        # Build curl args (auth header is optional).
+        local _curl_api=(
+            curl -sS -w "\n%{http_code}" -L
+            --connect-timeout "$CURL_CONNECT_TIMEOUT"
+            --max-time "$CURL_API_TIMEOUT"
+            -A "$INSTALLER_USER_AGENT"
+            -H "Accept: application/vnd.github.v3+json"
+            -H "X-GitHub-Api-Version: 2022-11-28"
+            -H "Cache-Control: no-cache"
+        )
+        [[ -n "$_auth_hdr" ]] && _curl_api+=( -H "$_auth_hdr" )
+        _curl_api+=( "${VOICE_BACKUP_API}?ref=${VOICE_BACKUP_API_REF}" )
+
         local api_response http_code
-        api_response=$(curl -sS -w "\n%{http_code}" -L \
-            -H "Accept: application/vnd.github.v3+json" \
-            "$VOICE_BACKUP_API" 2>&1) || {
-            local last_line="${api_response##*$'\n'}"
-            if [[ "$last_line" == "403" ]]; then
-                status "  [X] GitHub API rate limit exceeded. Try again later." red
-                status "      Tip: Wait a few minutes or use a VPN if in a restricted region." yellow
-                return 1
-            fi
+        if ! api_response=$("${_curl_api[@]}" 2>&1); then
             if [[ $attempt -lt $max_retries ]]; then
                 status "  [!] Attempt $attempt failed - retrying..." orange
                 continue
             fi
             status "  [X] Failed to fetch file list after $max_retries attempts" red
             status "      Error: ${api_response:0:200}" dim
+            # Last-ditch: try the local bundle if available.
+            if _copy_local_bundle_to "$dest_path"; then
+                status "  [OK] Recovered using local bundle" green
+                return 0
+            fi
             return 1
-        }
+        fi
 
         # Extract HTTP code from last line
         http_code="${api_response##*$'\n'}"
         api_response="${api_response%$'\n'*}"
 
-        if [[ "$http_code" == "404" ]]; then
-            status "  [X] Repository not found (404). Check the URL configuration." red
-            log_file "ERROR" "GitHub API returned 404"
-            return 1
-        fi
+        case "$http_code" in
+            200) ;;
+            403)
+                # Rate-limited. Could still be temporary - retry, then fall back.
+                status "  [X] GitHub API rate-limited (403)." orange
+                status "      Tip: set GITHUB_TOKEN to lift the 60/hr anonymous limit." yellow
+                if [[ $attempt -lt $max_retries ]]; then
+                    sleep 3
+                    continue
+                fi
+                if _copy_local_bundle_to "$dest_path"; then
+                    status "  [OK] Used local bundle while rate-limited" green
+                    return 0
+                fi
+                return 1
+                ;;
+            404)
+                status "  [X] Repository folder not found (404)." red
+                status "      URL: $VOICE_BACKUP_API" dim
+                log_file "ERROR" "GitHub API returned 404 for $VOICE_BACKUP_API"
+                return 1
+                ;;
+            5*|"")
+                status "  [!] GitHub API HTTP $http_code - retrying..." orange
+                if [[ $attempt -lt $max_retries ]]; then
+                    continue
+                fi
+                if _copy_local_bundle_to "$dest_path"; then
+                    return 0
+                fi
+                return 1
+                ;;
+            *)
+                status "  [!] Unexpected HTTP $http_code from GitHub API" orange
+                ;;
+        esac
 
         ensure_dir "$dest_path"
 
@@ -973,9 +1178,9 @@ download_voice_files() {
 
         # Parse JSON array of files
         local file_names file_urls file_sizes
-        file_names=$(echo "$api_response" | jq -r '.[] | select(.type == "file") | .name' 2>/dev/null || true)
-        file_urls=$(echo "$api_response" | jq -r '.[] | select(.type == "file") | .download_url' 2>/dev/null || true)
-        file_sizes=$(echo "$api_response" | jq -r '.[] | select(.type == "file") | .size' 2>/dev/null || true)
+        file_names=$(echo "$api_response" | jq -r '.[] | select(.type == "file") | .name'         2>/dev/null || true)
+        file_urls=$( echo "$api_response" | jq -r '.[] | select(.type == "file") | .download_url' 2>/dev/null || true)
+        file_sizes=$(echo "$api_response" | jq -r '.[] | select(.type == "file") | .size'         2>/dev/null || true)
 
         if [[ -z "$file_names" ]]; then
             if [[ $attempt -lt $max_retries ]]; then
@@ -993,10 +1198,31 @@ download_voice_files() {
         while IFS= read -r fname && IFS= read -r furl <&3 && IFS= read -r fexpected_size <&4; do
             local fpath="$dest_path/$fname"
 
-            if curl -sS --fail -L -o "$fpath" "$furl" 2>/dev/null; then
+            local _curl_file=(
+                curl -sS --fail -L
+                --connect-timeout "$CURL_CONNECT_TIMEOUT"
+                --max-time "$CURL_FILE_TIMEOUT"
+                -A "$INSTALLER_USER_AGENT"
+                -H "Cache-Control: no-cache"
+                -o "$fpath"
+            )
+            # download_url is raw.githubusercontent (no auth needed) but token
+            # works there too and helps if rate-limited.
+            [[ -n "$_auth_hdr" ]] && _curl_file+=( -H "$_auth_hdr" )
+            _curl_file+=( "$furl" )
+
+            if "${_curl_file[@]}" 2>/dev/null; then
                 if [[ ! -f "$fpath" ]] || [[ ! -s "$fpath" ]]; then
                     status "  [!] Downloaded file is empty: $fname" orange
                     failed_files+=("$fname")
+                    rm -f "$fpath" 2>/dev/null
+                    continue
+                fi
+
+                if _payload_looks_like_html "$fpath"; then
+                    status "  [!] $fname looks like an HTML error page (rate limit?)" orange
+                    failed_files+=("$fname (html error page)")
+                    rm -f "$fpath" 2>/dev/null
                     continue
                 fi
 
@@ -1004,11 +1230,12 @@ download_voice_files() {
                 fsize=$(stat -c%s "$fpath" 2>/dev/null || echo "0")
                 local ext="${fname##*.}"
 
-                # Size validation
-                if [[ "$ext" == "node" || "$ext" == "so" ]]; then
+                # Binary assets must be at least 1 KiB
+                if [[ "$ext" == "node" || "$ext" == "so" || "$ext" == "tflite" || "$ext" == "dylib" ]]; then
                     if [[ $fsize -lt 1024 ]]; then
-                        status "  [!] Warning: $fname seems too small ($fsize bytes)" orange
+                        status "  [!] $fname seems too small ($fsize bytes)" orange
                         failed_files+=("$fname (size: $fsize)")
+                        rm -f "$fpath" 2>/dev/null
                         continue
                     fi
                 fi
@@ -1045,6 +1272,10 @@ download_voice_files() {
                 continue
             fi
             status "  [X] No valid files were downloaded" red
+            if _copy_local_bundle_to "$dest_path"; then
+                status "  [OK] Recovered using local bundle" green
+                return 0
+            fi
             return 1
         fi
 
@@ -1066,6 +1297,11 @@ download_voice_files() {
         return 0
     done
 
+    # Final fallback after all retries exhausted.
+    status "  [!] Network attempts exhausted - trying local bundle..." yellow
+    if _copy_local_bundle_to "$dest_path"; then
+        return 0
+    fi
     return 1
 }
 
@@ -1320,6 +1556,26 @@ run_diagnostics() {
             echo -e "  ${RED}[X]${NC} $dep - NOT FOUND"
         fi
     done
+    echo ""
+
+    # Module source
+    echo -e "${CYAN}Module Source:${NC}"
+    echo -e "  API:   $VOICE_BACKUP_API"
+    echo -e "  Ref:   $VOICE_BACKUP_API_REF"
+    if [[ -n "$(_resolve_github_token || true)" ]]; then
+        echo -e "  Auth:  ${GREEN}token detected (5000/hr rate limit)${NC}"
+    else
+        echo -e "  Auth:  ${DIM}anonymous (60/hr rate limit)${NC}"
+    fi
+    local _local_bundle
+    if _local_bundle=$(_local_patched_bundle_dir 2>/dev/null); then
+        echo -e "  Local: ${GREEN}$_local_bundle${NC}"
+    else
+        echo -e "  Local: ${DIM}(no offline bundle alongside script)${NC}"
+    fi
+    if [[ "${DISCORD_STEREO_SKIP_REMOTE:-0}" == "1" ]]; then
+        echo -e "  Mode:  ${MAGENTA}OFFLINE (DISCORD_STEREO_SKIP_REMOTE=1)${NC}"
+    fi
     echo ""
 
     # Scan for clients

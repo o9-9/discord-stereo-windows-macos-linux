@@ -16,8 +16,10 @@ $ProgressPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing -ErrorAction SilentlyContinue
 
 # TLS 1.2 for GitHub/HTTPS on older hosts.
+# Note: comparison ops bind tighter than -band, so the -band must be parenthesized
+# or the test is interpreted as `-band ($Tls12 -eq 0)` and never enables TLS 1.2.
 try {
-    if ([Net.ServicePointManager]::SecurityProtocol -band [Net.SecurityProtocolType]::Tls12 -eq 0) {
+    if ((([Net.ServicePointManager]::SecurityProtocol) -band [Net.SecurityProtocolType]::Tls12) -eq 0) {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
     }
 } catch { }
@@ -604,6 +606,7 @@ function Get-PatcherRestartHelperScriptContent {
 }
 
 function Test-ScriptUpdateAvailable {
+    $tempFile = $null
     try {
         Write-Log "Checking for script updates from GitHub (no-cache)..." -Level Info
         if ([string]::IsNullOrEmpty($PSCommandPath)) {
