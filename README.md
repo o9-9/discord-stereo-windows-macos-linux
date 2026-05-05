@@ -210,7 +210,7 @@ Tags: **[v1.0](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/
 
 ## 🍎 macOS
 
-**Codeberg** is **still down**; the **macOS** build is **moving** here. When it’s up: **Swift GUI** (patch, backup, Apple Silicon, signing) — [repo](https://codeberg.org/DiscordStereoPatcher-macOS) · thanks **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)**.
+ The **Codeberg** is **still down**; the **macOS** build is **moving** here. When it’s up it will be available as an advanced patch method, and the patched **macOS nodes** will be available in **Stereo Hub** — thanks to the Devs **[Crüe](https://codeberg.org/DiscordStereoPatcher-macOS)** and **[HorrorPills / Geeko](https://codeberg.org/DiscordStereoPatcher-macOS)**.
 
 ---
 
