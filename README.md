@@ -19,7 +19,7 @@
 
 ---
 
-## 📷 Before & after
+## Before & after
 
 | Before | After |
 |:------:|:-----:|
