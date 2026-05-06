@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Optional, Tuple
 import subprocess
 import re
+import queue
+import threading
 
 
 try:
@@ -39,7 +41,7 @@ except Exception:  # pragma: no cover
 
 
 APP_NAME = "Discord Stereo Hub"
-APP_VERSION = "0.1-dev"
+APP_VERSION = "1.1"
 
 
 def _lerp_rgb(c1: str, c2: str, t: float) -> str:
@@ -973,6 +975,7 @@ def revert(target: Target, log: "Logger") -> None:
 class Logger:
     def __init__(self, text: "tk.Text"):
         self.text = text
+        self._main_thread_id = threading.get_ident()
         safe_mkdir(log_path().parent)
         ok_c = getattr(devhub, "ONLINE_GREEN", "#23a559")
         warn_c = getattr(devhub, "YELLOW", "#fdd835")
@@ -986,6 +989,13 @@ class Logger:
         except Exception:
             pass
 
+    def _insert(self, line: str, tag: str) -> None:
+        try:
+            self.text.insert("end", line + "\n", (tag,))
+            self.text.see("end")
+        except Exception:
+            pass
+
     def _write(self, line: str) -> None:
         tag = "lg_info"
         if "FAIL:" in line:
@@ -994,11 +1004,13 @@ class Logger:
             tag = "lg_warn"
         elif "OK:" in line:
             tag = "lg_ok"
-        try:
-            self.text.insert("end", line + "\n", (tag,))
-            self.text.see("end")
-        except Exception:
-            pass
+        if threading.get_ident() == self._main_thread_id:
+            self._insert(line, tag)
+        else:
+            try:
+                self.text.after(0, self._insert, line, tag)
+            except Exception:
+                pass
         try:
             with log_path().open("a", encoding="utf-8") as f:
                 f.write(line + "\n")
@@ -1527,36 +1539,61 @@ class App:
         self._run_action("Revert", revert)
 
     def _run_action(self, name: str, fn) -> None:
+        try:
+            tgt = self._get_target()
+        except Exception as e:
+            self.logger.fail(human_exc(e))
+            self.set_status("Could not resolve Discord install.")
+            return
+
         self.set_busy(True)
         self.set_status("Running %s..." % name)
         self.logger.info(f"=== {name} ===")
-        try:
-            tgt = self._get_target()
-            self.logger.info(f"Discord root: {tgt.discord_root}")
-            self.logger.info(f"Voice dir:    {tgt.voice_dir}")
-            fn(tgt, self.logger)
-            self.set_status("Ready. %s is complete." % name)
-            if name == "Patch":
-                self._refresh_install_derived_ui()
-        except Exception as e:
-            self.logger.fail(human_exc(e))
-            self.logger.fail(traceback.format_exc().strip())
-            if devhub is not None and hasattr(devhub, "hub_show_error"):
-                try:
-                    devhub.hub_show_error(self.root, f"{name} failed", str(e))
-                except Exception:
+        self.logger.info(f"Discord root: {tgt.discord_root}")
+        self.logger.info(f"Voice dir:    {tgt.voice_dir}")
+
+        result_q: "queue.Queue[Optional[tuple]]" = queue.Queue()
+
+        def _worker() -> None:
+            try:
+                fn(tgt, self.logger)
+                result_q.put(None)
+            except Exception as e:
+                result_q.put((e, traceback.format_exc().strip()))
+
+        def _poll() -> None:
+            try:
+                result = result_q.get_nowait()
+            except queue.Empty:
+                self.root.after(50, _poll)
+                return
+            if result is None:
+                self.set_status("Ready. %s is complete." % name)
+                if name == "Patch":
+                    self._refresh_install_derived_ui()
+            else:
+                exc, tb = result
+                self.logger.fail(human_exc(exc))
+                self.logger.fail(tb)
+                if devhub is not None and hasattr(devhub, "hub_show_error"):
                     try:
-                        messagebox.showerror(APP_NAME, f"{name} failed:\n\n{e}")
+                        devhub.hub_show_error(self.root, f"{name} failed", str(exc))
+                    except Exception:
+                        try:
+                            messagebox.showerror(APP_NAME, f"{name} failed:\n\n{exc}")
+                        except Exception:
+                            pass
+                else:
+                    try:
+                        messagebox.showerror(APP_NAME, f"{name} failed:\n\n{exc}")
                     except Exception:
                         pass
-            else:
-                try:
-                    messagebox.showerror(APP_NAME, f"{name} failed:\n\n{e}")
-                except Exception:
-                    pass
-            self.set_status("%s failed." % name)
-        finally:
+                self.set_status("%s failed." % name)
             self.set_busy(False)
+
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
+        self.root.after(50, _poll)
 
     def run(self) -> None:
         self.root.mainloop()
@@ -1577,4 +1614,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
