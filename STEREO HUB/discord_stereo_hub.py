@@ -41,7 +41,7 @@ except Exception:  # pragma: no cover
 
 
 APP_NAME = "Discord Stereo Hub"
-APP_VERSION = "0.1-dev"
+APP_VERSION = "1.1"
 
 
 def _lerp_rgb(c1: str, c2: str, t: float) -> str:
