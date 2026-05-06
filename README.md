@@ -13,9 +13,9 @@
 
 <a id="stereo-hub"></a>
 
-## 📢 Stereo Hub v1.0 — released
+## 📢 Stereo Hub v1.1 — UPDATE!!!
 
-**Stereo Hub** is out as **[v1.0 on GitHub Releases](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v1.0)**. Download **`discord_stereo_hub.py`** from that page (same file as [`STEREO HUB/discord_stereo_hub.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/STEREO%20HUB/discord_stereo_hub.py) on `main`) and run it with **Python 3** — this is the supported entry for everyone **EXCEPT MacOS!!!** as the Codeberg is down and the patcher will be merging to this repo soon — see [**macOS**](#macos).
+**Stereo Hub** is out as **[v1.1 on GitHub Releases](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/releases/tag/v1.0)**. Download **`discord_stereo_hub.py`** from that page (same file as [`STEREO HUB/discord_stereo_hub.py`](https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/blob/main/STEREO%20HUB/discord_stereo_hub.py) on `main`) and run it with **Python 3.8 or HIGHER** — this is the supported entry for everyone **EXCEPT MacOS!!!** as the Codeberg is down and the patcher will be merging to this repo soon — see [**macOS**](#macos).
 
 ---
 
