@@ -1,40 +1,55 @@
+================================================================================
+PLAIN SUMMARY (NOT BINDING — sections 1-6 below win if anything conflicts)
+================================================================================
+Everything this repo ships (code, patched .node/other binaries, installers, hubs,
+docs, manifests, archives, ancillary bundled assets—whole or materially the same subset)
+must stay free to obtain. Fork and modify freely; keep credit intact; don't sell those
+artifacts as your product or pretend you authored the originals.
+
+================================================================================
+CUSTOM MIT-STYLE LICENSE — free use • no fee for shipped bundle • attribution required
+================================================================================
 Copyright (c) 2026 Discord Audio Collective
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of the
-accompanying source files (including patching scripts, build tools, documentation,
-and injected C++ code) - collectively referred to as "the Software" - to deal in
-the Software without restriction, including without limitation the rights to use,
-copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
-Software, subject to the following conditions:
+SCOPE ("Software" in Sections 1-3 below). Means the project's shipped distribution: sources,
+scripts, tooling, installers, hubs, patched native modules (including *.node* payloads),
+libraries (*.dll, *.so, *.dylib) and allied executables, manifests/fingerprints/hashes,
+release archives—plus any materially equivalent subset propagated onward. Attribution, no-sale,
+and honesty obligations apply to every included artifact. Intellectual property belonging to Discord
+Inc. or other upstream parties stays theirs (Section 4).
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to use, copy, modify,
+merge, publish, distribute, and create derivative works of the Software, subject to:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+1. Attribution
+   Include the copyright line, this entire license document, and clear credit to Discord
+   Audio Collective. Don't remove or misrepresent origins. Forks/derivatives must say they
+   are derivative and must not imply "official/original/authors' release" unless given in
+   writing.
 
-WARNING: IMPORTANT CLARIFICATIONS:
+2. No sale of the Software
+   You must not monetize conveying that shipped bundle when buyers pay foremost to obtain its
+   files—including paywalls, storefronts, subscription tiers, tipped unlocks, analogous schemes.
+   Permitted: free mirrors/forks/archives (zero fee for the files themselves; Sections 1 and 3
+   honored).
+   Narrow carve-out: bill clearly separate individualized professional services—only while the
+   identical Software remains gratis, same license, conspicuously elsewhere; camouflaged mandatory
+   purchase still breaches this clause.
 
-1. This license applies ONLY to the patching tools, scripts, and injected code
-   provided by this project.
+3. No misrepresentation
+   Do not falsely claim sole authorship, implied endorsement by us, nor rebrand whole cloth
+   as unrelated/indie origin.
 
-2. This project modifies Discord's proprietary discord_voice.node binary files.
-   Discord retains all rights to their original binaries and infrastructure.
+4. Third parties
+   Discord trademarks, binaries, branding, and product terms belong to Discord. This license
+   does not grant Discord IP beyond what tooling here legitimately interacts with locally.
 
-3. No Discord-owned source code is distributed herein. Users apply patches to
-   binaries already present on their own systems.
+5. Warranty
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+   PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+   FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE.
 
-4. Use of this software may violate Discord's Terms of Service. Users assume
-   all risks, including potential account restrictions.
-
-5. This project is not affiliated with, endorsed by, or supported by Discord Inc.
-
-6. No previous account restrictions have been reported as of this release, but
-   future Discord updates may change this.
-
-BY USING THIS SOFTWARE, YOU ACKNOWLEDGE THAT YOU ARE MODIFYING DISCORD'S FILES
-AT YOUR OWN RISK AND AGREE TO HOLD THE AUTHORS HARMLESS FROM ANY CONSEQUENCES.
+6. Severability & priority
+   Unenforceable provisions drop; surviving terms stay. Sections 1-5 prevail over Plain Summary.
