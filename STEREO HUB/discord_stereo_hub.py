@@ -14,7 +14,6 @@ import time
 import traceback
 import urllib.request
 import zipfile
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Tuple
@@ -41,7 +40,7 @@ except Exception:  # pragma: no cover
 
 
 APP_NAME = "Discord Stereo Hub"
-APP_VERSION = "1.1"
+APP_VERSION = "1.2"
 
 
 def _lerp_rgb(c1: str, c2: str, t: float) -> str:
@@ -76,8 +75,112 @@ PATCHED_LINUX_GITHUB_CONTENTS_API = (
 PATCHED_MACOS_ZIP_URL = "https://example.invalid/Updates/Nodes/Patched/macOS/latest.zip"
 
 OFFLINE_SKIP_REMOTE_ENV = "DISCORD_STEREO_SKIP_REMOTE"
+# When "1", do not replace this script from GitHub on startup (Patch may still fetch nodes).
+SKIP_HUB_SELF_UPDATE_ENV = "DISCORD_STEREO_SKIP_HUB_SELF_UPDATE"
+HUB_SELF_UPDATE_RAW_URL = (
+    "https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/"
+    "main/STEREO%20HUB/discord_stereo_hub.py"
+)
 
 # endregion Repo sources
+
+_RE_APP_VERSION_ASSIGN = re.compile(r"^\s*APP_VERSION\s*=\s*[\"']([^\"']+)[\"']", re.MULTILINE)
+
+
+def _version_tuple_for_cmp(ver: str) -> Tuple[int, ...]:
+    parts = [int(x) for x in re.findall(r"\d+", ver or "")]
+    return tuple(parts) if parts else (0,)
+
+
+def _compare_semver_like(a: str, b: str) -> int:
+    """-1 if a < b, 0 if equal, 1 if a > b (numeric segments, implicitly zero-padded)."""
+    ta = _version_tuple_for_cmp(a)
+    tb = _version_tuple_for_cmp(b)
+    n = max(len(ta), len(tb))
+    ta_x = ta + (0,) * (n - len(ta))
+    tb_x = tb + (0,) * (n - len(tb))
+    if ta_x < tb_x:
+        return -1
+    if ta_x > tb_x:
+        return 1
+    return 0
+
+
+def _parse_app_version_from_hub_source(src: str) -> Optional[str]:
+    m = _RE_APP_VERSION_ASSIGN.search(src)
+    if not m:
+        return None
+    return (m.group(1) or "").strip()
+
+
+def _hub_script_fs_path() -> Optional[Path]:
+    try:
+        p = Path(__file__).resolve()
+        if p.suffix.lower() == ".py" and p.is_file():
+            return p
+    except Exception:
+        pass
+    return None
+
+
+def _raw_download_looks_like_error_page(data: bytes) -> bool:
+    head = data[:512].lstrip()
+    return head.startswith(b"<!DOCTYPE") or head.startswith(b"<html") or b"<title>" in head[:220].lower()
+
+
+def _looks_like_stereo_hub_py(src: str) -> bool:
+    if len(src) < 800:
+        return False
+    if APP_NAME not in src:
+        return False
+    if _parse_app_version_from_hub_source(src) is None:
+        return False
+    if "def main()" not in src:
+        return False
+    return True
+
+
+def _restart_hub_program(hub_path: Path) -> None:
+    """Replace current process with a fresh Stereo Hub interpreter + script (fallback: spawn + exit)."""
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception:
+        pass
+    exe = sys.executable
+    child_args = [exe, str(hub_path.resolve())] + sys.argv[1:]
+    try:
+        os.execv(exe, child_args)
+    except OSError as exc:
+        try:
+            subprocess.Popen(child_args)
+            sys.exit(0)
+        except Exception as exc2:
+            sys.stderr.write(
+                "%s failed to restart after self-update (%s); %s. Re-open the hub manually.\n"
+                % (APP_NAME, human_exc(exc), human_exc(exc2))
+            )
+            sys.exit(1)
+
+
+def _hub_self_update_skip_reason_or_ready_path() -> Tuple[Optional[str], Optional[Path]]:
+    """(skip_reason, hub_path_when_operable); when skip_reason is set, caller must not patch files."""
+    if os.environ.get(SKIP_HUB_SELF_UPDATE_ENV, "").strip() == "1":
+        return (SKIP_HUB_SELF_UPDATE_ENV + "=1", None)
+    if os.environ.get(OFFLINE_SKIP_REMOTE_ENV, "").strip() == "1":
+        return (OFFLINE_SKIP_REMOTE_ENV + "=1", None)
+    if getattr(sys, "frozen", False):
+        return ("frozen executable bundle (updates require a newer build or python script)", None)
+    hub_path = _hub_script_fs_path()
+    if hub_path is None:
+        return ("script location unavailable — run discord_stereo_hub.py as a file", None)
+    try:
+        probe = hub_path.stat()
+        if sys.platform != "win32" and not (probe.st_mode & 0o200):
+            return ("hub script path is read-only (%s)" % hub_path, hub_path)
+    except Exception as exc:
+        return ("cannot stat hub script: %s" % human_exc(exc), hub_path)
+    return (None, hub_path)
 
 
 def detect_platform_key() -> str:
@@ -298,13 +401,22 @@ def find_discord_voice_dir_under(root: Path) -> Optional[Path]:
     return None
 
 
-@dataclass
 class Target:
-    discord_root: Path
-    voice_dir: Path
-    app_dir: Optional[Path] = None
-    exe_name: Optional[str] = None
-    diagnostics: Optional[str] = None
+    """Voice patch target paths (plain class avoids dataclass needing sys.modules[__name__] on import)."""
+
+    def __init__(
+        self,
+        discord_root: Path,
+        voice_dir: Path,
+        app_dir: Optional[Path] = None,
+        exe_name: Optional[str] = None,
+        diagnostics: Optional[str] = None,
+    ):
+        self.discord_root = discord_root
+        self.voice_dir = voice_dir
+        self.app_dir = app_dir
+        self.exe_name = exe_name
+        self.diagnostics = diagnostics
 
 
 def _windows_client_exe_for_root(root: Path) -> str:
@@ -1180,6 +1292,18 @@ class App:
             anchor="w",
         ).pack(fill="x", pady=(0, 14))
 
+        self._hub_script_status_lbl = tk.Label(
+            outer,
+            text="Stereo Hub · v%s · preparing update check…" % APP_VERSION,
+            font=self._font_small,
+            bg=self._bg,
+            fg=self._accent_glow,
+            anchor="w",
+            wraplength=820,
+            justify="left",
+        )
+        self._hub_script_status_lbl.pack(fill="x", pady=(0, 14))
+
         rim = tk.Frame(outer, bg=self._card_border, highlightthickness=0)
         rim.pack(fill="both", expand=True)
         card = tk.Frame(rim, bg=self._card, highlightthickness=0)
@@ -1323,6 +1447,164 @@ class App:
         self._start_motion()
         self.on_autodetect()
         self._refresh_install_derived_ui()
+        self.root.after(350, self._run_hub_github_self_update_thread)
+
+    def _hub_update_defer_to_ui(self, fn) -> None:
+        try:
+            if self._destroying:
+                fn()
+                return
+            self.root.after(0, fn)
+        except Exception:
+            try:
+                fn()
+            except Exception:
+                pass
+
+    def _set_hub_script_status(self, text: str) -> None:
+        if self._destroying:
+            return
+        try:
+            self._hub_script_status_lbl.configure(text=text)
+            self.root.update_idletasks()
+        except Exception:
+            pass
+
+    def _run_hub_github_self_update_thread(self) -> None:
+        t = threading.Thread(target=self._hub_github_self_update_worker, daemon=True)
+        t.start()
+
+    def _hub_github_self_update_worker(self) -> None:
+        lg = self.logger
+
+        def defer(fn):
+            self._hub_update_defer_to_ui(fn)
+
+        skip, hub_path = _hub_self_update_skip_reason_or_ready_path()
+        if skip:
+            lg.warn(f"Hub self-update: skipped — {skip}.")
+            short = skip if len(skip) <= 76 else skip[:73] + "…"
+
+            defer(lambda s=short: self._set_hub_script_status(f"Stereo Hub · v{APP_VERSION} · update check skipped ({s})"))
+            return
+
+        if hub_path is None:
+            lg.fail("Hub self-update: internal error — no hub script path despite checks passing.")
+            return
+
+        defer(lambda: self.set_busy(True))
+        defer(lambda: self.set_status("Hub script: checking for updates…"))
+        defer(lambda: self._set_hub_script_status(f"Stereo Hub · v{APP_VERSION} · checking GitHub for a newer hub…"))
+        lg.info(f"Hub self-update: checking GitHub (this copy v{APP_VERSION}).")
+
+        will_restart = False
+        remote_ver = ""
+        try:
+            lg.info("Hub self-update: (1/4) Downloading canonical hub script from GitHub raw…")
+            defer(
+                lambda: self._set_hub_script_status(f"Stereo Hub · v{APP_VERSION} · (1/4) Downloading hub from GitHub…")
+            )
+
+            raw = download_bytes(HUB_SELF_UPDATE_RAW_URL, timeout_s=45)
+            validate_download_payload("discord_stereo_hub.py", raw)
+            if _raw_download_looks_like_error_page(raw):
+                raise RuntimeError("download looks like HTML / rate-limit / error page")
+            remote_src = raw.decode("utf-8", errors="replace")
+            lg.ok(f"Hub self-update: (1/4) Download finished ({len(raw):,} bytes).")
+
+            lg.info("Hub self-update: (2/4) Reading remote APP_VERSION.")
+            defer(
+                lambda: self._set_hub_script_status(
+                    f"Stereo Hub · v{APP_VERSION} · (2/4) Parsing remote hub version…"
+                )
+            )
+            remote_ver = _parse_app_version_from_hub_source(remote_src) or ""
+            if not remote_ver:
+                raise RuntimeError("could not parse APP_VERSION from GitHub hub script.")
+
+            lg.info(f'Hub self-update: GitHub main reports Stereo Hub APP_VERSION="{remote_ver}".')
+
+            cmp = _compare_semver_like(APP_VERSION, remote_ver)
+            if cmp > 0:
+                lg.info(
+                    f"Hub self-update: this copy is newer than GitHub "
+                    f"(local v{APP_VERSION}, GitHub v{remote_ver}); keeping local script."
+                )
+                defer(
+                    lambda rv=remote_ver: self._set_hub_script_status(
+                        f"Stereo Hub · v{APP_VERSION} · ahead of GitHub (remote v{rv}) — no update."
+                    )
+                )
+                return
+            if cmp == 0:
+                lg.ok(
+                    f"Hub self-update: (3/4) Versions match — your hub script is up to date (v{APP_VERSION})."
+                )
+                defer(
+                    lambda: self._set_hub_script_status(
+                        f"Stereo Hub · v{APP_VERSION} · up to date (GitHub also v{APP_VERSION})."
+                    )
+                )
+                return
+
+            lg.warn(
+                f"Hub self-update: (3/4) Update available — GitHub v{remote_ver} is newer than local v{APP_VERSION}."
+            )
+            defer(
+                lambda rv=remote_ver: self._set_hub_script_status(
+                    f"Stereo Hub · v{APP_VERSION} → v{rv} · (4/4) Installing update…"
+                )
+            )
+
+            if not _looks_like_stereo_hub_py(remote_src):
+                raise RuntimeError("downloaded hub failed integrity checks")
+
+            lg.info("Hub self-update: (4/4) Replacing discord_stereo_hub.py on disk, then restarting…")
+            tmp_path = hub_path.with_name(hub_path.name + ".self_update.tmp")
+            try:
+                tmp_path.write_text(remote_src, encoding="utf-8", newline="\n")
+                os.replace(tmp_path, hub_path)
+            except Exception as exc_inner:
+                try:
+                    if tmp_path.exists():
+                        tmp_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+                raise RuntimeError(str(exc_inner))
+
+            lg.ok(
+                f"Hub self-update: installed v{remote_ver}. Restarting this app so changes take effect…"
+            )
+            will_restart = True
+            defer(
+                lambda rv=remote_ver: self._set_hub_script_status(f"Stereo Hub · restarting · loading v{rv}…")
+            )
+            defer(lambda: self.set_status("Restarting Stereo Hub — loading new hub…"))
+
+            defer(lambda p=hub_path: self._invoke_hub_restart_safe(p))
+
+        except Exception as e:
+            lg.fail(f"Hub self-update: {human_exc(e)}")
+            fail_ver = remote_ver or "?"
+            defer(
+                lambda fv=fail_ver: self._set_hub_script_status(
+                    f"Stereo Hub · v{APP_VERSION} · update check/install failed · still on v{APP_VERSION}"
+                    + (f" · remote was v{fv}" if fv != "?" else "")
+                )
+            )
+
+        finally:
+            if not will_restart:
+                defer(lambda: self.set_busy(False))
+                defer(lambda: self.set_status("Ready."))
+
+    def _invoke_hub_restart_safe(self, hub_path: Path) -> None:
+        if self._destroying:
+            return
+        try:
+            _restart_hub_program(hub_path)
+        except Exception:
+            pass
 
     def _on_path_var_changed(self, *_args: object) -> None:
         self._refresh_install_derived_ui()
