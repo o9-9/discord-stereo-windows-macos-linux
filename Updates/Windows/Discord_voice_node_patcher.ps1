@@ -173,8 +173,11 @@ foreach ($grp in $Script:PatchGroups.Values) {
 $Script:SelectedPatches = @{}
 foreach ($k in $Script:AllPatchKeys) { $Script:SelectedPatches[$k] = $true }
 
-# Discord can fail to launch if DISCORD_API_LOCK offsets drift. Keep it opt-in.
-foreach ($k in $Script:PatchGroups.DISCORD_API_LOCK.Keys) { $Script:SelectedPatches[$k] = $false }
+# DISCORD_API_LOCK (API stub / RET patches) default ON. If Discord fails to start offsets may have drifted:
+#   set DISCORD_STEREO_DISABLE_API_LOCK_PATCHES=1 for this session, or turn off that group in Debug Mode.
+if ($env:DISCORD_STEREO_DISABLE_API_LOCK_PATCHES -eq '1') {
+    foreach ($k in $Script:PatchGroups.DISCORD_API_LOCK.Keys) { $Script:SelectedPatches[$k] = $false }
+}
 
 # endregion Patch Definitions
 
