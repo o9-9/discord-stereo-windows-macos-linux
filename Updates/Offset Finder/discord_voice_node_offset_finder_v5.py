@@ -2460,7 +2460,6 @@ WINDOWS_EXTENDED_OFFSET_NAMES = [
     "Discord_SetEchoCancellationPre",
     "Discord_EnableBuiltInAEC",
     "Discord_SetNoiseCancellation",
-    "Discord_SetNoiseCancellationAfter",
     "Discord_SetNoiseCancellationDuring",
     "Discord_SetNoiseCancellationStats",
     "Discord_SetSidechainCompression",
@@ -2471,29 +2470,24 @@ WINDOWS_EXTENDED_OFFSET_NAMES = [
     "Discord_SetAecDump",
 ]
 
-# Reference EmulateStereoSuccess1 RVA from the build used to record Discord_* RVAs below (Discord desktop ~Apr 2026).
-WINDOWS_DISCORD_REF_EMULATE_STEREO_SUCCESS1 = 0x54B98B
-
-# Discord API patch sites (RVA) on the reference build; relocated as (new_ESS - WINDOWS_DISCORD_REF_EMULATE_STEREO_SUCCESS1).
-WINDOWS_DISCORD_OFFSETS_REF = {
-    "Discord_SetAutomaticGainControl_1": 0x88C20,
-    "Discord_SetAutomaticGainControl_2": 0x88F30,
-    "Discord_SetNoiseSuppression_1": 0x88570,
-    "Discord_SetNoiseSuppression_2": 0x88870,
-    "Discord_SetEchoCancellation_1": 0x87F50,
-    "Discord_SetEchoCancellation_2": 0x88560,
-    "Discord_SetEchoCancellationPre": 0x88250,
-    "Discord_EnableBuiltInAEC": 0x87C50,
-    "Discord_SetNoiseCancellation": 0x88F40,
-    "Discord_SetNoiseCancellationAfter": 0x89DE0,
-    "Discord_SetNoiseCancellationDuring": 0x89AD0,
-    "Discord_SetNoiseCancellationStats": 0x897C0,
-    "Discord_SetSidechainCompression": 0xA15C0,
-    "Discord_SetHasFullbandPerformance": 0xA3A90,
-    "Discord_SetDuckingPreference": 0x997A0,
-    "Discord_SetIdleJitterBufferFlush": 0x87940,
-    "Discord_SetAudioInputEnabled": 0xA12C0,
-    "Discord_SetAecDump": 0x9EB60,
+WINDOWS_DISCORD_EXPORT_NAMES = {
+    "Discord_SetAutomaticGainControl_1": "?SetAutomaticGainControl@Discord@@QEAAX_N@Z",
+    "Discord_SetAutomaticGainControl_2": "?SetAutomaticGainControl@Discord@@QEAAXH@Z",
+    "Discord_SetNoiseSuppression_1": "?SetNoiseSuppression@Discord@@QEAAX_N@Z",
+    "Discord_SetNoiseSuppression_2": "?SetNoiseSuppression@Discord@@QEAAXH@Z",
+    "Discord_SetEchoCancellation_1": "?SetEchoCancellation@Discord@@QEAAX_N@Z",
+    "Discord_SetEchoCancellation_2": "?SetEchoCancellation@Discord@@QEAAXH@Z",
+    "Discord_SetEchoCancellationPre": "?SetEchoCancellationPreEcho@Discord@@QEAAX_N@Z",
+    "Discord_EnableBuiltInAEC": "?EnableBuiltInAEC@Discord@@QEAAX_N@Z",
+    "Discord_SetNoiseCancellation": "?SetNoiseCancellation@Discord@@QEAAX_N@Z",
+    "Discord_SetNoiseCancellationDuring": "?SetNoiseCancellationDuringProcessing@Discord@@QEAAX_N@Z",
+    "Discord_SetNoiseCancellationStats": "?SetNoiseCancellationEnableStats@Discord@@QEAAX_N@Z",
+    "Discord_SetSidechainCompression": "?SetSidechainCompression@Discord@@QEAAX_N@Z",
+    "Discord_SetHasFullbandPerformance": "?SetHasFullbandPerformance@Discord@@QEAAX_N@Z",
+    "Discord_SetDuckingPreference": "?SetDuckingPreference@Discord@@QEAAX_N@Z",
+    "Discord_SetIdleJitterBufferFlush": "?SetIdleJitterBufferFlush@Discord@@QEAAX_N@Z",
+    "Discord_SetAudioInputEnabled": "?SetAudioInputEnabled@Discord@@QEAAX_N@Z",
+    "Discord_SetAecDump": "?SetAecDump@Discord@@QEAAX_N@Z",
 }
 
 PATCHER_OFFSET_NAMES = list(WINDOWS_PATCHER_OFFSET_NAMES) + list(WINDOWS_EXTENDED_OFFSET_NAMES)
@@ -2984,6 +2978,106 @@ def _pe_file_off_to_rva(file_off, sections):
     return None
 
 
+def _pe_rva_to_file_off(rva, sections):
+    """Map PE RVA to on-disk file offset using section table."""
+    for sec in sections or []:
+        va = sec.get("vaddr", 0)
+        vs = sec.get("vsize", 0) or sec.get("raw_size", 0)
+        ro = sec.get("raw_offset", 0)
+        if va and ro and va <= rva < va + vs:
+            return rva - va + ro
+    return None
+
+
+def _pe_read_cstr(data, off, max_len=512):
+    end = data.find(b"\x00", off, min(len(data), off + max_len))
+    if end < 0:
+        return None
+    try:
+        return data[off:end].decode("ascii")
+    except UnicodeDecodeError:
+        return None
+
+
+def _pe_parse_exports(data, bin_info):
+    if bin_info.get("format") != "pe":
+        return {}
+    cached = bin_info.get("exports_by_name")
+    if cached is not None:
+        return cached
+    sections = bin_info.get("sections") or []
+    pe_off = bin_info.get("pe_offset")
+    if not pe_off or pe_off + 4 > len(data):
+        bin_info["exports_by_name"] = {}
+        return {}
+    coff = pe_off + 4
+    if coff + 20 > len(data):
+        bin_info["exports_by_name"] = {}
+        return {}
+    opt_size = struct.unpack_from("<H", data, coff + 16)[0]
+    opt = coff + 20
+    if opt + 2 > len(data):
+        bin_info["exports_by_name"] = {}
+        return {}
+    magic = struct.unpack_from("<H", data, opt)[0]
+    if magic == 0x20B:
+        dd_off = opt + 112
+    elif magic == 0x10B:
+        dd_off = opt + 96
+    else:
+        bin_info["exports_by_name"] = {}
+        return {}
+    if dd_off + 8 > opt + opt_size or dd_off + 8 > len(data):
+        bin_info["exports_by_name"] = {}
+        return {}
+    exp_rva = struct.unpack_from("<I", data, dd_off)[0]
+    exp_size = struct.unpack_from("<I", data, dd_off + 4)[0]
+    if exp_rva == 0 or exp_size < 40:
+        bin_info["exports_by_name"] = {}
+        return {}
+    exp_file = _pe_rva_to_file_off(exp_rva, sections)
+    if exp_file is None or exp_file + 40 > len(data):
+        bin_info["exports_by_name"] = {}
+        return {}
+    num_funcs = struct.unpack_from("<I", data, exp_file + 20)[0]
+    num_names = struct.unpack_from("<I", data, exp_file + 24)[0]
+    funcs_rva = struct.unpack_from("<I", data, exp_file + 28)[0]
+    names_rva = struct.unpack_from("<I", data, exp_file + 32)[0]
+    ords_rva = struct.unpack_from("<I", data, exp_file + 36)[0]
+    funcs_file = _pe_rva_to_file_off(funcs_rva, sections)
+    names_file = _pe_rva_to_file_off(names_rva, sections)
+    ords_file = _pe_rva_to_file_off(ords_rva, sections)
+    if None in (funcs_file, names_file, ords_file):
+        bin_info["exports_by_name"] = {}
+        return {}
+    if funcs_file + num_funcs * 4 > len(data):
+        bin_info["exports_by_name"] = {}
+        return {}
+    if names_file + num_names * 4 > len(data) or ords_file + num_names * 2 > len(data):
+        bin_info["exports_by_name"] = {}
+        return {}
+    out = {}
+    for i in range(num_names):
+        name_rva = struct.unpack_from("<I", data, names_file + i * 4)[0]
+        name_file = _pe_rva_to_file_off(name_rva, sections)
+        if name_file is None:
+            continue
+        nm = _pe_read_cstr(data, name_file)
+        if not nm:
+            continue
+        ord_idx = struct.unpack_from("<H", data, ords_file + i * 2)[0]
+        if ord_idx >= num_funcs:
+            continue
+        fn_rva = struct.unpack_from("<I", data, funcs_file + ord_idx * 4)[0]
+        if fn_rva == 0:
+            continue
+        if exp_rva <= fn_rva < exp_rva + exp_size:
+            continue
+        out[nm] = fn_rva
+    bin_info["exports_by_name"] = out
+    return out
+
+
 def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, text_start, text_end):
     """PE-only: Opus packet-loss cvtts, NetEq ms/loss imm, Pacer BlockAudio setz, Discord API (ESS-relative)."""
     if bin_info.get("format") != "pe" or "EmulateStereoSuccess1" not in results:
@@ -3090,13 +3184,24 @@ def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, t
     else:
         print(f"  [FAIL] Opus packet-loss sites: no cvttsd2si pair in cluster (candidates={len(cands)})")
 
-    ref_ess = WINDOWS_DISCORD_REF_EMULATE_STEREO_SUCCESS1
-    new_ess = results["EmulateStereoSuccess1"]
-    for name, ref_rva in WINDOWS_DISCORD_OFFSETS_REF.items():
-        rva = new_ess + (ref_rva - ref_ess)
-        results[name] = rva
-        tiers_used[name] = "extended(discord-api+ess-delta)"
-    print(f"  [ OK ] Discord API lock sites{' ':26s} ({len(WINDOWS_DISCORD_OFFSETS_REF)} RVAs, ESS delta)")
+    exports = _pe_parse_exports(data, bin_info)
+    if not exports:
+        print(f"  [FAIL] Discord API lock sites: PE export directory unreadable")
+    else:
+        resolved = 0
+        missing = []
+        for name, mangled in WINDOWS_DISCORD_EXPORT_NAMES.items():
+            rva = exports.get(mangled)
+            if rva is None:
+                missing.append(name)
+                continue
+            results[name] = rva
+            tiers_used[name] = "extended(discord-api+pe-export)"
+            resolved += 1
+        if missing:
+            print(f"  [WARN] Discord API lock sites: {resolved}/{len(WINDOWS_DISCORD_EXPORT_NAMES)} resolved; missing: {', '.join(missing)}")
+        else:
+            print(f"  [ OK ] Discord API lock sites{' ':26s} ({resolved} RVAs, PE export table)")
 
 
 def discover_offsets(data, bin_info, verbose=True):
@@ -4176,7 +4281,6 @@ PATCHER_DEBUG_GROUPS = {
         ("Discord_SetEchoCancellationPre", "Discord::SetEchoCancellationPreEcho"),
         ("Discord_EnableBuiltInAEC", "Discord::EnableBuiltInAEC"),
         ("Discord_SetNoiseCancellation", "Discord::SetNoiseCancellation"),
-        ("Discord_SetNoiseCancellationAfter", "Discord::SetNoiseCancellationAfterProcessing"),
         ("Discord_SetNoiseCancellationDuring", "Discord::SetNoiseCancellationDuringProcessing"),
         ("Discord_SetNoiseCancellationStats", "Discord::SetNoiseCancellationEnableStats"),
         ("Discord_SetSidechainCompression", "Discord::SetSidechainCompression"),

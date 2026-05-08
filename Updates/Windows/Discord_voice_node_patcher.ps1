@@ -34,51 +34,50 @@ $Script:SCRIPT_VERSION = "8"
 
 $Script:OffsetsMeta = @{
     FinderVersion = "discord_voice_node_offset_finder.py v5.1.4"
-    DiscordAppVersion = "1.0.9235"
-    Size          = 14455736
-    MD5           = "c11c7f006f336704223263339f9dc95c"
+    DiscordAppVersion = "1.0.9236"
+    Size          = 14470072
+    MD5           = "2a82ee8c2f27fb5d69942d7f22a95a1e"
 }
 
 $Script:Offsets = @{
-    CreateAudioFrameStereo             = 0x117AC1
-    AudioEncoderOpusConfigSetChannels  = 0x3B0854
-    MonoDownmixer                      = 0xD704E
-    EmulateStereoSuccess1              = 0x53C3CB
-    EmulateStereoSuccess2              = 0x53C3D7
-    EmulateBitrateModified             = 0x53C82A
-    SetsBitrateBitrateValue            = 0x53E651
-    SetsBitrateBitwiseOr               = 0x53E659
-    Emulate48Khz                       = 0x53C533
-    HighPassFilter                     = 0x548640
-    HighpassCutoffFilter               = 0x8DD350
-    DcReject                           = 0x8DD530
-    DownmixFunc                        = 0x8D96C0
-    AudioEncoderOpusConfigIsOk         = 0x3B0AF0
-    ThrowError                         = 0x2C6E80
-    EncoderConfigInit1                 = 0x3B085E
-    EncoderConfigInit2                 = 0x3B0167
-    OpusPacketLossCvtt1                = 0x53DA3A
-    OpusPacketLossCvtt2                = 0x53DBA7
-    NetEqDelayMgr_MsPerLossPercent     = 0xAA4EDD
-    Pacer_BlockAudio_Disable           = 0x6E1B62
-    Discord_SetAutomaticGainControl_1  = 0x79660
-    Discord_SetAutomaticGainControl_2  = 0x79970
-    Discord_SetNoiseSuppression_1      = 0x78FB0
-    Discord_SetNoiseSuppression_2      = 0x792B0
-    Discord_SetEchoCancellation_1      = 0x78990
-    Discord_SetEchoCancellation_2      = 0x78FA0
-    Discord_SetEchoCancellationPre     = 0x78C90
-    Discord_EnableBuiltInAEC           = 0x78690
-    Discord_SetNoiseCancellation       = 0x79980
-    Discord_SetNoiseCancellationAfter  = 0x7A820
-    Discord_SetNoiseCancellationDuring = 0x7A510
-    Discord_SetNoiseCancellationStats  = 0x7A200
-    Discord_SetSidechainCompression    = 0x92000
-    Discord_SetHasFullbandPerformance  = 0x944D0
-    Discord_SetDuckingPreference       = 0x8A1E0
-    Discord_SetIdleJitterBufferFlush   = 0x78380
-    Discord_SetAudioInputEnabled       = 0x91D00
-    Discord_SetAecDump                 = 0x8F5A0
+    CreateAudioFrameStereo             = 0x117511
+    AudioEncoderOpusConfigSetChannels  = 0x3B7BA4
+    MonoDownmixer                      = 0xD6A42
+    EmulateStereoSuccess1              = 0x559CEB
+    EmulateStereoSuccess2              = 0x559CF7
+    EmulateBitrateModified             = 0x55A14A
+    SetsBitrateBitrateValue            = 0x55BF71
+    SetsBitrateBitwiseOr               = 0x55BF79
+    Emulate48Khz                       = 0x559E53
+    HighPassFilter                     = 0x565F60
+    HighpassCutoffFilter               = 0x8DF510
+    DcReject                           = 0x8DF6F0
+    DownmixFunc                        = 0x8DB880
+    AudioEncoderOpusConfigIsOk         = 0x3B7E40
+    ThrowError                         = 0x2C83C0
+    EncoderConfigInit1                 = 0x3B7BAE
+    EncoderConfigInit2                 = 0x3B74B7
+    OpusPacketLossCvtt1                = 0x55B35A
+    OpusPacketLossCvtt2                = 0x55B4C7
+    NetEqDelayMgr_MsPerLossPercent     = 0xAA855D
+    Pacer_BlockAudio_Disable           = 0x6F6502
+    Discord_SetAutomaticGainControl_1  = 0x87F40
+    Discord_SetAutomaticGainControl_2  = 0x88250
+    Discord_SetNoiseSuppression_1      = 0x87890
+    Discord_SetNoiseSuppression_2      = 0x87B90
+    Discord_SetEchoCancellation_1      = 0x87270
+    Discord_SetEchoCancellation_2      = 0x87880
+    Discord_SetEchoCancellationPre     = 0x87570
+    Discord_EnableBuiltInAEC           = 0x86F70
+    Discord_SetNoiseCancellation       = 0x88260
+    Discord_SetNoiseCancellationDuring = 0x88DF0
+    Discord_SetNoiseCancellationStats  = 0x88AE0
+    Discord_SetSidechainCompression    = 0xA0F90
+    Discord_SetHasFullbandPerformance  = 0xA3460
+    Discord_SetDuckingPreference       = 0x98900
+    Discord_SetIdleJitterBufferFlush   = 0x86C60
+    Discord_SetAudioInputEnabled       = 0xA0C90
+    Discord_SetAecDump                 = 0x9DCC0
 }
 
 # endregion Offsets
@@ -98,7 +97,7 @@ $Script:RequiredOffsetNames = @(
     "Discord_SetEchoCancellation_1", "Discord_SetEchoCancellation_2",
     "Discord_SetEchoCancellationPre",
     "Discord_EnableBuiltInAEC",
-    "Discord_SetNoiseCancellation", "Discord_SetNoiseCancellationAfter",
+    "Discord_SetNoiseCancellation",
     "Discord_SetNoiseCancellationDuring", "Discord_SetNoiseCancellationStats",
     "Discord_SetSidechainCompression", "Discord_SetHasFullbandPerformance",
     "Discord_SetDuckingPreference", "Discord_SetIdleJitterBufferFlush",
@@ -153,13 +152,12 @@ $Script:PatchGroups = [ordered]@{
         Discord_SetEchoCancellation_1     = @{ Name = "Discord::SetEchoCancellation (variant 1)"; Hex = "C3" }
         Discord_SetEchoCancellation_2     = @{ Name = "Discord::SetEchoCancellation (variant 2)"; Hex = "C3" }
         Discord_SetEchoCancellationPre    = @{ Name = "Discord::SetEchoCancellationPreEcho"; Hex = "C3" }
+        Discord_EnableBuiltInAEC          = @{ Name = "Discord::EnableBuiltInAEC"; Hex = "C3" }
         Discord_SetNoiseCancellation      = @{ Name = "Discord::SetNoiseCancellation"; Hex = "C3" }
-        Discord_SetNoiseCancellationAfter = @{ Name = "Discord::SetNoiseCancellationAfterProcessing"; Hex = "C3" }
-        Discord_SetNoiseCancellationDuring= @{ Name = "Discord::SetNoiseCancellationDuringProcessing"; Hex = "C3" }
+        Discord_SetNoiseCancellationDuring  = @{ Name = "Discord::SetNoiseCancellationDuringProcessing"; Hex = "C3" }
         Discord_SetNoiseCancellationStats = @{ Name = "Discord::SetNoiseCancellationEnableStats"; Hex = "C3" }
         Discord_SetSidechainCompression   = @{ Name = "Discord::SetSidechainCompression"; Hex = "C3" }
         Discord_SetHasFullbandPerformance = @{ Name = "Discord::SetHasFullbandPerformance"; Hex = "C3" }
-        Discord_EnableBuiltInAEC          = @{ Name = "Discord::EnableBuiltInAEC"; Hex = "C3" }
         Discord_SetDuckingPreference      = @{ Name = "Discord::SetDuckingPreference"; Hex = "C3" }
         Discord_SetIdleJitterBufferFlush  = @{ Name = "Discord::SetIdleJitterBufferFlush"; Hex = "C3" }
         Discord_SetAudioInputEnabled      = @{ Name = "Discord::SetAudioInputEnabled"; Hex = "C3" }
@@ -1899,7 +1897,6 @@ namespace Offsets {
     constexpr uint32_t Discord_SetEchoCancellationPre    = $('0x{0:X}' -f $offsets.Discord_SetEchoCancellationPre);
     constexpr uint32_t Discord_EnableBuiltInAEC          = $('0x{0:X}' -f $offsets.Discord_EnableBuiltInAEC);
     constexpr uint32_t Discord_SetNoiseCancellation      = $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellation);
-    constexpr uint32_t Discord_SetNoiseCancellationAfter = $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellationAfter);
     constexpr uint32_t Discord_SetNoiseCancellationDuring= $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellationDuring);
     constexpr uint32_t Discord_SetNoiseCancellationStats = $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellationStats);
     constexpr uint32_t Discord_SetSidechainCompression   = $('0x{0:X}' -f $offsets.Discord_SetSidechainCompression);
@@ -2370,19 +2367,6 @@ private:
         }
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellation - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_Discord_SetNoiseCancellationAfter
-        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationAfterProcessing -> RET...\n");
-        {
-            uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetNoiseCancellationAfter;
-            if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] NCAfter - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
-            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
-            else patchCount++;
-        }
-#else
-        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationAfterProcessing - SKIPPED\n"); skipCount++;
 #endif
 #if PATCH_Discord_SetNoiseCancellationDuring
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationDuringProcessing -> RET...\n");
