@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""discord_voice.node offset finder v5.1.4 (PE / ELF / Mach-O)."""
 
 import sys
 import os
@@ -21,7 +20,7 @@ try:
 except ImportError:
     VIZ_AVAILABLE = False
 
-VERSION = "5.1.4"
+VERSION = "5.1.9"
 
 TARGET_BITRATE_BPS = 384000
 _BITRATE_LE = TARGET_BITRATE_BPS.to_bytes(4, "little")
@@ -29,48 +28,49 @@ BITRATE_PATCH_3 = " ".join(f"{b:02X}" for b in _BITRATE_LE[:3])
 BITRATE_PATCH_4 = " ".join(f"{b:02X}" for b in _BITRATE_LE)
 BITRATE_PATCH_5 = BITRATE_PATCH_4 + " 00"
 
-# MSVC PE Phase-2 deltas (_PHASE2_SKIP_CLANG for ELF/Mach-O exceptions).
 DERIVATIONS = {
-    "EmulateStereoSuccess2": [
-        ("EmulateStereoSuccess1", 0xC),
-        ("EmulateStereoSuccess1", 0x1),
+    "CodecProbe_ForceSuccessBranch": [
+        ("CodecProbe_ChannelCountPatch", 0xC),
+        ("CodecProbe_ChannelCountPatch", 0x1),
     ],
-    "Emulate48Khz": [
-        ("EmulateStereoSuccess1", 0x168),
+    "SampleRate_Select48kNop": [
+        ("CodecProbe_ChannelCountPatch", 0x168),
     ],
-    "EmulateBitrateModified": [
-        ("EmulateStereoSuccess1", 0x45F),
+    "OpusBitrate_Imul384k": [
+        ("CodecProbe_ChannelCountPatch", 0x45F),
     ],
-    "HighPassFilter": [
-        ("EmulateStereoSuccess1", 0xC275),
+    "WebRtcHighpass_Trampoline": [
+        ("CodecProbe_ChannelCountPatch", 0xC275),
     ],
-    "SetsBitrateBitwiseOr": [
-        ("SetsBitrateBitrateValue", 0x8),
+    "AudioEncoder_BitrateOrMaskNop": [
+        ("AudioEncoder_BitrateMovImm", 0x8),
     ],
-    "AudioEncoderOpusConfigIsOk": [
-        ("AudioEncoderOpusConfigSetChannels", 0x29C),
-        ("AudioEncoderOpusConfigSetChannels", 0x19B),
-        ("AudioEncoderOpusConfigSetChannels", 0x30B),
+    "OpusEncoderConfig_IsOkRetTrue": [
+        ("OpusEncoderConfig_SetStereoChannels", 0x29C),
+        ("OpusEncoderConfig_SetStereoChannels", 0x19B),
+        ("OpusEncoderConfig_SetStereoChannels", 0x30B),
     ],
-    "DcReject": [
-        ("HighpassCutoffFilter", 0x1E0),
-        ("HighpassCutoffFilter", 0x1B0),
+    "WebRtcDcReject_Injected": [
+        ("WebRtcHighpassCutoff_Injected", 0x1E0),
+        ("WebRtcHighpassCutoff_Injected", 0x1B0),
     ],
-    "EncoderConfigInit1": [
-        ("AudioEncoderOpusConfigSetChannels", 0xA),
+    "OpusEncoderConfig_CtorBitrate_A": [
+        ("OpusEncoderConfig_SetStereoChannels", 0xA),
+    ],
+    "OpusEncoderConfig_CtorUseInbandFecOn": [
+        ("OpusEncoderConfig_CtorBitrate_A", 0x27),
     ],
 }
 
-# ELF/Mach-O: skip Phase 2 for these (resolved in 2b / symbols).
 _PHASE2_SKIP_CLANG = frozenset({
-    "EmulateBitrateModified",
+    "OpusBitrate_Imul384k",
 })
 
 SLIDING_WINDOW_DEFAULT = 128
 SLIDING_WINDOW_OVERRIDES = {
-    "EmulateStereoSuccess2": 48,
-    "EncoderConfigInit1": 48,
-    "EmulateBitrateModified": 0x1000,  # Clang: wider search for 00 7D 00
+    "CodecProbe_ForceSuccessBranch": 48,
+    "OpusEncoderConfig_CtorBitrate_A": 48,
+    "OpusBitrate_Imul384k": 0x1000,
 }
 
 class Signature:
@@ -101,7 +101,6 @@ class Signature:
 
 
 def _mono_downmixer_disambiguator(data, match_offset):
-    # Audit 2b: reject if already NOP-patched (84 C0 74 0D -> 90...)
     if match_offset + 8 + 13 <= len(data):
         if data[match_offset + 8:match_offset + 8 + 13] == b'\x90' * 13:
             return False
@@ -116,11 +115,9 @@ def _mono_downmixer_disambiguator(data, match_offset):
 
 
 def _ess1_no_duplicate_cmp_in_next_24(data, match_offset):
-    """Audit: stronger anchor — reject if a second cmp byte [rsp+disp], 1 appears in next 24 bytes."""
     if match_offset + 18 + 24 > len(data):
         return True
     chunk = data[match_offset + 18 : match_offset + 18 + 24]
-    # Second occurrence of 80 BC 24 xx xx 00 00 01 (at least 8 bytes)
     pos = 0
     while pos <= len(chunk) - 8:
         if chunk[pos:pos+3] == b'\x80\xBC\x24' and chunk[pos+7] == 0x01:
@@ -130,10 +127,6 @@ def _ess1_no_duplicate_cmp_in_next_24(data, match_offset):
 
 
 def has_nearby_stereo_setter(data, file_offset, window=120):
-    """Check for stereo setter (mov byte [rsp+disp], 0/1/2) near match.
-    Pattern: C6 84 24 <disp32> <imm8> with 0x140 <= disp <= 0x1C0 and imm in (0,1,2).
-    Used to disambiguate EmulateStereoSuccess1 when multiple primary matches exist.
-    """
     if not isinstance(data, (bytes, bytearray)) or file_offset < 0:
         return False
     start = max(0, file_offset - window)
@@ -150,7 +143,7 @@ def has_nearby_stereo_setter(data, file_offset, window=120):
 
 SIGNATURES = [
     Signature(
-        name="EmulateStereoSuccess1",
+        name="CodecProbe_ChannelCountPatch",
         pattern_hex="E8 ?? ?? ?? ?? BD ?? 00 00 00 80 BC 24 80 01 00 00 01",
         target_offset=6,
         description="Stereo channel count: call <rel>; mov ebp, CHANNELS; cmp byte [rsp+0x180], 1",
@@ -163,7 +156,7 @@ SIGNATURES = [
     ),
 
     Signature(
-        name="AudioEncoderOpusConfigSetChannels",
+        name="OpusEncoderConfig_SetStereoChannels",
         pattern_hex="48 B9 14 00 00 00 80 BB 00 00 48 89 08 48 C7 40 08 ?? 00 00 00",
         target_offset=17,
         description="Opus config: mov rcx, {48000<<32|20}; mov [rax],rcx; mov qword [rax+8], CHANNELS",
@@ -176,7 +169,7 @@ SIGNATURES = [
     ),
 
     Signature(
-        name="MonoDownmixer",
+        name="DownmixMono_BypassBranch",
         pattern_hex="48 89 F9 E8 ?? ?? ?? ?? 84 C0 74 0D 83 BE ?? ?? 00 00 09 0F 8F",
         target_offset=8,
         description="Mono downmix gate: mov rcx,rdi; call; test al,al; jz +0xD; cmp [rsi+??], 9; jg",
@@ -192,7 +185,7 @@ SIGNATURES = [
     ),
 
     Signature(
-        name="SetsBitrateBitrateValue",
+        name="AudioEncoder_BitrateMovImm",
         pattern_hex="89 F8 48 B9 ?? ?? ?? ?? 01 00 00 00 48 09 C1 48 89 4E 1C",
         target_offset=4,
         description="Bitrate setter: mov eax,edi; mov rcx,imm64; or rcx,rax; mov [rsi+0x1C],rcx",
@@ -204,7 +197,7 @@ SIGNATURES = [
     ),
 
     Signature(
-        name="ThrowError",
+        name="AudioEncoderCodec_ThrowNoOp",
         pattern_hex="56 56 57 53 48 81 EC C8 00 00 00 0F 29 B4 24 B0 00 00 00 4C 89 CE 4C 89 C7 89 D3",
         target_offset=-1,
         description="Error handler: push rsi;rdi;rbx; sub rsp,0xC8; movaps [rsp+0xB0],xmm6; ...",
@@ -216,7 +209,7 @@ SIGNATURES = [
     ),
 
     Signature(
-        name="DownmixFunc",
+        name="ChannelDownmix_RetStub",
         pattern_hex="57 41 56 41 55 41 54 56 57 55 53 48 83 EC 10 48 89 0C 24 45 85 C0",
         target_offset=-1,
         description="Downmix function: push r15..r12,rsi,rdi,rbp,rbx; sub rsp,0x10; ...",
@@ -229,7 +222,7 @@ SIGNATURES = [
     ),
 
     Signature(
-        name="CreateAudioFrameStereo",
+        name="AudioFrame_StereoChannelAssign",
         pattern_hex="B8 80 BB 00 00 BD 00 7D 00 00 0F 43 E8",
         target_offset=31,
         description="Audio frame: mov eax,48000; mov ebp,32000; cmovae ebp,eax; ... second cmov",
@@ -241,7 +234,7 @@ SIGNATURES = [
     ),
 
     Signature(
-        name="HighpassCutoffFilter",
+        name="WebRtcHighpassCutoff_Injected",
         pattern_hex="56 48 83 EC 30 44 0F 29 44 24 20 0F 29 7C 24 10 0F 29 34 24",
         target_offset=0,
         description="HP cutoff filter: push rsi; sub rsp,0x30; SSE saves (xmm8,xmm7,xmm6)",
@@ -253,7 +246,7 @@ SIGNATURES = [
         ],
     ),
     Signature(
-        name="EncoderConfigInit2",
+        name="OpusEncoderConfig_CtorBitrate_B",
         pattern_hex="48 B9 ?? ?? ?? ?? ?? ?? ?? ?? 48 89 48 10 66 C7 40 18 00 00 C6 40 1A 00",
         target_offset=6,
         description="Encoder config constructor 2: mov rcx,packed_qword; mov [rax+0x10],rcx; ...",
@@ -267,56 +260,55 @@ SIGNATURES = [
 ]
 
 CLANG_ALT_PATTERNS = [
-    ("EmulateStereoSuccess1",
+    ("CodecProbe_ChannelCountPatch",
      "E8 ?? ?? ?? ?? BF ?? 00 00 00 80 ?? 24 ?? ?? 00 00 01", 6),
-    ("EmulateStereoSuccess1",
+    ("CodecProbe_ChannelCountPatch",
      "?? ?? 00 00 00 80 ?? 24 ?? ?? 00 00 01", 1),
-    ("AudioEncoderOpusConfigSetChannels",
+    ("OpusEncoderConfig_SetStereoChannels",
      "48 B8 14 00 00 00 80 BB 00 00 48 89 ?? 48 C7 ?? ?? ?? 00 00 00", 17),
-    ("AudioEncoderOpusConfigSetChannels",
+    ("OpusEncoderConfig_SetStereoChannels",
      "48 ?? 14 00 00 00 80 BB 00 00 48 89 ?? ?? 48 C7 ?? ?? ?? 00 00 00", 18),
-    ("MonoDownmixer",
+    ("DownmixMono_BypassBranch",
      "48 89 FF E8 ?? ?? ?? ?? 84 C0 74 ?? 83 ?? ?? ?? 00 00 09 0F 8F", 8),
-    ("MonoDownmixer",
+    ("DownmixMono_BypassBranch",
      "F3 0F 1E FA ?? 89 ?? E8 ?? ?? ?? ?? 84 C0 74 ?? 83 ?? ?? ?? 00 00 09 0F 8F", 12),
-    ("MonoDownmixer",
+    ("DownmixMono_BypassBranch",
      "4C 89 ?? E8 ?? ?? ?? ?? 84 C0 74 ?? 83 7B ?? 09 0F 8F", 8),
-    ("MonoDownmixer",
+    ("DownmixMono_BypassBranch",
      "4C 89 ?? E8 ?? ?? ?? ?? 84 C0 74 ?? 83 7B ?? 09 7F", 8),
-    ("SetsBitrateBitrateValue",
+    ("AudioEncoder_BitrateMovImm",
      "89 F8 48 ?? ?? ?? ?? ?? 01 00 00 00 48 09 ?? 48 89 ?? ??", 4),
-    ("SetsBitrateBitrateValue",
+    ("AudioEncoder_BitrateMovImm",
      "89 ?? 48 B8 ?? ?? ?? ?? 01 00 00 00 48 09 ?? 48 89 ?? ??", 4),
-    ("ThrowError",
+    ("AudioEncoderCodec_ThrowNoOp",
      "55 48 89 E5 41 57 41 56 41 55 41 54 53 48 ?? EC ?? ?? 00 00", -1),
-    ("ThrowError",
+    ("AudioEncoderCodec_ThrowNoOp",
      "F3 0F 1E FA 55 48 89 E5 41 57 41 56 41 55 41 54 53", 3),
-    ("DownmixFunc",
+    ("ChannelDownmix_RetStub",
      "55 48 89 E5 41 57 41 56 41 55 41 54 53 48 83 EC ?? 45 85 C0", -1),
-    ("DownmixFunc",
+    ("ChannelDownmix_RetStub",
      "F3 0F 1E FA 55 48 89 E5 41 57 41 56 41 55 41 54 53 48 83 EC ??", 3),
-    ("DownmixFunc",
+    ("ChannelDownmix_RetStub",
      "41 57 41 56 41 55 41 54 55 53 48 83 EC ?? 49 89 ?? 45 85 ??", -1),
-    ("CreateAudioFrameStereo",
+    ("AudioFrame_StereoChannelAssign",
      "B8 80 BB 00 00 ?? ?? 00 7D 00 00 0F ?? ??", 31),
-    ("HighpassCutoffFilter",
+    ("WebRtcHighpassCutoff_Injected",
      "55 48 89 E5 ?? ?? EC ?? 0F 29 ?? ?? ?? 0F 29 ?? ?? ?? 0F 29", 0),
-    ("HighpassCutoffFilter",
+    ("WebRtcHighpassCutoff_Injected",
      "F3 0F 1E FA 56 48 83 EC ?? ?? 0F 29 ?? ?? ?? 0F 29 ?? ?? ?? 0F 29", 4),
-    ("EncoderConfigInit2",
+    ("OpusEncoderConfig_CtorBitrate_B",
      "48 ?? ?? ?? ?? ?? ?? ?? ?? ?? 48 89 ?? ?? 66 C7 ?? ?? 00 00 C6 ?? ?? 00", 6),
-    ("SetsBitrateBitrateValue",
+    ("AudioEncoder_BitrateMovImm",
      "89 ?? 48 B9 00 00 00 00 01 00 00 00 48 09 C1", 4),
-    ("CreateAudioFrameStereo",
+    ("AudioFrame_StereoChannelAssign",
      "B8 80 BB 00 00 41 BD 00 7D 00 00 44 0F 43 E8", 31),
-    ("CreateAudioFrameStereo",
+    ("AudioFrame_StereoChannelAssign",
      "B8 80 BB 00 00 41 ?? 00 7D 00 00 ?? 0F 43 ??", 31),
 ]
 
 # region PE Parser
 
 def parse_pe(data):
-    """Extract PE info; file_offset_adjustment from .text VA - raw, else 0xC00."""
     if len(data) < 0x40 or data[:2] != b'MZ':
         return None
 
@@ -332,9 +324,9 @@ def parse_pe(data):
     opt = coff + 20
     magic = struct.unpack_from('<H', data, opt)[0]
 
-    if magic == 0x20B:  # PE32+
+    if magic == 0x20B:
         image_base = struct.unpack_from('<Q', data, opt + 24)[0]
-    else:  # PE32
+    else:
         image_base = struct.unpack_from('<I', data, opt + 28)[0]
 
     sections = []
@@ -386,71 +378,50 @@ def parse_pe(data):
 
 
 # region ELF Parser
-# Linux node: symbol name hints (.symtab). target_within = offset inside function, not at entry.
 ELF_SYMBOL_MAP = {
-    # -- Function-start offsets (symbol address IS the offset) --------------
-    # Verified against Linux discord_voice.node (Aug 2025 build)
 
-    "ThrowError": {
-        # discord::node_api::Environment::Throw<const char*>
-        # First byte 0x41 (push r14), patched to 0xC3 (ret)
+    "AudioEncoderCodec_ThrowNoOp": {
         "patterns": ["Environment5ThrowIJPKcEE", "Environment5Throw", "throw_error"],
         "at_start": True,
-        "prefer_smallest": True,  # Pick the smallest overload (single-arg)
+        "prefer_smallest": True,
     },
-    "DownmixFunc": {
-        # downmix_and_resample - standalone function
-        # Linux first byte 0x55 (push rbp), patched to 0xC3 (ret)
+    "ChannelDownmix_RetStub": {
         "patterns": ["downmix_and_resample"],
         "at_start": True,
     },
-    "HighpassCutoffFilter": {
-        # hp_cutoff - standalone function in Opus codec
+    "WebRtcHighpassCutoff_Injected": {
         "patterns": ["hp_cutoff"],
         "at_start": True,
     },
-    "DcReject": {
-        # dc_reject - standalone function in Opus codec
+    "WebRtcDcReject_Injected": {
         "patterns": ["dc_reject"],
         "at_start": True,
     },
-    "HighPassFilter": {
-        # webrtc::AudioProcessingImpl::InitializeHighPassFilter
+    "WebRtcHighpass_Trampoline": {
         "patterns": ["InitializeHighPassFilter"],
         "at_start": True,
     },
 
-    # -- Instruction-level offsets (symbol gives function range) ------------
 
-    "EmulateStereoSuccess1": {
-        # discord::media::LocalUser::CommitAudioCodec (NOT lambda invokers)
-        # Contains stereo emulation check: cmp byte [rbx+0x3BB], 0 ; je
-        # Target: the comparison value byte (0x00 on Linux, 0x01 on Windows)
-        # On macOS x86_64, Clang may put this check in ApplySettings instead.
+    "CodecProbe_ChannelCountPatch": {
         "patterns": ["LocalUser16CommitAudioCodecEv",
                      "LocalUser13ApplySettings"],
         "at_start": False,
         "linux_scan": "stereo_cmp_byte",
-        "prefer_largest": True,  # Lambda wrappers are ~31 bytes; real function is ~2020
+        "prefer_largest": True,
     },
-    "CreateAudioFrameStereo": {
-        # discord::media::EngineAudioTransport::CreateAudioFrameToProcess
-        # Contains cmovnb for channel count: 4C 0F 43 E0 (Linux) vs E8 (Windows)
+    "AudioFrame_StereoChannelAssign": {
         "patterns": ["CreateAudioFrameToProcess", "CreateAudioFrame"],
         "at_start": False,
         "linux_scan": "channel_cmov",
     },
-    "AudioEncoderOpusConfigSetChannels": {
-        # webrtc::AudioEncoderOpusConfig::AudioEncoderOpusConfig() [constructor]
-        # Contains channels=1 byte at +0x15: mov qword [rdi+8], 1
+    "OpusEncoderConfig_SetStereoChannels": {
         "patterns": ["AudioEncoderOpusConfigC1Ev", "AudioEncoderOpusConfigC2Ev",
                      "OpusConfigC1", "OpusConfigC2"],
         "at_start": False,
         "linux_scan": "opus_config_channels",
     },
-    "AudioEncoderMultiChannelOpusCh": {
-        # webrtc::AudioEncoderMultiChannelOpusConfig::AudioEncoderMultiChannelOpusConfig() [constructor]
-        # Contains channels=1 byte after: mov dword [rdi], 0x14 ; mov qword [rdi+8], 1
+    "OpusEncoderConfig_SetMultiChannelStereo": {
         "patterns": [
             "AudioEncoderMultiChannelOpusConfigC1Ev",
             "AudioEncoderMultiChannelOpusConfigC2Ev",
@@ -460,31 +431,31 @@ ELF_SYMBOL_MAP = {
         "at_start": False,
         "linux_scan": "multichannel_opus_config_channels",
     },
-    "SetsBitrateBitrateValue": {
+    "AudioEncoder_BitrateMovImm": {
         "patterns": ["WebrtcAdmHelper22EnsureRecordingStarted",
                      "WebrtcAdmHelper20EnsurePlayoutStarted"],
         "exclude_patterns": ["__function", "__policy"],
         "at_start": False,
         "linux_scan": "bitrate_movabs_or",
     },
-    "EncoderConfigInit2": {
+    "OpusEncoderConfig_CtorBitrate_B": {
         "patterns": ["AudioEncoderOpusConfigC1Ev", "AudioEncoderOpusConfigC2Ev"],
         "at_start": False,
         "linux_scan": "opus_config_bitrate",
     },
-    "MonoDownmixer": {
+    "DownmixMono_BypassBranch": {
         "patterns": ["CapturedAudioProcessor7Process"],
         "at_start": False,
         "linux_scan": "mono_downmix_test",
     },
-    "EmulateStereoSuccess2": {
+    "CodecProbe_ForceSuccessBranch": {
         "patterns": ["LocalUser16CommitAudioCodecEv",
                      "LocalUser13ApplySettings"],
         "at_start": False,
         "linux_scan": "stereo_success2_byte",
         "prefer_largest": True,
     },
-    "Emulate48Khz": {
+    "SampleRate_Select48kNop": {
         "patterns": ["LocalUser16CommitAudioCodecEv",
                      "LocalUser13ApplySettings"],
         "at_start": False,
@@ -494,108 +465,101 @@ ELF_SYMBOL_MAP = {
 }
 
 
-# ARM64 instruction encoding helpers for MOVZ Wd, #imm16:
-#   encoding = 0x52800000 | (imm16 << 5) | rd
-#   mask ignoring rd (bits 0-4): 0xFFFFFFE0
 _ARM64_MOVZ_W_MASK = 0xFFFFFFE0
-_ARM64_MOVZ_W1     = 0x52800020   # MOVZ wN, #1
-_ARM64_MOVZ_W2     = 0x52800040   # MOVZ wN, #2
-_ARM64_MOVZ_W48000 = 0x52977000   # MOVZ wN, #48000 (0xBB80)
-_ARM64_MOVZ_W32000 = 0x528FA000   # MOVZ wN, #32000 (0x7D00)
-_ARM64_MOVZ_W960   = 0x52807800   # MOVZ wN, #960   (0x3C0)
-_ARM64_RET         = 0xD65F03C0   # RET
+_ARM64_MOVZ_W1     = 0x52800020
+_ARM64_MOVZ_W2     = 0x52800040
+_ARM64_MOVZ_W48000 = 0x52977000
+_ARM64_MOVZ_W32000 = 0x528FA000
+_ARM64_MOVZ_W960   = 0x52807800
+_ARM64_RET         = 0xD65F03C0
 
 
 ARM64_SYMBOL_MAP = {
-    # Function-start offsets (symbol address IS the patch offset; patch = RET)
-    "ThrowError": {
+    "AudioEncoderCodec_ThrowNoOp": {
         "patterns": ["Environment5ThrowIJPKcEE", "Environment5Throw", "throw_error"],
         "at_start": True,
         "prefer_smallest": True,
     },
-    "DownmixFunc": {
+    "ChannelDownmix_RetStub": {
         "patterns": ["downmix_and_resample"],
         "at_start": True,
     },
-    "HighpassCutoffFilter": {
+    "WebRtcHighpassCutoff_Injected": {
         "patterns": ["hp_cutoff"],
         "at_start": True,
     },
-    "DcReject": {
+    "WebRtcDcReject_Injected": {
         "patterns": ["dc_reject"],
         "at_start": True,
     },
-    "HighPassFilter": {
+    "WebRtcHighpass_Trampoline": {
         "patterns": ["InitializeHighPassFilter"],
         "at_start": True,
     },
 
-    # Instruction-level offsets (symbol gives function range, arm64 scan finds target)
-    "CreateAudioFrameStereo": {
+    "AudioFrame_StereoChannelAssign": {
         "patterns": ["CreateAudioFrameToProcess", "CreateAudioFrame"],
         "at_start": False,
         "arm64_scan": "arm64_channel_movz",
     },
-    "AudioEncoderOpusConfigSetChannels": {
+    "OpusEncoderConfig_SetStereoChannels": {
         "patterns": ["AudioEncoderOpusConfigC1Ev", "AudioEncoderOpusConfigC2Ev",
                      "OpusConfigC1", "OpusConfigC2"],
         "at_start": False,
         "arm64_scan": "arm64_opus_config_channels",
     },
-    "EmulateStereoSuccess1": {
+    "CodecProbe_ChannelCountPatch": {
         "patterns": ["LocalUser16CommitAudioCodecEv"],
         "at_start": False,
         "arm64_scan": "arm64_stereo_cmp",
         "prefer_largest": True,
     },
-    "MonoDownmixer": {
+    "DownmixMono_BypassBranch": {
         "patterns": ["CapturedAudioProcessor7Process"],
         "at_start": False,
         "arm64_scan": "arm64_mono_downmix",
     },
-    "EncoderConfigInit2": {
+    "OpusEncoderConfig_CtorBitrate_B": {
         "patterns": ["AudioEncoderOpusConfigC1Ev", "AudioEncoderOpusConfigC2Ev"],
         "at_start": False,
         "arm64_scan": "arm64_bitrate_const",
     },
-    "SetsBitrateBitrateValue": {
+    "AudioEncoder_BitrateMovImm": {
         "patterns": ["AudioRtpReceiver17SetupMediaChannel",
                      "SetupMediaChannel"],
         "at_start": False,
         "arm64_scan": "arm64_bitrate_or",
     },
-    "AudioEncoderOpusConfigIsOk": {
+    "OpusEncoderConfig_IsOkRetTrue": {
         "patterns": ["AudioEncoderOpusConfigC1Ev", "AudioEncoderOpusConfigC2Ev",
                      "AudioEncoderOpus"],
         "at_start": False,
         "arm64_scan": "arm64_opus_config_isok",
     },
-    "EncoderConfigInit1": {
+    "OpusEncoderConfig_CtorBitrate_A": {
         "patterns": ["AudioEncoderOpusConfigC1Ev", "AudioEncoderOpusConfigC2Ev"],
         "at_start": False,
         "arm64_scan": "arm64_opus_config_init1",
     },
-    # These are resolved via derivation from arm64 anchors, not direct symbol scan.
-    # Entries here allow symbol hints for targeted scanning if needed.
-    "EmulateStereoSuccess2": {
+    "CodecProbe_ForceSuccessBranch": {
         "patterns": ["LocalUser16CommitAudioCodecEv"],
         "at_start": False,
         "arm64_scan": "arm64_stereo_success2",
         "prefer_largest": True,
     },
-    "Emulate48Khz": {
+    "SampleRate_Select48kNop": {
         "patterns": ["LocalUser16CommitAudioCodecEv"],
         "at_start": False,
         "arm64_scan": "arm64_emulate_48khz",
         "prefer_largest": True,
     },
-    "EmulateBitrateModified": {
+    "OpusBitrate_Imul384k": {
         "patterns": ["LocalUser16CommitAudioCodecEv"],
         "at_start": False,
         "arm64_scan": "arm64_bitrate_modified",
         "prefer_largest": True,
     },
-    "SetsBitrateBitwiseOr": {
+    "AudioEncoder_BitrateOrMaskNop": {
         "patterns": ["AudioRtpReceiver17SetupMediaChannel",
                      "SetupMediaChannel"],
         "at_start": False,
@@ -605,41 +569,31 @@ ARM64_SYMBOL_MAP = {
 
 
 def parse_elf(data):
-    """Parse ELF binary and extract section info, adjustment, and symbol table.
-
-    Linux discord_voice.node is not stripped: debug symbols are present for
-    every node in all three client builds (Stable, PTB, Canary). We resolve
-    function addresses directly from .symtab/.dynsym.
-    """
     if len(data) < 64:
         return None
 
-    # ELF magic
     if data[:4] != b'\x7fELF':
         return None
 
-    ei_class = data[4]   # 1=32-bit, 2=64-bit
-    ei_data = data[5]    # 1=LE, 2=BE
+    ei_class = data[4]
+    ei_data = data[5]
     if ei_class != 2 or ei_data != 1:
-        # We only handle 64-bit little-endian (x86-64)
         if ei_class == 2 and ei_data == 2:
-            return None  # Big-endian, not x86
+            return None
         if ei_class == 1:
-            return None  # 32-bit, unlikely for discord_voice.node
+            return None
 
-    # ELF64 header
     e_type = struct.unpack_from('<H', data, 16)[0]
     e_machine = struct.unpack_from('<H', data, 18)[0]
     e_entry = struct.unpack_from('<Q', data, 24)[0]
-    e_shoff = struct.unpack_from('<Q', data, 40)[0]       # Section header table offset
-    e_shentsize = struct.unpack_from('<H', data, 58)[0]   # Section header entry size
-    e_shnum = struct.unpack_from('<H', data, 60)[0]       # Number of section headers
-    e_shstrndx = struct.unpack_from('<H', data, 62)[0]    # Section name string table index
+    e_shoff = struct.unpack_from('<Q', data, 40)[0]
+    e_shentsize = struct.unpack_from('<H', data, 58)[0]
+    e_shnum = struct.unpack_from('<H', data, 60)[0]
+    e_shstrndx = struct.unpack_from('<H', data, 62)[0]
 
     if e_shoff == 0 or e_shnum == 0:
         return None
 
-    # Parse section headers
     sections = []
     for i in range(e_shnum):
         off = e_shoff + i * e_shentsize
@@ -657,10 +611,9 @@ def parse_elf(data):
             'name_idx': sh_name_idx, 'type': sh_type, 'flags': sh_flags,
             'vaddr': sh_addr, 'raw_offset': sh_offset, 'raw_size': sh_size,
             'link': sh_link, 'entsize': sh_entsize, 'index': i,
-            'name': '',  # filled in below
+            'name': '',
         })
 
-    # Resolve section names from .shstrtab
     if e_shstrndx < len(sections):
         strtab = sections[e_shstrndx]
         strtab_off = strtab['raw_offset']
@@ -674,7 +627,6 @@ def parse_elf(data):
                     end = strtab_end
                 sec['name'] = data[name_off:end].decode('ascii', errors='replace')
 
-    # Find .text section for adjustment
     text_section = None
     file_offset_adjustment = 0
     for sec in sections:
@@ -683,7 +635,6 @@ def parse_elf(data):
             file_offset_adjustment = sec['vaddr'] - sec['raw_offset']
             break
 
-    # Fallback: first executable section
     if text_section is None:
         SHF_EXECINSTR = 0x4
         for sec in sections:
@@ -692,7 +643,6 @@ def parse_elf(data):
                 file_offset_adjustment = sec['vaddr'] - sec['raw_offset']
                 break
 
-    # Parse symbol tables (.symtab and .dynsym)
     symbols = []
     SHT_SYMTAB = 2
     SHT_DYNSYM = 11
@@ -701,7 +651,6 @@ def parse_elf(data):
             continue
         if sec['entsize'] == 0:
             continue
-        # String table for this symbol table
         if sec['link'] >= len(sections):
             continue
         sym_strtab = sections[sec['link']]
@@ -719,7 +668,6 @@ def parse_elf(data):
             st_value = struct.unpack_from('<Q', data, sym_off + 8)[0]
             st_size = struct.unpack_from('<Q', data, sym_off + 16)[0]
 
-            # Resolve symbol name
             name_off = sym_strtab_off + st_name
             sym_name = ''
             if name_off < sym_strtab_end:
@@ -740,7 +688,6 @@ def parse_elf(data):
                     'section': st_shndx,
                 })
 
-    # Build a quick-access dict of function symbols by name
     func_symbols = {}
     for sym in symbols:
         if sym['is_func'] and sym['value'] > 0:
@@ -750,7 +697,7 @@ def parse_elf(data):
 
     return {
         'format': 'elf',
-        'image_base': 0,  # ELF PIE - typically 0 for shared objects
+        'image_base': 0,
         'file_offset_adjustment': file_offset_adjustment,
         'text_section': text_section,
         'sections': [{'name': s['name'], 'vaddr': s['vaddr'],
@@ -758,7 +705,7 @@ def parse_elf(data):
                       for s in sections if s['name']],
         'symbols': symbols,
         'func_symbols': func_symbols,
-        'has_symbols': len(func_symbols) > 50,  # sanity: real symbol table is large
+        'has_symbols': len(func_symbols) > 50,
         'arch': arch,
         'entry': e_entry,
     }
@@ -769,29 +716,23 @@ def parse_elf(data):
 # region Mach-O Parser
 
 def parse_macho(data):
-    """Parse Mach-O binary (including fat/universal) for macOS discord_voice.node.
-
-    Extracts __TEXT,__text section info for adjustment computation.
-    macOS builds are typically stripped, so no symbol shortcut.
-    """
     if len(data) < 32:
         return None
 
     magic = struct.unpack_from('<I', data, 0)[0]
 
-    # Fat/universal binary - find x86_64 slice
-    FAT_MAGIC = 0xBEBAFECA   # 0xCAFEBABE as LE
+    FAT_MAGIC = 0xBEBAFECA
     FAT_MAGIC_64 = 0xBFBAFECA
     if magic in (FAT_MAGIC, FAT_MAGIC_64):
         return _parse_fat_macho(data)
 
     MH_MAGIC_64 = 0xFEEDFACF
-    MH_MAGIC_64_BE = 0xCFFAEDFE  # big-endian read as LE
+    MH_MAGIC_64_BE = 0xCFFAEDFE
 
     if magic == MH_MAGIC_64:
         return _parse_macho_slice(data, 0)
     elif magic == MH_MAGIC_64_BE:
-        return None  # big-endian Mach-O, not x86_64
+        return None
     elif struct.unpack_from('>I', data, 0)[0] in (0xCAFEBABE, 0xCAFEBABF):
         return _parse_fat_macho(data)
 
@@ -799,11 +740,9 @@ def parse_macho(data):
 
 
 def _parse_fat_macho(data):
-    """Parse fat/universal Mach-O, extract x86_64 slice.
-    Also parses arm64 slice if present and stores it in result['arm64_info']."""
     nfat_arch = struct.unpack_from('>I', data, 4)[0]
     if nfat_arch > 20:
-        return None  # sanity
+        return None
 
     CPU_TYPE_X86_64 = 0x01000007
     CPU_TYPE_ARM64 = 0x0100000C
@@ -832,7 +771,6 @@ def _parse_fat_macho(data):
             arm64_offset = offset
             arm64_size = size
 
-    # Parse arm64 slice and attach to x86_64 result
     if x86_result is not None:
         if arm64_offset is not None:
             arm64_info = _parse_macho_slice(data, arm64_offset)
@@ -842,7 +780,6 @@ def _parse_fat_macho(data):
                 x86_result['arm64_info'] = arm64_info
         return x86_result
 
-    # No x86_64 slice - return arm64 as primary if available
     if arm64_offset is not None:
         arm64_info = _parse_macho_slice(data, arm64_offset)
         if arm64_info:
@@ -854,7 +791,6 @@ def _parse_fat_macho(data):
 
 
 def _parse_macho_slice(data, base_offset):
-    """Parse a single Mach-O 64 slice starting at base_offset."""
     magic = struct.unpack_from('<I', data, base_offset)[0]
     if magic != 0xFEEDFACF:
         return None
@@ -872,14 +808,13 @@ def _parse_macho_slice(data, base_offset):
     else:
         arch = f'cpu_{cputype:#x}'
 
-    # Walk load commands
     LC_SEGMENT_64 = 0x19
     LC_SYMTAB = 0x02
 
     sections = []
     text_section = None
     file_offset_adjustment = 0
-    cmd_offset = base_offset + 32  # past mach_header_64
+    cmd_offset = base_offset + 32
 
     symtab_off = 0
     symtab_nsyms = 0
@@ -902,7 +837,6 @@ def _parse_macho_slice(data, base_offset):
             file_size = struct.unpack_from('<Q', data, cmd_offset + 48)[0]
             nsects = struct.unpack_from('<I', data, cmd_offset + 64)[0]
 
-            # Parse sections within segment
             sec_base = cmd_offset + 72
             for s in range(nsects):
                 sec_off = sec_base + s * 80
@@ -933,13 +867,12 @@ def _parse_macho_slice(data, base_offset):
 
         cmd_offset += cmdsize
 
-    # Parse symbols if present
     func_symbols = {}
     symbols = []
     NLIST_64_SIZE = 16
     if symtab_nsyms > 0 and symtab_off + symtab_nsyms * NLIST_64_SIZE <= len(data):
         strtab_end = strtab_off + strtab_size
-        for i in range(min(symtab_nsyms, 200000)):  # cap for sanity
+        for i in range(min(symtab_nsyms, 200000)):
             noff = symtab_off + i * NLIST_64_SIZE
             if noff + NLIST_64_SIZE > len(data):
                 break
@@ -957,7 +890,6 @@ def _parse_macho_slice(data, base_offset):
                 sym_name = data[name_off:end].decode('ascii', errors='replace')
 
             if sym_name and n_value > 0:
-                # N_SECT (0x0e) and external check
                 is_defined = (n_type & 0x0e) == 0x0e
                 sym = {'name': sym_name, 'value': n_value, 'is_func': is_defined and n_sect > 0, 'size': 0}
                 symbols.append(sym)
@@ -966,8 +898,6 @@ def _parse_macho_slice(data, base_offset):
 
     has_symbols = len(func_symbols) > 50
 
-    # Estimate function sizes from gaps between consecutive symbol addresses.
-    # Mach-O nlist doesn't carry size; approximate from address ordering.
     if has_symbols:
         sorted_funcs = sorted(func_symbols.values(), key=lambda s: s['value'])
         for i, sym in enumerate(sorted_funcs):
@@ -995,7 +925,6 @@ def _parse_macho_slice(data, base_offset):
 # region macOS Stereo Patch Finder
 
 def _parse_fat_macho_slices(data):
-    """Parse fat Mach-O, return list of {arch, fat_offset, fat_size, data} for both slices."""
     if len(data) < 32:
         return []
     magic = struct.unpack_from("<I", data, 0)[0]
@@ -1026,7 +955,6 @@ def _parse_hex_bytes(s):
     return bytes([int(b, 16) for b in s.split() if b])
 
 
-# macOS stereo mic patch signatures (x86_64)
 _X86_STEREO = [
     {"n": "MultiChannelOpusConfig_channels", "p": "C7 07 14 00 00 00 48 C7 47 08 01 00 00 00", "t": 10, "o": "01", "x": "02"},
     {"n": "MultiChannelOpusConfig_bitrate", "p": "48 B8 00 00 00 00 00 7D 00 00 48 89 47 10 66 C7 47 18", "t": 7, "o": "7D 00", "x": BITRATE_PATCH_3},
@@ -1039,7 +967,6 @@ _X86_STEREO = [
     {"n": "SdpToConfig_jne", "p": "41 BF ?? ?? ?? ?? 80 7D C8 01 75", "t": 10, "o": "75", "x": "EB"},
 ]
 
-# macOS stereo mic patch signatures (arm64) - min VA 0x4000 to skip header
 _ARM64_STEREO = [
     {"n": "MultiChannelOpusConfig_channels", "p": "28 00 80 52", "t": 0, "o": "28", "x": "48", "occ": 1},
     {"n": "OpusConfig_channels", "p": "28 00 80 52", "t": 0, "o": "28", "x": "48", "occ": 2},
@@ -1110,8 +1037,6 @@ def _find_stereo_arm64(slice_info, out):
 
 
 def find_macos_stereo_patches(data):
-    """Run macOS stereo microphone patch finder on Mach-O fat binary.
-    Returns list of {arch, va, fat_offset, orig, patch, name} or [] if not applicable."""
     slices = _parse_fat_macho_slices(data)
     if not slices:
         return []
@@ -1129,7 +1054,6 @@ def find_macos_stereo_patches(data):
 # region Format Detection
 
 def detect_binary_format(data):
-    """PE -> Mach-O -> ELF -> raw; returns dict with 'format', file_offset_adjustment, text_section."""
     pe = parse_pe(data)
     if pe:
         pe['format'] = 'pe'
@@ -1159,7 +1083,6 @@ def detect_binary_format(data):
 
 
 def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
-    """Scan function range for scan_type pattern; returns config offset (file_off + adj) or None."""
     import struct as _st
 
     end = min(func_start + func_size, len(data))
@@ -1167,9 +1090,6 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
     flen = len(func)
 
     if scan_type == "multichannel_opus_config_channels":
-        # AudioEncoderMultiChannelOpusConfig constructor: channels=1 in struct at +0xA after pattern head
-        # C7 07 14 00 00 00                 (mov dword ptr [rdi], 0x14)
-        # 48 C7 47 08 01 00 00 00            (mov qword ptr [rdi+8], 1) <- target byte is the 01
         pat = b"\xC7\x07\x14\x00\x00\x00\x48\xC7\x47\x08"
         for i in range(flen - (len(pat) + 4)):
             if func[i : i + len(pat)] != pat:
@@ -1180,42 +1100,26 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "opus_config_channels":
-        # AudioEncoderOpusConfig constructor: packed movabs then channels=1
-        # 48 B8 14 00 00 00 80 BB 00 00  (movabs rax, packed 20|48000)
-        # 48 89 07                        (mov [rdi], rax)
-        # 48 C7 47 08 01 00 00 00         (mov qword [rdi+8], 1) <- target byte is the 01
         for i in range(flen - 24):
             if (func[i:i+2] == b'\x48\xb8'
                     and func[i+2] == 0x14 and func[i+6:i+10] == b'\x80\xbb\x00\x00'):
-                # Found the packed movabs - channels byte is at +0x15
                 ch_off = i + 0x15
                 if ch_off < flen and func[ch_off] in (0x01, 0x02):
                     return func_start + ch_off + adj
         return None
 
     if scan_type == "opus_config_bitrate":
-        # Same constructor: the 32000 (0x7D00) packed in second movabs
-        # 48 B8 00 00 00 00 00 7D 00 00  (movabs rax, 0x7D00_0000_0000)
         for i in range(flen - 10):
             if (func[i:i+2] == b'\x48\xb8'
                     and func[i+2:i+7] == b'\x00\x00\x00\x00\x00'
                     and func[i+7:i+10] == b'\x7d\x00\x00'):
-                # Target: the "00 7D 00 00" starting at +5
                 target_off = i + 5
                 if func[target_off:target_off+4] == b'\x00\x7d\x00\x00':
                     return func_start + target_off + adj
         return None
 
     if scan_type == "stereo_cmp_byte":
-        # CommitAudioCodec: cmp byte [reg+off], val ; jcc
-        # MSVC/Linux pattern:  80 BB xx xx xx xx [00|01] [74|75] (rbx, short jcc)
-        # Clang/macOS pattern: 80 B9 xx xx xx xx [01] 0F [84|85] (rcx, near jcc)
-        # Target: the comparison value byte (the 00 on Linux, 01 on Windows/macOS)
-        # Disambiguator: setter "C6 [80+reg] <same offset> 01" within 56 bytes
-        # Accept any base register: ModRM 0xB8-0xBF (cmp byte [reg+disp32], imm8)
-        # Accept short jcc (74/75) or near jcc (0F 84/0F 85)
         def _is_stereo_cmp(buf, pos, buflen):
-            """Check if pos is a cmp byte [reg+disp32], val; jcc pattern."""
             if pos + 8 > buflen:
                 return False, 0, 0
             if buf[pos] != 0x80:
@@ -1223,7 +1127,6 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
             modrm = buf[pos + 1]
             if not (0xB8 <= modrm <= 0xBF):
                 return False, 0, 0
-            # Skip SIB-based addressing (modrm & 7 == 4)
             if (modrm & 7) == 4:
                 return False, 0, 0
             val = buf[pos + 6]
@@ -1232,7 +1135,6 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
             jcc_byte = buf[pos + 7]
             if jcc_byte not in (0x74, 0x75, 0x0F):
                 return False, 0, 0
-            # For near jcc, verify the second byte is 84 or 85
             if jcc_byte == 0x0F and pos + 9 <= buflen:
                 if buf[pos + 8] not in (0x84, 0x85):
                     return False, 0, 0
@@ -1241,20 +1143,17 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
                 return False, 0, 0
             return True, modrm, member_off
 
-        # Pass 1: setter-confirmed match (most reliable)
         for i in range(flen - 8):
             ok, modrm, member_off = _is_stereo_cmp(func, i, flen)
             if not ok:
                 continue
             off_bytes = func[i+2:i+6]
-            # Build setter: C6 [80+reg] <same offset> 01
             setter_modrm = 0x80 | (modrm & 7)
             setter = bytes([0xC6, setter_modrm]) + off_bytes + b'\x01'
             search_start = i + 8
             search_end = min(i + 56, flen)
             if setter in func[search_start:search_end]:
                 return func_start + i + 6 + adj
-        # Pass 2: accept first match without setter confirmation
         for i in range(flen - 8):
             ok, modrm, member_off = _is_stereo_cmp(func, i, flen)
             if ok:
@@ -1262,10 +1161,6 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "stereo_success2_byte":
-        # Second stereo patch site in CommitAudioCodec.
-        # Find the second cmp byte [reg+disp32], val; jcc pair.
-        # Target: the jcc byte (short: 74/75, or near: the 0F byte).
-        # On Windows: expected "75" (jne short). On macOS: "0F" (near jcc).
         found_first = False
         for i in range(flen - 8):
             if func[i] != 0x80:
@@ -1288,38 +1183,26 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
             if not found_first:
                 found_first = True
                 continue
-            # Second match: target is the jcc byte
             return func_start + i + 7 + adj
         return None
 
     if scan_type == "emulate_48khz_cmov":
-        # CommitAudioCodec: conditional selection of sample rate config.
-        # On MSVC: cmovb after comparing channel count.
-        # On Clang/macOS: CMOV (0F 42-4F) or REX+CMOV (48 0F 43) after a
-        #   cmp dword [reg+off], 2  (channel count comparison).
-        # Target: the CMOV instruction.
-        # Search for cmp dword [reg+off], 2; ... cmov within 20 bytes.
         for i in range(flen - 16):
-            # cmp dword [rbx+disp32], 2: 83 BB xx xx xx xx 02
             if func[i] == 0x83 and 0xB8 <= func[i+1] <= 0xBF:
                 if (func[i+1] & 7) == 4:
                     continue
                 disp = _st.unpack_from('<I', func, i+2)[0]
                 if 0x40 < disp < 0x1000 and func[i+6] == 0x02:
-                    # Found channel count cmp; search forward for CMOV
                     for j in range(7, 20):
                         if i + j + 4 > flen:
                             break
                         b0 = func[i + j]
                         b1 = func[i + j + 1]
-                        # Plain CMOV: 0F 4x
                         if b0 == 0x0F and 0x40 <= b1 <= 0x4F:
                             return func_start + i + j + adj
-                        # REX.W + CMOV: 48 0F 4x
                         if b0 == 0x48 and b1 == 0x0F and i + j + 2 < flen:
                             if 0x40 <= func[i + j + 2] <= 0x4F:
                                 return func_start + i + j + adj
-            # 41 83 variant (REX.B for r8-r15 base)
             if func[i] == 0x41 and func[i+1] == 0x83 and i+8 <= flen:
                 if 0xB8 <= func[i+2] <= 0xBF and (func[i+2] & 7) != 4:
                     disp = _st.unpack_from('<I', func, i+3)[0]
@@ -1334,10 +1217,8 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
                             if b0 == 0x48 and b1 == 0x0F and i + j + 2 < flen:
                                 if 0x40 <= func[i + j + 2] <= 0x4F:
                                     return func_start + i + j + adj
-        # Fallback: look for any CMOV near a LEA pair (Clang pattern)
         for i in range(flen - 12):
             if func[i:i+3] == b'\x48\x8d\x05' or func[i:i+3] == b'\x48\x8d\x15':
-                # LEA rax/rdx, [rip+disp32] - check for second LEA then CMOV
                 for j in range(7, 24):
                     if i + j + 4 > flen:
                         break
@@ -1347,13 +1228,8 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "channel_cmov":
-        # CreateAudioFrameToProcess: two cmovnb instructions after mov eax, 48000
-        # 1st: 44 0F 43 E8 - frequency cmovnb r13d, eax (32-bit, skip this)
-        # 2nd: 4C 0F 43 E0 - channel  cmovnb r12, rax  (64-bit, TARGET)
-        # The channel cmov uses REX.WR (4C) for 64-bit operands
         for i in range(flen - 40):
-            if func[i:i+5] == b'\xb8\x80\xbb\x00\x00':  # mov eax, 48000
-                # Search forward for the 64-bit cmovnb (4C 0F 43) within 40 bytes
+            if func[i:i+5] == b'\xb8\x80\xbb\x00\x00':
                 for j in range(5, 40):
                     if i+j+4 <= flen and func[i+j:i+j+3] == b'\x4c\x0f\x43':
                         return func_start + i + j + adj
@@ -1368,12 +1244,6 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "mono_downmix_test":
-        # test al,al ; jz XX ; cmp dword [rbx+disp], 9 ; jg
-        # Two cmp encodings exist across builds:
-        #   Long disp32: 83 BB/BE xx xx 00 00 09  (0.0.93+, disp >= 0x80)
-        #   Short disp8: 83 7B/7E xx 09           (0.0.84, disp < 0x80)
-        # jg can be near (0F 8F) or short (7F). Prefer near jg first — patcher NOP sled
-        # length matches the near-jg layout on builds that have both in one function.
         def _mono_match_at(i):
             if func[i:i+2] != b'\x84\xc0' or func[i+2] != 0x74:
                 return None
@@ -1417,13 +1287,6 @@ def _linux_scan_within_function(data, func_start, func_size, scan_type, adj):
 
 
 def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
-    """Scan within a known function range for ARM64 instruction patterns.
-
-    Each scan_type encodes knowledge of what ARM64 instructions to look for
-    inside a particular function in an arm64 Mach-O slice.
-
-    Returns the CONFIG offset (file offset + adj) or None.
-    """
     end = min(func_start + func_size, len(data))
     func = data[func_start:end]
     flen = len(func)
@@ -1434,22 +1297,16 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
         return struct.unpack_from('<I', buf, off)[0]
 
     def _is_movz_w(raw, imm16):
-        """Check if instruction is MOVZ wN, #imm16 (any register)."""
         return (raw & _ARM64_MOVZ_W_MASK) == (0x52800000 | (imm16 << 5))
 
     if scan_type == "arm64_channel_movz":
-        # CreateAudioFrameToProcess: MOVZ wN, #1 (channels) near MOVZ wM, #48000
-        # Verified: MOVZ w27, #1 at +0x... and MOVZ w12, #48000 within ~40 bytes
-        # Find MOVZ wN, #48000, then search backward for MOVZ wM, #1
         for i in range(0, flen - 4, 4):
             raw = _read32(func, i)
             if _is_movz_w(raw, 48000):
-                # Found MOVZ wN, #48000; search backward up to 64 instructions for MOVZ wM, #1
                 for j in range(4, min(256, i + 4), 4):
                     r2 = _read32(func, i - j)
                     if _is_movz_w(r2, 1):
                         return func_start + (i - j) + adj
-                # Also search forward up to 64 instructions
                 for j in range(4, min(256, flen - i), 4):
                     r2 = _read32(func, i + j)
                     if _is_movz_w(r2, 1):
@@ -1457,22 +1314,15 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "arm64_opus_config_channels":
-        # AudioEncoderOpusConfig constructor: stores channels=1 to struct.
-        # Look for MOVZ wN, #1 that is followed by a STR to a struct member,
-        # near MOVZ wM, #48000 or the packed constant 20|48000.
-        # Strategy: find MOVZ wN, #48000 or MOVZ wN, #960, then look for
-        # a nearby MOVZ wM, #1 that is stored (STR/STRB after it).
         candidates = []
         for i in range(0, flen - 4, 4):
             raw = _read32(func, i)
             if _is_movz_w(raw, 48000) or _is_movz_w(raw, 960):
-                # Found a sample-rate constant; search nearby for channels=1
                 for j in range(-128, 128, 4):
                     off2 = i + j
                     if 0 <= off2 < flen - 4:
                         r2 = _read32(func, off2)
                         if _is_movz_w(r2, 1):
-                            # Check next instruction is a store (STR/STRB)
                             if off2 + 4 < flen - 4:
                                 next_raw = _read32(func, off2 + 4)
                                 is_store = (next_raw & 0x3B000000) == 0x39000000 and not ((next_raw >> 22) & 1)
@@ -1481,7 +1331,6 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
                                     candidates.append(off2)
         if candidates:
             return func_start + candidates[0] + adj
-        # Fallback: just find first MOVZ wN, #1 in the function
         for i in range(0, flen - 4, 4):
             raw = _read32(func, i)
             if _is_movz_w(raw, 1):
@@ -1489,12 +1338,6 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "arm64_stereo_cmp":
-        # CommitAudioCodec: find LDRB followed by a conditional branch testing
-        # the loaded value. On arm64 this can be:
-        #   LDRB wN, [xM, #off] ; SUBS wzr, wN, #val ; B.cond
-        #   LDRB wN, [xM, #off] ; TBZ/TBNZ wN, #bit, <label>
-        #   LDRB wN, [xM, #off] ; CBZ/CBNZ wN, <label>
-        # Target: the LDRB instruction offset.
         for i in range(0, flen - 12, 4):
             raw = _read32(func, i)
             if (raw & 0xFFC00000) != 0x39400000:
@@ -1505,13 +1348,10 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
                 continue
             next_raw = _read32(func, i + 4)
             next_rt = next_raw & 0x1F
-            # Check CBZ/CBNZ
             if (next_raw & 0x7F000000) == 0x34000000 and next_rt == rt:
                 return func_start + i + adj
-            # Check TBZ/TBNZ (0x36=TBZ, 0x37=TBNZ)
             if (next_raw & 0x7E000000) == 0x36000000 and next_rt == rt:
                 return func_start + i + adj
-            # Check SUBS wzr, wN, #imm + B.cond (CMP pattern)
             if (next_raw & 0xFF000000) == 0x71000000:
                 subs_rn = (next_raw >> 5) & 0x1F
                 subs_rd = next_raw & 0x1F
@@ -1522,9 +1362,6 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "arm64_stereo_success2":
-        # Second stereo patch site in CommitAudioCodec.
-        # On x86: the je byte. On arm64: the conditional branch instruction.
-        # Find the second LDRB+branch pair; target is the branch instruction.
         found_first = False
         for i in range(0, flen - 12, 4):
             raw = _read32(func, i)
@@ -1555,9 +1392,6 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "arm64_emulate_48khz":
-        # In CommitAudioCodec: find CSEL/CSINC (sample rate conditional).
-        # On arm64, CommitAudioCodec may not have MOVZ #48000 directly;
-        # look for any CSEL/CSINC in the function.
         for i in range(0, flen - 4, 4):
             raw = _read32(func, i)
             if (raw & 0xFFE00C00) in (0x1A800000, 0x1A800400):
@@ -1565,13 +1399,10 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "arm64_bitrate_modified":
-        # In CommitAudioCodec: find MOVZ wN, #32000, or if absent, find
-        # 32000 in literal pool (compiler may use ADRP+LDR instead of MOVZ).
         for i in range(0, flen - 4, 4):
             raw = _read32(func, i)
             if _is_movz_w(raw, 32000):
                 return func_start + i + adj
-        # Fallback: scan for 32-bit literal 0x00007D00 (32000) in function + literal pool
         literal_32000 = struct.pack('<I', 32000)
         search_end = min(func_start + flen + 2048, len(data) - 4)
         for i in range(func_start, search_end - 3):
@@ -1580,16 +1411,10 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "arm64_bitrate_const":
-        # EncoderConfigInit2: In AudioEncoderOpusConfig constructor.
-        # On arm64 the 32000 value may be loaded from literal pool (ADRP+LDR),
-        # not via MOVZ. Look for MOVZ first; fallback to finding a small
-        # integer constant that is stored to a struct field after channels.
         for i in range(0, flen - 4, 4):
             raw = _read32(func, i)
             if _is_movz_w(raw, 32000):
                 return func_start + i + adj
-        # Fallback: find a MOVZ followed by STR to struct (not channels)
-        # after the channels=1 store
         channels_off = None
         for i in range(0, flen - 4, 4):
             raw = _read32(func, i)
@@ -1606,14 +1431,10 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "arm64_bitrate_or":
-        # SetsBitrateBitrateValue: on x86 this is movabs+or pattern.
-        # On arm64: ORR xN, xN, #0x100000000 (single instruction sets bit 32).
-        # Encoding: 0xB2600000 | (rn << 5) | rd, mask 0xFFFFFC00
         for i in range(0, flen - 4, 4):
             raw = _read32(func, i)
             if (raw & 0xFFFFFC00) == 0xB2600000:
                 return func_start + i + adj
-        # Fallback: MOVK xN, #1, lsl #32 (alternative encoding)
         for i in range(0, flen - 4, 4):
             raw = _read32(func, i)
             if (raw & 0xFFE0FFE0) == 0xF2A00020:
@@ -1621,22 +1442,13 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "arm64_bitrate_or_insn":
-        # SetsBitrateBitwiseOr: on arm64 the ORR immediate IS the OR.
-        # Find the store instruction immediately after the ORR xN, xN, #0x100000000.
         for i in range(0, flen - 8, 4):
             raw = _read32(func, i)
             if (raw & 0xFFFFFC00) == 0xB2600000:
-                # The next instruction (STUR/STR) is the store that commits the OR
                 return func_start + (i + 4) + adj
         return None
 
     if scan_type == "arm64_opus_config_isok":
-        # AudioEncoderOpusConfigIsOk: validation/check near end of constructor.
-        # On x86: mov edx, [rcx]; xor eax, eax (8B 11 31 C0).
-        # On arm64: use RET instruction as a landmark in the constructor,
-        # and derive from channels offset. This is the IsOk check which
-        # validates the config after construction.
-        # Look for LDR wt, [xn, #0] followed by SUBS or MOV pattern.
         for i in range(0, flen - 8, 4):
             raw = _read32(func, i)
             if (raw & 0xFFC003E0) == 0xB9400000:
@@ -1645,8 +1457,6 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
                     return func_start + i + adj
                 if (next_raw & 0xFFE0FFE0) == 0x2A0003E0:
                     return func_start + i + adj
-        # Fallback: find MOVN (negative constant) which appears in constructor
-        # for fields like max_playback_rate_hz = -1
         for i in range(0, flen - 4, 4):
             raw = _read32(func, i)
             if (raw & 0xFF800000) == 0x12800000:
@@ -1654,27 +1464,17 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
         return None
 
     if scan_type == "arm64_opus_config_init1":
-        # EncoderConfigInit1: same constructor as SetChannels.
-        # On arm64: 48000 is loaded from literal pool (ADRP+LDR), not MOVZ.
-        # Look for MOVZ wN, #48000 first; fallback to finding the first
-        # ADRP+LDR pair in the constructor (which loads struct init data).
         for i in range(0, flen - 4, 4):
             raw = _read32(func, i)
             if _is_movz_w(raw, 48000):
                 return func_start + i + adj
-        # Fallback: find first ADRP (page-relative address load) which
-        # references the literal pool containing sample rate/frame config
         for i in range(0, flen - 4, 4):
             raw = _read32(func, i)
-            # ADRP xd, <page>: opcode mask 0x9F000000 == 0x90000000
             if (raw & 0x9F000000) == 0x90000000:
                 return func_start + i + adj
         return None
 
     if scan_type == "arm64_mono_downmix":
-        # CapturedAudioProcessor::Process: conditional branch for mono path.
-        # On x86: test al,al ; je +0x0D ; cmp dword [rbx+off], 9
-        # On arm64: CBZ/CBNZ or TBZ/TBNZ followed by CMP #9 equivalent.
         for i in range(0, flen - 12, 4):
             raw = _read32(func, i)
             is_cbz = (raw & 0x7F000000) == 0x34000000
@@ -1691,15 +1491,6 @@ def _arm64_scan_within_function(data, func_start, func_size, scan_type, adj):
 
 
 def _resolve_elf_symbols(bin_info, data):
-    """Use ELF/Mach-O symbol table to resolve offsets directly.
-
-    Linux nodes (Stable, PTB, Canary) are not stripped; symbols are always
-    present. For function-start offsets, the symbol address is the offset.
-    For instruction-level offsets, we find the containing function then
-    do a targeted instruction scan within that function's range.
-
-    Returns (dict of {name: config_offset}, list of detail tuples).
-    """
     if not bin_info.get('has_symbols') or not bin_info.get('func_symbols'):
         return {}, []
 
@@ -1726,11 +1517,9 @@ def _resolve_elf_symbols(bin_info, data):
 
         if mapping.get('prefer_smallest'):
             candidates.sort(key=lambda c: c.get('size', 0x10000))
-        # Prefer largest function (real impl over lambda wrappers) if requested
         elif mapping.get('prefer_largest'):
             candidates.sort(key=lambda c: c.get('size', 0), reverse=True)
 
-        # Prefer exact name match over substring
         best = candidates[0]
         for c in candidates:
             if any(p.lower() == c['name'].lower().rstrip('_') for p in mapping['patterns']):
@@ -1740,14 +1529,11 @@ def _resolve_elf_symbols(bin_info, data):
         sym_addr = best['value']
 
         if mapping['at_start']:
-            # Function start - symbol address IS the config offset
             file_off = sym_addr - adj
             if 0 <= file_off < len(data):
                 resolved[offset_name] = sym_addr
                 details.append((offset_name, sym_addr, best['name'], 'symbol-direct'))
         else:
-            # Instruction-level - scan within the function for exact target.
-            # Try each candidate function in priority order until scan succeeds.
             linux_scan = mapping.get('linux_scan')
             scan_found = False
             for candidate in candidates:
@@ -1769,7 +1555,6 @@ def _resolve_elf_symbols(bin_info, data):
                         break
 
             if not scan_found:
-                # Store hint from best candidate for fallback scanning
                 func_size = best.get('size', 0)
                 if func_size == 0 or func_size > 0x10000:
                     func_size = 0x2000
@@ -1798,7 +1583,6 @@ def _resolve_elf_symbols(bin_info, data):
 # region Signature Scanner
 
 def scan_pattern(data, pattern, limit=0, start=0, end=None):
-    """Pattern scan via bytes.find() for first fixed byte then verify; returns list of file offsets."""
     matches = []
     pat_len = len(pattern)
     if end is None:
@@ -1811,7 +1595,7 @@ def scan_pattern(data, pattern, limit=0, start=0, end=None):
             break
 
     if first_fixed is None:
-        return matches  # all wildcards = meaningless
+        return matches
 
     skip_to, first_byte = first_fixed
     needle = bytes([first_byte])
@@ -1847,8 +1631,6 @@ def scan_pattern(data, pattern, limit=0, start=0, end=None):
 
 
 def find_offset(data, sig, text_start=0, text_end=None):
-    """Find offset using tiered pattern matching: primary -> relaxed alternates.
-    Returns (file_offset, error_or_None, tier_string)."""
 
     tiers = [(sig.pattern, sig.target_offset, "primary")]
     for i, (p, o) in enumerate(sig.alt_patterns):
@@ -1863,8 +1645,8 @@ def find_offset(data, sig, text_start=0, text_end=None):
         if len(matches) == 1:
             file_offset = matches[0] + target_off
             if 0 <= file_offset < len(data):
-                if sig.name == "EmulateStereoSuccess1" and not has_nearby_stereo_setter(data, matches[0], 120):
-                    print(f"  [FILTER] EmulateStereoSuccess1 @ 0x{matches[0]:X} has no nearby stereo setter (accepting anyway)")
+                if sig.name == "CodecProbe_ChannelCountPatch" and not has_nearby_stereo_setter(data, matches[0], 120):
+                    print(f"  [FILTER] CodecProbe_ChannelCountPatch @ 0x{matches[0]:X} has no nearby stereo setter (accepting anyway)")
                 return file_offset, None, tier
 
         resolved = list(matches)
@@ -1873,19 +1655,19 @@ def find_offset(data, sig, text_start=0, text_end=None):
             if len(valid) >= 1:
                 resolved = valid
 
-        if sig.name == "EmulateStereoSuccess1" and len(resolved) >= 1:
+        if sig.name == "CodecProbe_ChannelCountPatch" and len(resolved) >= 1:
             resolved = [m for m in resolved if _ess1_no_duplicate_cmp_in_next_24(data, m)]
             if not resolved:
                 continue
-        if sig.name == "EmulateStereoSuccess1" and len(resolved) >= 1:
+        if sig.name == "CodecProbe_ChannelCountPatch" and len(resolved) >= 1:
             with_setter = [m for m in resolved if has_nearby_stereo_setter(data, m, 120)]
             if len(resolved) > 1 and len(with_setter) >= 1:
                 for m in resolved:
                     if m not in with_setter:
-                        print(f"  [FILTER] Rejected EmulateStereoSuccess1 @ 0x{m:X} — no nearby stereo setter")
+                        print(f"  [FILTER] Rejected CodecProbe_ChannelCountPatch @ 0x{m:X} — no nearby stereo setter")
                 resolved = with_setter
             elif len(resolved) == 1 and not with_setter:
-                print(f"  [FILTER] EmulateStereoSuccess1 @ 0x{resolved[0]:X} has no nearby stereo setter (accepting anyway)")
+                print(f"  [FILTER] CodecProbe_ChannelCountPatch @ 0x{resolved[0]:X} has no nearby stereo setter (accepting anyway)")
 
         if len(resolved) > 1 and sig.expected_original:
             expected = bytes.fromhex(sig.expected_original.replace(' ', ''))
@@ -1934,17 +1716,12 @@ CONFIDENCE_ORIGINAL_BYTES = 25
 CONFIDENCE_FINGERPRINT_MATCH = 20
 CONFIDENCE_HEURISTIC_PATTERN = 15
 
-# Opcode prefixes and common instruction starts (x86-64)
 _OPCODE_PREFIXES = (0x66, 0xF2, 0xF3, 0x2E, 0x3E, 0x26, 0x64, 0x65, 0x36)
 _COMMON_OPCODES = (0x48, 0x49, 0x4C, 0x4D, 0x55, 0x53, 0x56, 0x57, 0x41, 0xC3,
                    0x89, 0x8B, 0xB8, 0xB9, 0xC7, 0xE8, 0xE9, 0x74, 0x75, 0x0F)
 
 
 def validate_context(binary_data, offset, expected_prefix=None, expected_suffix=None):
-    """Validate surrounding opcode context at a patch location.
-    Reads 16-32 bytes before and after, checks instruction-like patterns.
-    Handles both x86-64 and ARM64 code regions.
-    Returns True if context appears valid."""
     if not isinstance(binary_data, (bytes, bytearray)):
         return False
     n = len(binary_data)
@@ -1956,16 +1733,12 @@ def validate_context(binary_data, offset, expected_prefix=None, expected_suffix=
         return False
     pre = binary_data[offset - before:offset]
     suf = binary_data[offset:offset + after]
-    # Check that region is not all zeros or all 0xFF (data/padding)
     if pre == b'\x00' * len(pre) or pre == b'\xff' * len(pre):
         return False
     if suf == b'\x00' * len(suf) or suf == b'\xff' * len(suf):
         return False
-    # Detect ARM64 context (4-byte aligned instructions, common ARM64 patterns)
     is_arm64 = False
     if offset % 4 == 0 and len(pre) >= 16:
-        # Check if the region looks like ARM64 (many 4-byte aligned values
-        # with common ARM64 top nibbles)
         arm64_like = 0
         for i in range(0, min(16, len(pre)) - 3, 4):
             top_byte = pre[i + 3]
@@ -1976,16 +1749,13 @@ def validate_context(binary_data, offset, expected_prefix=None, expected_suffix=
         if arm64_like >= 2:
             is_arm64 = True
     if is_arm64:
-        # ARM64 validation: check for reasonable instruction density
         arm_valid = 0
         for i in range(0, min(16, len(pre)) - 3, 4):
             word = struct.unpack_from('<I', pre, i)[0]
-            # Common ARM64 instruction classes (rough check on top bits)
             top4 = (word >> 28) & 0xF
             if top4 in (0x0, 0x1, 0x2, 0x3, 0x5, 0x6, 0x7, 0x9, 0xA, 0xB, 0xD, 0xF):
                 arm_valid += 1
         return arm_valid >= 2
-    # x86-64 opcode density: expect some bytes that look like opcodes
     opcode_like = sum(1 for b in pre[-16:] if b in _COMMON_OPCODES or b in _OPCODE_PREFIXES)
     if opcode_like < 2:
         return False
@@ -2001,12 +1771,6 @@ def validate_context(binary_data, offset, expected_prefix=None, expected_suffix=
 
 
 def compute_function_fingerprint(binary_data, offset, window=96):
-    """Compute a stable hash of the surrounding function region (x86-64 only).
-    Masks immediate values (operands of mov, call, jmp, lea, cmp) to reduce
-    sensitivity to small constant or address changes. Returns hex digest string.
-
-    Used when known_fingerprints is passed; the main discovery path does not
-    supply fingerprints—signature + expected bytes are enough."""
     n = len(binary_data)
     if offset < 0 or offset >= n:
         return ""
@@ -2017,50 +1781,41 @@ def compute_function_fingerprint(binary_data, offset, window=96):
         return ""
     region = bytearray(binary_data[start:end])
     rlen = len(region)
-    # Mask potential immediates to produce a stable fingerprint
     i = 0
     while i < rlen - 2:
         b0 = region[i]
         b1 = region[i + 1] if i + 1 < rlen else 0
-        # MOV r32, imm32 (B8-BF)
         if 0xB8 <= b0 <= 0xBF and i + 5 <= rlen:
             for j in range(1, 5):
                 region[i + j] = 0
             i += 5
             continue
-        # REX.W + MOV r64, imm64 (48 B8-BF)
         if b0 == 0x48 and 0xB8 <= b1 <= 0xBF and i + 10 <= rlen:
             for j in range(2, 10):
                 region[i + j] = 0
             i += 10
             continue
-        # CALL rel32 / JMP rel32 (E8 / E9)
         if b0 in (0xE8, 0xE9) and i + 5 <= rlen:
             for j in range(1, 5):
                 region[i + j] = 0
             i += 5
             continue
-        # JMP rel8 / Jcc rel8 (EB / 70-7F)
         if b0 == 0xEB or (0x70 <= b0 <= 0x7F):
             if i + 2 <= rlen:
                 region[i + 1] = 0
             i += 2
             continue
-        # MOV r/m, imm32 with REX (48 C7)
         if b0 == 0x48 and b1 == 0xC7 and i + 7 <= rlen:
-            # Mask the imm32 (bytes 3-6 from start, assuming ModRM at +2)
             for j in range(3, 7):
                 if i + j < rlen:
                     region[i + j] = 0
             i += 7
             continue
-        # LEA with RIP-relative (48 8D 05/0D/15/1D/25/2D/35/3D)
         if b0 in (0x48, 0x4C) and b1 == 0x8D and i + 6 <= rlen:
             for j in range(3, min(7, rlen - i)):
                 region[i + j] = 0
             i += 7
             continue
-        # Two-byte Jcc rel32 (0F 80-8F)
         if b0 == 0x0F and 0x80 <= b1 <= 0x8F and i + 6 <= rlen:
             for j in range(2, 6):
                 region[i + j] = 0
@@ -2071,33 +1826,15 @@ def compute_function_fingerprint(binary_data, offset, window=96):
 
 
 def _detect_function_boundary(binary_data, offset, direction=-1, max_scan=512):
-    """Scan for probable function boundaries near offset.
-
-    Looks for alignment padding (CC CC, 90 90, 66 2E 0F 1F), RET+padding,
-    or common function prologues to estimate if offset is inside valid code.
-
-    Args:
-        binary_data: raw binary bytes
-        offset: position to scan from
-        direction: -1 for backward (find start), +1 for forward (find end)
-        max_scan: maximum bytes to scan
-
-    Returns (boundary_offset, confidence) or (None, 0).
-    """
     n = len(binary_data)
     if offset < 0 or offset >= n:
         return None, 0
 
-    # MSVC int3 padding: CC CC CC CC
-    # Clang NOP padding: 66 2E 0F 1F, 0F 1F 84 00, 90 90 90
-    # Function end: C3 (ret) followed by padding
 
     if direction < 0:
-        # Scan backward for function start
         start = max(0, offset - max_scan)
         for i in range(offset - 1, start, -1):
             b = binary_data[i]
-            # 4+ bytes of CC padding => function boundary just after
             if b == 0xCC and i + 4 <= n:
                 run = 0
                 for j in range(i, min(i + 8, n)):
@@ -2109,30 +1846,24 @@ def _detect_function_boundary(binary_data, offset, direction=-1, max_scan=512):
                     boundary = i + run
                     if boundary <= offset:
                         return boundary, 8
-            # Clang: ret followed by NOP alignment
             if b == 0xC3 and i + 2 <= n:
                 nxt = binary_data[i + 1]
                 if nxt in (0x90, 0x66, 0x0F, 0xCC):
                     boundary = i + 1
-                    # Advance past NOPs
                     while boundary < n and binary_data[boundary] in (0x90, 0xCC):
                         boundary += 1
                     if boundary <= offset:
                         return boundary, 6
         return None, 0
     else:
-        # Scan forward for function end
         end = min(n, offset + max_scan)
         for i in range(offset, end):
             b = binary_data[i]
             if b == 0xC3 and i > offset + 4:
-                # Check for padding after ret
                 if i + 1 < n and binary_data[i + 1] in (0xCC, 0x90, 0x66, 0x0F):
                     return i, 7
-                # ret at end of a basic block (next byte is a new function prologue)
                 if i + 1 < n and binary_data[i + 1] in (0x55, 0x56, 0x57, 0x41, 0x53):
                     return i, 5
-            # CC padding block
             if b == 0xCC and i + 3 < n:
                 if binary_data[i + 1] == 0xCC and binary_data[i + 2] == 0xCC:
                     return i, 7
@@ -2140,23 +1871,13 @@ def _detect_function_boundary(binary_data, offset, direction=-1, max_scan=512):
 
 
 def _estimate_instruction_flow(binary_data, offset, count=8):
-    """Estimate whether bytes at offset form a plausible x86-64 instruction
-    stream by checking for valid instruction prefixes and opcode patterns.
-
-    Walks forward from offset, using simplified length estimation for common
-    instruction forms. Returns (valid_count, total_checked) where valid_count
-    is how many instructions looked plausible.
-    """
     n = len(binary_data)
     pos = offset
     valid = 0
     checked = 0
 
-    # REX prefixes (0x40-0x4F), common opcodes, and mandatory prefixes
     rex_range = range(0x40, 0x50)
     mandatory_prefixes = (0x66, 0xF2, 0xF3)
-    # Simplified length table for common single-byte opcodes
-    # Maps first byte -> (min_length, max_length) for the full instruction
     _LEN_HINTS = {
         0x50: (1, 1), 0x51: (1, 1), 0x52: (1, 1), 0x53: (1, 1),
         0x54: (1, 1), 0x55: (1, 1), 0x56: (1, 1), 0x57: (1, 1),
@@ -2164,8 +1885,8 @@ def _estimate_instruction_flow(binary_data, offset, count=8):
         0x5C: (1, 1), 0x5D: (1, 1), 0x5E: (1, 1), 0x5F: (1, 1),
         0x90: (1, 1), 0xC3: (1, 1), 0xCC: (1, 1), 0xCB: (1, 1),
         0xC9: (1, 1),
-        0xE8: (5, 5), 0xE9: (5, 5),  # call/jmp rel32
-        0xEB: (2, 2),  # jmp rel8
+        0xE8: (5, 5), 0xE9: (5, 5),
+        0xEB: (2, 2),
         0x74: (2, 2), 0x75: (2, 2), 0x70: (2, 2), 0x71: (2, 2),
         0x72: (2, 2), 0x73: (2, 2), 0x76: (2, 2), 0x77: (2, 2),
         0x78: (2, 2), 0x79: (2, 2), 0x7A: (2, 2), 0x7B: (2, 2),
@@ -2178,7 +1899,6 @@ def _estimate_instruction_flow(binary_data, offset, count=8):
         b0 = binary_data[pos]
         step = 0
 
-        # Skip REX prefix
         adj_pos = pos
         if b0 in rex_range:
             adj_pos += 1
@@ -2193,18 +1913,15 @@ def _estimate_instruction_flow(binary_data, offset, count=8):
             step = mn + (adj_pos - pos)
             valid += 1
         elif b0 in mandatory_prefixes or b0 in rex_range:
-            # Prefixed instruction: assume 2-7 bytes total, accept as plausible
             step = 3
             valid += 1
         elif b0 in (0x0F,):
-            # Two-byte opcode escape
             step = 3
             valid += 1
         elif b0 in _COMMON_OPCODES or b0 in _OPCODE_PREFIXES:
             step = 2
             valid += 1
         else:
-            # Unknown but not necessarily invalid
             step = 2
 
         checked += 1
@@ -2214,7 +1931,6 @@ def _estimate_instruction_flow(binary_data, offset, count=8):
 
 
 def run_heuristic_analysis(binary_data, offset, patch_len=4):
-    """Heuristic score (max 15) for patch site plausibility; returns (ok, score)."""
     if offset < 32 or offset + 32 > len(binary_data):
         return False, 0
     score = 0
@@ -2272,7 +1988,6 @@ def run_heuristic_analysis(binary_data, offset, patch_len=4):
 
 def calculate_confidence(signature_match, context_valid, original_bytes_match,
                          fingerprint_match, heuristic_score):
-    """Aggregate confidence from validation signals. Returns integer 0-100+."""
     total = 0
     if signature_match:
         total += CONFIDENCE_SIGNATURE_MATCH
@@ -2289,11 +2004,9 @@ def calculate_confidence(signature_match, context_valid, original_bytes_match,
 def validate_patch_site(binary_data, offset, expected_original_bytes, patch_bytes,
                         patch_name="", known_fingerprints=None, expected_prefix=None,
                         expected_suffix=None):
-    """Validate a patch location without writing. Returns (ok, confidence, messages)."""
     messages = []
     if offset < 0 or offset >= len(binary_data):
         return False, 0, ["offset out of bounds"]
-    # Normalize byte inputs
     if isinstance(expected_original_bytes, str):
         exp_orig = bytes.fromhex(expected_original_bytes.replace(' ', '')) if expected_original_bytes.strip() else b''
     else:
@@ -2306,40 +2019,31 @@ def validate_patch_site(binary_data, offset, expected_original_bytes, patch_byte
     if offset + read_len > len(binary_data):
         return False, 0, ["patch region exceeds binary size"]
     current = binary_data[offset:offset + read_len]
-    # Pre-patch byte validation
     orig_match = True
     if len(exp_orig) > 0:
         if current[:len(exp_orig)] != exp_orig:
             orig_match = False
             messages.append("unexpected bytes at patch location")
-    # Context validation
     ctx_ok = validate_context(binary_data, offset, expected_prefix, expected_suffix)
     if not ctx_ok:
         messages.append("context validation failed")
-    # Fingerprint check (optional; main pipeline does not pass known_fingerprints)
     fp = compute_function_fingerprint(binary_data, offset)
     fp_match = False
     if known_fingerprints and fp and fp in known_fingerprints:
         fp_match = True
     elif known_fingerprints and fp:
         messages.append("fingerprint mismatch")
-    # Heuristic analysis (x86-centric opcode/boundary checks)
     heur_ok, heur_score = run_heuristic_analysis(binary_data, offset, len(patch_b))
-    # When expected original bytes already match, trust that over heuristic layout
-    # (Clang/ELF layouts can score low on x86 heuristics while still being valid)
     if orig_match and len(exp_orig) > 0:
         heur_ok, heur_score = True, CONFIDENCE_HEURISTIC_PATTERN
     elif not heur_ok:
         messages.append("heuristic analysis uncertain")
-    # Calculate aggregate confidence
     conf = calculate_confidence(True, ctx_ok, orig_match, fp_match, heur_score)
     ok = conf >= CONFIDENCE_THRESHOLD
     return ok, conf, messages
 
 
 def _run_patch_site_validation(data, file_offset, sig_or_dict, adj=0):
-    """Helper: run validation for a discovered offset. sig_or_dict is Signature or
-    dict with 'o','x','n' (orig, patch, name). Returns (ok, confidence, messages)."""
     if hasattr(sig_or_dict, 'expected_original') and hasattr(sig_or_dict, 'patch_bytes'):
         exp = sig_or_dict.expected_original or ''
         patch = sig_or_dict.patch_bytes or ''
@@ -2348,7 +2052,6 @@ def _run_patch_site_validation(data, file_offset, sig_or_dict, adj=0):
         exp = sig_or_dict.get('o', '') or ''
         patch = sig_or_dict.get('x', '') or ''
         name = sig_or_dict.get('n', '') or ''
-    # Skip validation for dynamic patches (injected code, stubs)
     if patch.startswith('<'):
         return True, 100, []
     if not exp and not patch:
@@ -2379,7 +2082,6 @@ def _run_patch_site_validation(data, file_offset, sig_or_dict, adj=0):
 # region Offset Discovery Engine
 
 def _topo_sort_derivations(derivations):
-    """Sort derivation keys so parents resolve before children."""
     all_derived = set(derivations.keys())
     order = []
     visited = set()
@@ -2399,98 +2101,92 @@ def _topo_sort_derivations(derivations):
     return order
 
 
-def _all_offset_names():
-    return list(ALL_OFFSET_NAMES)
-
 
 ALL_OFFSET_NAMES = [
-    "CreateAudioFrameStereo",
-    "AudioEncoderOpusConfigSetChannels",
-    "AudioEncoderMultiChannelOpusCh",
-    "MonoDownmixer",
-    "EmulateStereoSuccess1",
-    "EmulateStereoSuccess2",
-    "EmulateBitrateModified",
-    "SetsBitrateBitrateValue",
-    "SetsBitrateBitwiseOr",
-    "Emulate48Khz",
-    "HighPassFilter",
-    "HighpassCutoffFilter",
-    "DcReject",
-    "DownmixFunc",
-    "AudioEncoderOpusConfigIsOk",
-    "ThrowError",
-    "EncoderConfigInit1",
-    "EncoderConfigInit2",
+    "AudioFrame_StereoChannelAssign",
+    "OpusEncoderConfig_SetStereoChannels",
+    "DownmixMono_BypassBranch",
+    "CodecProbe_ChannelCountPatch",
+    "CodecProbe_ForceSuccessBranch",
+    "OpusBitrate_Imul384k",
+    "AudioEncoder_BitrateMovImm",
+    "AudioEncoder_BitrateOrMaskNop",
+    "SampleRate_Select48kNop",
+    "WebRtcHighpass_Trampoline",
+    "WebRtcHighpassCutoff_Injected",
+    "WebRtcDcReject_Injected",
+    "ChannelDownmix_RetStub",
+    "OpusEncoderConfig_IsOkRetTrue",
+    "AudioEncoderCodec_ThrowNoOp",
+    "OpusEncoderConfig_CtorBitrate_A",
+    "OpusEncoderConfig_CtorBitrate_B",
+    "OpusEncoderConfig_CtorUseInbandFecOn",
 ]
 
-WINDOWS_PATCHER_OFFSET_NAMES = [
-    # Core 17: required for stereo/bitrate/encoder/filter pipeline.
-    "CreateAudioFrameStereo",
-    "AudioEncoderOpusConfigSetChannels",
-    "MonoDownmixer",
-    "EmulateStereoSuccess1",
-    "EmulateStereoSuccess2",
-    "EmulateBitrateModified",
-    "SetsBitrateBitrateValue",
-    "SetsBitrateBitwiseOr",
-    "Emulate48Khz",
-    "HighPassFilter",
-    "HighpassCutoffFilter",
-    "DcReject",
-    "DownmixFunc",
-    "AudioEncoderOpusConfigIsOk",
-    "ThrowError",
-    "EncoderConfigInit1",
-    "EncoderConfigInit2",
-]
+LINUX_ONLY_OFFSET_NAMES = ("OpusEncoderConfig_SetMultiChannelStereo",)
 
-# Windows-only extended sites (Discord_voice_node_patcher.ps1 PACKETLOSS / NETEQ / PACING / DISCORD_API_LOCK).
-WINDOWS_EXTENDED_OFFSET_NAMES = [
-    "OpusPacketLossCvtt1",
-    "OpusPacketLossCvtt2",
-    "NetEqDelayMgr_MsPerLossPercent",
-    "Pacer_BlockAudio_Disable",
-    "Discord_SetAutomaticGainControl_1",
-    "Discord_SetAutomaticGainControl_2",
-    "Discord_SetNoiseSuppression_1",
-    "Discord_SetNoiseSuppression_2",
-    "Discord_SetEchoCancellation_1",
-    "Discord_SetEchoCancellation_2",
-    "Discord_SetEchoCancellationPre",
-    "Discord_EnableBuiltInAEC",
-    "Discord_SetNoiseCancellation",
-    "Discord_SetNoiseCancellationDuring",
-    "Discord_SetNoiseCancellationStats",
-    "Discord_SetSidechainCompression",
-    "Discord_SetHasFullbandPerformance",
-    "Discord_SetDuckingPreference",
-    "Discord_SetIdleJitterBufferFlush",
-    "Discord_SetAudioInputEnabled",
-    "Discord_SetAecDump",
-]
+
+def _all_offset_names():
+    return list(ALL_OFFSET_NAMES) + list(LINUX_ONLY_OFFSET_NAMES)
+
+
+def _missing_discovered(results, fmt):
+    m = [n for n in _all_offset_names() if n not in results]
+    if fmt == "pe":
+        m = [n for n in m if n not in LINUX_ONLY_OFFSET_NAMES]
+    return m
+
+
+_WINDOWS_PATCHER_OFFSET_ORDER = (
+    "AudioFrame_StereoChannelAssign",
+    "OpusEncoderConfig_SetStereoChannels",
+    "DownmixMono_BypassBranch",
+    "CodecProbe_ChannelCountPatch",
+    "CodecProbe_ForceSuccessBranch",
+    "OpusBitrate_Imul384k",
+    "AudioEncoder_BitrateMovImm",
+    "AudioEncoder_BitrateOrMaskNop",
+    "SampleRate_Select48kNop",
+    "WebRtcHighpass_Trampoline",
+    "WebRtcHighpassCutoff_Injected",
+    "WebRtcDcReject_Injected",
+    "ChannelDownmix_RetStub",
+    "OpusEncoderConfig_IsOkRetTrue",
+    "AudioEncoderCodec_ThrowNoOp",
+    "OpusEncoderConfig_CtorBitrate_A",
+    "OpusEncoderConfig_CtorBitrate_B",
+    "OpusEncoderConfig_CtorUseInbandFecOn",
+    "NetEq_DelayMsPerLossPercent",
+    "Pacer_ForceBlockAudioFalse",
+    "Discord_SetAutomaticGainControlConfig",
+    "Discord_SetAutomaticGainControl_bool",
+    "Discord_SetNoiseSuppression_bool",
+    "Discord_SetEchoCancellation_bool",
+    "Discord_SetEchoCancellationPreEcho_bool",
+    "Discord_EnableBuiltInAcousticEchoCancel_bool",
+    "Discord_SetNoiseCancellation_bool",
+    "Discord_SetNoiseCancellationDuringProcessing_bool",
+)
+if len(_WINDOWS_PATCHER_OFFSET_ORDER) != 28:
+    raise RuntimeError("_WINDOWS_PATCHER_OFFSET_ORDER must be 28 entries (patcher sync)")
+
+WINDOWS_PATCHER_OFFSET_NAMES = list(_WINDOWS_PATCHER_OFFSET_ORDER[:18])
+WINDOWS_EXTENDED_OFFSET_NAMES = list(_WINDOWS_PATCHER_OFFSET_ORDER[18:])
 
 WINDOWS_DISCORD_EXPORT_NAMES = {
-    "Discord_SetAutomaticGainControl_1": "?SetAutomaticGainControl@Discord@@QEAAX_N@Z",
-    "Discord_SetAutomaticGainControl_2": "?SetAutomaticGainControl@Discord@@QEAAXH@Z",
-    "Discord_SetNoiseSuppression_1": "?SetNoiseSuppression@Discord@@QEAAX_N@Z",
-    "Discord_SetNoiseSuppression_2": "?SetNoiseSuppression@Discord@@QEAAXH@Z",
-    "Discord_SetEchoCancellation_1": "?SetEchoCancellation@Discord@@QEAAX_N@Z",
-    "Discord_SetEchoCancellation_2": "?SetEchoCancellation@Discord@@QEAAXH@Z",
-    "Discord_SetEchoCancellationPre": "?SetEchoCancellationPreEcho@Discord@@QEAAX_N@Z",
-    "Discord_EnableBuiltInAEC": "?EnableBuiltInAEC@Discord@@QEAAX_N@Z",
-    "Discord_SetNoiseCancellation": "?SetNoiseCancellation@Discord@@QEAAX_N@Z",
-    "Discord_SetNoiseCancellationDuring": "?SetNoiseCancellationDuringProcessing@Discord@@QEAAX_N@Z",
-    "Discord_SetNoiseCancellationStats": "?SetNoiseCancellationEnableStats@Discord@@QEAAX_N@Z",
-    "Discord_SetSidechainCompression": "?SetSidechainCompression@Discord@@QEAAX_N@Z",
-    "Discord_SetHasFullbandPerformance": "?SetHasFullbandPerformance@Discord@@QEAAX_N@Z",
-    "Discord_SetDuckingPreference": "?SetDuckingPreference@Discord@@QEAAX_N@Z",
-    "Discord_SetIdleJitterBufferFlush": "?SetIdleJitterBufferFlush@Discord@@QEAAX_N@Z",
-    "Discord_SetAudioInputEnabled": "?SetAudioInputEnabled@Discord@@QEAAX_N@Z",
-    "Discord_SetAecDump": "?SetAecDump@Discord@@QEAAX_N@Z",
+    "Discord_SetAutomaticGainControlConfig": "?SetAutomaticGainControlConfig@Discord@@QEAAXUGainControllerConfig@media@discord@@@Z",
+    "Discord_SetAutomaticGainControl_bool": "?SetAutomaticGainControl@Discord@@QEAAX_N@Z",
+    "Discord_SetNoiseSuppression_bool": "?SetNoiseSuppression@Discord@@QEAAX_N@Z",
+    "Discord_SetEchoCancellation_bool": "?SetEchoCancellation@Discord@@QEAAX_N@Z",
+    "Discord_SetEchoCancellationPreEcho_bool": "?SetEchoCancellationPreEcho@Discord@@QEAAX_N@Z",
+    "Discord_EnableBuiltInAcousticEchoCancel_bool": "?EnableBuiltInAEC@Discord@@QEAAX_N@Z",
+    "Discord_SetNoiseCancellation_bool": "?SetNoiseCancellation@Discord@@QEAAX_N@Z",
+    "Discord_SetNoiseCancellationDuringProcessing_bool": "?SetNoiseCancellationDuringProcessing@Discord@@QEAAX_N@Z",
 }
+if set(WINDOWS_DISCORD_EXPORT_NAMES) != set(_WINDOWS_PATCHER_OFFSET_ORDER[20:]):
+    raise RuntimeError("WINDOWS_DISCORD_EXPORT_NAMES keys must match Discord API LOCK entries in _WINDOWS_PATCHER_OFFSET_ORDER[20:]")
 
-PATCHER_OFFSET_NAMES = list(WINDOWS_PATCHER_OFFSET_NAMES) + list(WINDOWS_EXTENDED_OFFSET_NAMES)
+PATCHER_OFFSET_NAMES = list(_WINDOWS_PATCHER_OFFSET_ORDER)
 
 if len(ALL_OFFSET_NAMES) != len(set(ALL_OFFSET_NAMES)):
     raise RuntimeError("ALL_OFFSET_NAMES has duplicate entries (breaks patcher hit counting)")
@@ -2499,24 +2195,26 @@ if len(PATCHER_OFFSET_NAMES) != len(set(PATCHER_OFFSET_NAMES)):
 
 
 def count_patcher_offsets_found(results, patcher_names=None):
-    """Return (hits, required) using a de-duplicated patcher name list (stable order)."""
     names = list(dict.fromkeys(patcher_names or PATCHER_OFFSET_NAMES))
     hits = sum(1 for k in names if k in results)
     return hits, len(names)
 
 
-ALLOWED_OFFSET_NAMES = frozenset(ALL_OFFSET_NAMES) | frozenset(WINDOWS_EXTENDED_OFFSET_NAMES)
+ALLOWED_OFFSET_NAMES = (
+    frozenset(ALL_OFFSET_NAMES)
+    | frozenset(WINDOWS_EXTENDED_OFFSET_NAMES)
+    | frozenset(LINUX_ONLY_OFFSET_NAMES)
+)
 for _map_name, _map in (("ELF_SYMBOL_MAP", ELF_SYMBOL_MAP), ("ARM64_SYMBOL_MAP", ARM64_SYMBOL_MAP)):
     _extra = set(_map.keys()) - ALLOWED_OFFSET_NAMES
     if _extra:
-        raise RuntimeError("%s has keys not in ALL_OFFSET_NAMES: %s" % (_map_name, sorted(_extra)))
+        raise RuntimeError("%s has keys not in ALLOWED_OFFSET_NAMES: %s" % (_map_name, sorted(_extra)))
 
 
 def _log_context_fingerprints(data, results, adj):
-    """Log SHA1(32b before + 32b after) for top-5 critical patch sites."""
     critical = [
-        "EmulateStereoSuccess1", "AudioEncoderOpusConfigSetChannels", "MonoDownmixer",
-        "SetsBitrateBitrateValue", "CreateAudioFrameStereo",
+        "CodecProbe_ChannelCountPatch", "OpusEncoderConfig_SetStereoChannels", "DownmixMono_BypassBranch",
+        "AudioEncoder_BitrateMovImm", "AudioFrame_StereoChannelAssign",
     ]
     for name in critical:
         if name not in results:
@@ -2531,7 +2229,6 @@ def _log_context_fingerprints(data, results, adj):
 
 
 def _prune_results_to_allowed(results, tiers_used=None, label=""):
-    """Remove keys not in ALLOWED_OFFSET_NAMES."""
     if not results:
         return
     removed = [k for k in list(results.keys()) if k not in ALLOWED_OFFSET_NAMES]
@@ -2544,7 +2241,6 @@ def _prune_results_to_allowed(results, tiers_used=None, label=""):
 
 
 def _sliding_window_recover(data, anchor_config, delta, name, adj, bin_fmt='pe'):
-    """Scan ±WINDOW around expected position for original bytes; returns (config_offset, slide) or (None, 0)."""
     exp_map = _build_expected_map(bin_fmt)
 
     if name not in exp_map:
@@ -2556,20 +2252,16 @@ def _sliding_window_recover(data, anchor_config, delta, name, adj, bin_fmt='pe')
 
     expected = bytes.fromhex(exp_hex.replace(' ', ''))
     if len(expected) < 2:
-        # Single-byte expected values are too common for safe sliding
-        # (e.g., 0x01, 0x41) - only allow tiny window
         window = min(SLIDING_WINDOW_OVERRIDES.get(name, 16), 16)
     else:
         window = SLIDING_WINDOW_OVERRIDES.get(name, SLIDING_WINDOW_DEFAULT)
 
     exact_file = anchor_config + delta - adj
 
-    # Check exact position first
     if 0 <= exact_file and exact_file + len(expected) <= len(data):
         if data[exact_file:exact_file + len(expected)] == expected:
             return anchor_config + delta, 0
 
-    # For single-byte expected, collect ALL positions in window; reject if ambiguous
     if len(expected) == 1:
         candidates = []
         for dist in range(1, window + 1):
@@ -2586,7 +2278,6 @@ def _sliding_window_recover(data, anchor_config, delta, name, adj, bin_fmt='pe')
         candidate, slide_dist = candidates[0]
         return candidate + adj, slide_dist
 
-    # Multi-byte expected: scan window, preferring closer matches
     for dist in range(1, window + 1):
         for direction in (+1, -1):
             candidate = exact_file + (dist * direction)
@@ -2599,7 +2290,6 @@ def _sliding_window_recover(data, anchor_config, delta, name, adj, bin_fmt='pe')
 
 
 def _find_emulate_bitrate_in_anchor_window(data, anchor_file, adj, window=0x2000):
-    """Find 32000 literal (00 7D 00 00) near anchor; prefer imul; return (config_offset, reason) or (None, None)."""
     literal_32000 = b'\x00\x7d\x00\x00'
     start = max(0, anchor_file - window)
     end = min(len(data) - 4, anchor_file + window)
@@ -2620,50 +2310,47 @@ def _find_emulate_bitrate_in_anchor_window(data, anchor_file, adj, window=0x2000
 
 
 def _run_heuristic_scan(data, missing_names, adj, text_start, text_end):
-    """Last-resort search for missing offsets via instruction patterns."""
     hints = []
-    if "EmulateBitrateModified" in missing_names:
+    if "OpusBitrate_Imul384k" in missing_names:
         imul_pat = Signature._parse("69 ?? 00 7D 00 00")
         matches = scan_pattern(data, imul_pat, start=text_start, end=text_end)
         for m in matches:
             candidate_file = m + 2
             reason = f"imul *,32000 @file:0x{m:X}"
-            hints.append(("EmulateBitrateModified", candidate_file, reason))
-    if "Emulate48Khz" in missing_names:
+            hints.append(("OpusBitrate_Imul384k", candidate_file, reason))
+    if "SampleRate_Select48kNop" in missing_names:
         for i in range(text_start, min(text_end, len(data) - 24)):
             if data[i] == 0x83 and 0xB8 <= data[i+1] <= 0xBF and (data[i+1] & 7) != 4:
                 if i + 7 <= len(data) and data[i+6] == 0x02:
                     for j in range(7, 20):
                         if i + j + 2 <= len(data) and data[i+j] == 0x0F and 0x40 <= data[i+j+1] <= 0x4F:
-                            hints.append(("Emulate48Khz", i + j, f"cmp ...,2 + cmov @file:0x{i:X} [HEURISTIC USED]"))
+                            hints.append(("SampleRate_Select48kNop", i + j, f"cmp ...,2 + cmov @file:0x{i:X} [HEURISTIC USED]"))
                             break
             if data[i:i+2] == b'\x41\x83' and i + 8 <= len(data):
                 if 0xB8 <= data[i+2] <= 0xBF and (data[i+2] & 7) != 4 and data[i+7] == 0x02:
                     for j in range(8, 24):
                         if i + j + 2 <= len(data) and data[i+j] == 0x0F and 0x40 <= data[i+j+1] <= 0x4F:
-                            hints.append(("Emulate48Khz", i + j, f"41 83 cmp ...,2 + cmov @file:0x{i:X} [HEURISTIC USED]"))
+                            hints.append(("SampleRate_Select48kNop", i + j, f"41 83 cmp ...,2 + cmov @file:0x{i:X} [HEURISTIC USED]"))
                             break
-    if "CreateAudioFrameStereo" in missing_names:
+    if "AudioFrame_StereoChannelAssign" in missing_names:
         pair_pat = Signature._parse("B8 80 BB 00 00 BD 00 7D 00 00")
         matches = scan_pattern(data, pair_pat, start=text_start, end=text_end, limit=5)
         for m in matches:
-            # Scan forward for the second cmovae (4C 0F 43 E8)
             for off in range(20, 60):
                 pos = m + off
                 if pos + 4 <= len(data) and data[pos:pos+4] == b'\x4C\x0F\x43\xE8':
-                    hints.append(("CreateAudioFrameStereo", pos, f"48k/32k pair + cmovae @file:0x{m:X}"))
+                    hints.append(("AudioFrame_StereoChannelAssign", pos, f"48k/32k pair + cmovae @file:0x{m:X}"))
                     break
-    if "AudioEncoderOpusConfigSetChannels" in missing_names:
+    if "OpusEncoderConfig_SetStereoChannels" in missing_names:
         bb80_pat = Signature._parse("48 B9 14 00 00 00 80 BB 00 00")
         matches = scan_pattern(data, bb80_pat, start=text_start, end=text_end, limit=5)
         for m in matches:
-            # Scan forward for mov qword [rax+N], imm (48 C7 40 NN)
             for scan in range(12, 40):
                 pos = m + scan
                 if pos + 5 <= len(data) and data[pos] == 0x48 and data[pos+1] == 0xC7:
                     target = pos + 4
                     if target < len(data):
-                        hints.append(("AudioEncoderOpusConfigSetChannels", target,
+                        hints.append(("OpusEncoderConfig_SetStereoChannels", target,
                                      f"Opus config struct @file:0x{m:X}"))
                     break
 
@@ -2695,20 +2382,9 @@ def _run_heuristic_scan(data, missing_names, adj, text_start, text_end):
 
 
 def _cross_validate(results, adj, data, tiers_used=None, bin_fmt='pe'):
-    """Cross-validate discovered offsets.
-
-    On **PE**: optional derivation-distance checks against DERIVATIONS (MSVC-oriented
-    layout), plus symbol-tier skips when the address came from the symbol table.
-
-    On **ELF/Mach-O**: derivation distances are not meaningful vs MSVC anchors; Phase 3
-    byte verification is authoritative. We only run encoder-init literal checks here.
-
-    (There is no separate "DuplicateEmulateBitrateModified" check in this function.)
-    """
     warnings = []
     tiers = tiers_used or {}
 
-    # Derivation-distance sanity: PE only (Clang layout != MSVC fixed deltas).
     if bin_fmt == 'pe':
         for derived_name, paths in DERIVATIONS.items():
             if derived_name not in results:
@@ -2735,8 +2411,8 @@ def _cross_validate(results, adj, data, tiers_used=None, bin_fmt='pe'):
             if checked_any and not matched_any and mismatch_msg:
                 warnings.append(mismatch_msg)
 
-    if "EncoderConfigInit1" in results and "EncoderConfigInit2" in results:
-        for name in ["EncoderConfigInit1", "EncoderConfigInit2"]:
+    if "OpusEncoderConfig_CtorBitrate_A" in results and "OpusEncoderConfig_CtorBitrate_B" in results:
+        for name in ["OpusEncoderConfig_CtorBitrate_A", "OpusEncoderConfig_CtorBitrate_B"]:
             f = results[name] - adj
             if 0 <= f and f + 4 <= len(data):
                 val = data[f:f+4]
@@ -2748,8 +2424,8 @@ def _cross_validate(results, adj, data, tiers_used=None, bin_fmt='pe'):
 
 
 BITRATE_OFFSET_NAMES = [
-    "EmulateBitrateModified", "SetsBitrateBitrateValue",
-    "EncoderConfigInit1", "EncoderConfigInit2",
+    "OpusBitrate_Imul384k", "AudioEncoder_BitrateMovImm",
+    "OpusEncoderConfig_CtorBitrate_A", "OpusEncoderConfig_CtorBitrate_B",
 ]
 
 def run_bitrate_audit_pe(data, results, adj, text_start, text_end):
@@ -2794,9 +2470,8 @@ def run_bitrate_audit_pe(data, results, adj, text_start, text_end):
         if len(uncovered_512k) > 10:
             print(f"    ... and {len(uncovered_512k) - 10} more")
         rva0 = uncovered_512k[0][1]
-        print(f"  [NEW DISCOVERY VERIFIED] potential EncoderConfigInit3 (uncovered 512000 literal) at RVA 0x{rva0:X}")
-        print("  If Discord still reports ~512/529 Kbps, add EncoderConfigInit3 in the patcher:")
-        print(f"  In Offsets set:  EncoderConfigInit3 = 0x{rva0:X}")
+        print(f"  [INFO] 512000 literals in .text not near known bitrate sites (example RVA 0x{rva0:X}).")
+        print("         Treat as noise unless IDA + Linux xref confirm another encoder init path.")
     if not uncovered_32k and not uncovered_512k and bitrate_rvas:
         print("  All 32000/512000 constants in .text are at or near known patch sites.")
     print()
@@ -2804,11 +2479,6 @@ def run_bitrate_audit_pe(data, results, adj, text_start, text_end):
 
 
 def _resolve_arm64_symbols(bin_info, data):
-    """Use arm64 Mach-O symbol table to resolve offsets.
-
-    Uses ARM64_SYMBOL_MAP with arm64-specific scan types.
-    Returns (dict of {name: config_offset}, list of detail tuples).
-    """
     if not bin_info.get('has_symbols') or not bin_info.get('func_symbols'):
         return {}, []
 
@@ -2832,7 +2502,6 @@ def _resolve_arm64_symbols(bin_info, data):
         elif mapping.get('prefer_largest'):
             candidates.sort(key=lambda c: c.get('size', 0), reverse=True)
 
-        # Prefer exact name match over substring
         best = candidates[0]
         for c in candidates:
             if any(p.lower() == c['name'].lower().lstrip('_').rstrip('_') for p in mapping['patterns']):
@@ -2849,7 +2518,7 @@ def _resolve_arm64_symbols(bin_info, data):
         else:
             func_size = best.get('size', 0)
             if func_size == 0 or func_size > 0x10000:
-                func_size = 0x4000  # wider default for arm64
+                func_size = 0x4000
 
             func_file_start = sym_addr - adj
             if func_file_start < 0:
@@ -2875,18 +2544,6 @@ def _resolve_arm64_symbols(bin_info, data):
 
 
 def discover_offsets_arm64(data, arm64_info):
-    """Run arm64-specific offset discovery using symbol table + ARM64 instruction scans.
-
-    Unlike discover_offsets() which uses x86 byte patterns and derivations,
-    this relies entirely on the arm64 slice's symbol table (which has full
-    symbols in Discord's Mach-O builds).
-
-    Args:
-        data: the FULL fat binary data (not just the slice)
-        arm64_info: bin_info dict for the arm64 slice (from _parse_macho_slice)
-
-    Returns (results_dict, errors_list, adjustment, tiers_used_dict).
-    """
     results = {}
     errors = []
     tiers_used = {}
@@ -2932,8 +2589,7 @@ def discover_offsets_arm64(data, arm64_info):
         elif method == 'arm64-hint':
             print(f"  [HINT] {offset_name:45s} function '{safe_sym}' - scan did not match")
 
-    # Fallback: if EmulateBitrateModified still missing, scan arm64 for 32-bit literal 32000 (0x00007D00).
-    if "EmulateBitrateModified" not in results:
+    if "OpusBitrate_Imul384k" not in results:
         slice_start = fat_offset
         slice_end = fat_offset + arm64_info.get('fat_size', 0)
         if slice_end > len(data):
@@ -2945,9 +2601,9 @@ def discover_offsets_arm64(data, arm64_info):
             if data[i:i + 4] == literal_32000 and data[i:i + 3] == orig_low3:
                 candidates.append(i)
         if candidates:
-            results["EmulateBitrateModified"] = candidates[0] + adj
-            tiers_used["EmulateBitrateModified"] = "arm64-literal-32000(1st)"
-            print(f"  [SCAN] {'EmulateBitrateModified':45s} = 0x{candidates[0] + adj:X}  (file 0x{candidates[0]:X})  [literal 32000]")
+            results["OpusBitrate_Imul384k"] = candidates[0] + adj
+            tiers_used["OpusBitrate_Imul384k"] = "arm64-literal-32000(1st)"
+            print(f"  [SCAN] {'OpusBitrate_Imul384k':45s} = 0x{candidates[0] + adj:X}  (file 0x{candidates[0]:X})  [literal 32000]")
 
     validation_failures = _validate_discovered_offsets(results, data, adj)
     for name, reason in validation_failures:
@@ -2956,7 +2612,7 @@ def discover_offsets_arm64(data, arm64_info):
         errors.append((name, reason))
         print(f"  [INVALID] {name}: {reason}")
 
-    missing = [n for n in _all_offset_names() if n not in results]
+    missing = [n for n in _all_offset_names() if n not in results and n not in LINUX_ONLY_OFFSET_NAMES]
     if missing:
         print(f"\n  ARM64 missing offsets ({len(missing)}): {', '.join(missing)}")
         for name in missing:
@@ -2968,7 +2624,6 @@ def discover_offsets_arm64(data, arm64_info):
 
 
 def _pe_file_off_to_rva(file_off, sections):
-    """Map PE on-disk offset to RVA using section table."""
     for sec in sections or []:
         ro = sec.get("raw_offset", 0)
         rs = sec.get("raw_size", 0)
@@ -2979,7 +2634,6 @@ def _pe_file_off_to_rva(file_off, sections):
 
 
 def _pe_rva_to_file_off(rva, sections):
-    """Map PE RVA to on-disk file offset using section table."""
     for sec in sections or []:
         va = sec.get("vaddr", 0)
         vs = sec.get("vsize", 0) or sec.get("raw_size", 0)
@@ -3079,8 +2733,7 @@ def _pe_parse_exports(data, bin_info):
 
 
 def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, text_start, text_end):
-    """PE-only: Opus packet-loss cvtts, NetEq ms/loss imm, Pacer BlockAudio setz, Discord API (ESS-relative)."""
-    if bin_info.get("format") != "pe" or "EmulateStereoSuccess1" not in results:
+    if bin_info.get("format") != "pe" or "CodecProbe_ChannelCountPatch" not in results:
         return
 
     adj = bin_info.get("file_offset_adjustment", 0xC00)
@@ -3088,7 +2741,7 @@ def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, t
     sections = bin_info.get("sections") or []
 
     print("\n" + "=" * 65)
-    print("  PHASE 2c: Windows Extended (packet loss / NetEq / Pacer / Discord API)")
+    print("  PHASE 2c: Windows Extended (NetEq / Pacer / Discord API)")
     print("=" * 65)
 
     pat_ne = bytes.fromhex("48 B8 14 00 00 00 C8 00 00 00")
@@ -3102,22 +2755,22 @@ def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, t
         idx = j + 1
     if len(ne_hits) == 1:
         rva = ne_hits[0]
-        results["NetEqDelayMgr_MsPerLossPercent"] = rva
-        tiers_used["NetEqDelayMgr_MsPerLossPercent"] = "extended(neteq-movabs)"
-        print(f"  [ OK ] NetEqDelayMgr_MsPerLossPercent{' ':16s} = 0x{rva:X}  [movabs 14..C8]")
+        results["NetEq_DelayMsPerLossPercent"] = rva
+        tiers_used["NetEq_DelayMsPerLossPercent"] = "extended(neteq-movabs)"
+        print(f"  [ OK ] NetEq_DelayMsPerLossPercent{' ':16s} = 0x{rva:X}  [movabs 14..C8]")
     elif not ne_hits:
-        print("  [FAIL] NetEqDelayMgr_MsPerLossPercent: movabs pattern not found")
+        print("  [FAIL] NetEq_DelayMsPerLossPercent: movabs pattern not found")
     else:
-        print(f"  [FAIL] NetEqDelayMgr_MsPerLossPercent: ambiguous ({len(ne_hits)} movabs hits)")
+        print(f"  [FAIL] NetEq_DelayMsPerLossPercent: ambiguous ({len(ne_hits)} movabs hits)")
 
     pacer_key = b"WebRTC-Pacer-BlockAudio\x00"
     pk = data.find(pacer_key)
     if pk < 0:
-        print("  [FAIL] Pacer_BlockAudio_Disable: string WebRTC-Pacer-BlockAudio not found")
+        print("  [FAIL] Pacer_ForceBlockAudioFalse: string WebRTC-Pacer-BlockAudio not found")
     else:
         str_rva = _pe_file_off_to_rva(pk, sections)
         if str_rva is None:
-            print("  [FAIL] Pacer_BlockAudio_Disable: could not map string file offset to RVA")
+            print("  [FAIL] Pacer_ForceBlockAudioFalse: could not map string file offset to RVA")
         else:
             str_va = image_base + str_rva
             lea_rva = None
@@ -3135,7 +2788,7 @@ def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, t
                         break
                 i += 1
             if lea_rva is None:
-                print("  [FAIL] Pacer_BlockAudio_Disable: no LEA to BlockAudio string in .text")
+                print("  [FAIL] Pacer_ForceBlockAudioFalse: no LEA to BlockAudio string in .text")
             else:
                 lea_file = lea_rva - adj
                 found_p = None
@@ -3144,45 +2797,11 @@ def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, t
                         found_p = k + adj
                         break
                 if found_p:
-                    results["Pacer_BlockAudio_Disable"] = found_p
-                    tiers_used["Pacer_BlockAudio_Disable"] = "extended(pacer-blockaudio)"
-                    print(f"  [ OK ] Pacer_BlockAudio_Disable{' ':21s} = 0x{found_p:X}  [setz bl after LEA]")
+                    results["Pacer_ForceBlockAudioFalse"] = found_p
+                    tiers_used["Pacer_ForceBlockAudioFalse"] = "extended(pacer-blockaudio)"
+                    print(f"  [ OK ] Pacer_ForceBlockAudioFalse{' ':21s} = 0x{found_p:X}  [setz bl after LEA]")
                 else:
-                    print("  [FAIL] Pacer_BlockAudio_Disable: setz bl not found after LEA")
-
-    ess = results["EmulateStereoSuccess1"]
-    ess_f = ess - adj
-    lo = max(text_start, ess_f - 0x2000)
-    hi = min(text_end, ess_f + 0xA000)
-    cvtt = bytes.fromhex("F2 0F 2C D0")
-    cands = []
-    i = lo
-    while i < hi:
-        j = data.find(cvtt, i, hi)
-        if j < 0:
-            break
-        tail = data[j + 4 : j + 4 + 6]
-        if tail.startswith(b"\x48\x8B\x8E\xA8") or tail.startswith(b"\x48\x8B\x89\xA8"):
-            cands.append(j + adj)
-        i = j + 4
-    best_pair = None
-    for a in range(len(cands)):
-        for b in range(a + 1, len(cands)):
-            dlt = cands[b] - cands[a]
-            if 0x120 <= dlt <= 0x1B0:
-                best_pair = (cands[a], cands[b], dlt)
-                break
-        if best_pair:
-            break
-    if best_pair:
-        o1, o2, dlt = best_pair
-        results["OpusPacketLossCvtt1"] = o1
-        results["OpusPacketLossCvtt2"] = o2
-        tiers_used["OpusPacketLossCvtt1"] = "extended(opus-cvtt-pair)"
-        tiers_used["OpusPacketLossCvtt2"] = "extended(opus-cvtt-pair)"
-        print(f"  [ OK ] OpusPacketLossCvtt1 / Cvtt2{' ':15s} = 0x{o1:X} / 0x{o2:X}  (delta 0x{dlt:X})")
-    else:
-        print(f"  [FAIL] Opus packet-loss sites: no cvttsd2si pair in cluster (candidates={len(cands)})")
+                    print("  [FAIL] Pacer_ForceBlockAudioFalse: setz bl not found after LEA")
 
     exports = _pe_parse_exports(data, bin_info)
     if not exports:
@@ -3205,7 +2824,6 @@ def _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, t
 
 
 def discover_offsets(data, bin_info, verbose=True):
-    """Full discovery pipeline; verbose=False suppresses phase prints. Returns (results, errors, adj, tiers_used)."""
     _saved_stdout = None
     if not verbose:
         _saved_stdout = sys.stdout
@@ -3218,7 +2836,6 @@ def discover_offsets(data, bin_info, verbose=True):
 
 
 def _discover_offsets_impl(data, bin_info):
-    """Offset discovery implementation (prints to current stdout)."""
     results = {}
     errors = []
     tiers_used = {}
@@ -3254,7 +2871,6 @@ def _discover_offsets_impl(data, bin_info):
 
         for offset_name, config_off, sym_name, method in sym_details:
             if method == 'symbol-direct':
-                # Verify by checking expected bytes
                 file_off = config_off - adj
                 accept = True
                 _exp_sym = _build_expected_map(fmt)
@@ -3274,14 +2890,12 @@ def _discover_offsets_impl(data, bin_info):
                     print(f"  [SYM ] {offset_name:45s} = 0x{config_off:X}  (file 0x{file_off:X})  [{sym_name}]")
 
             elif method == 'symbol+scan':
-                # Symbol found + targeted instruction scan succeeded
                 results[offset_name] = config_off
                 tiers_used[offset_name] = f"symbol+scan({sym_name})"
                 file_off = config_off - adj
                 print(f"  [SCAN] {offset_name:45s} = 0x{config_off:X}  (file 0x{file_off:X})  [via {sym_name}]")
 
             elif method == 'symbol-range-hint':
-                # Store hint for targeted scanning in Phase 1
                 hint_key = f"_symhint_{offset_name}"
                 if hint_key in sym_resolved:
                     sym_hints[offset_name] = sym_resolved[hint_key]
@@ -3299,18 +2913,15 @@ def _discover_offsets_impl(data, bin_info):
             print(f"  [SKIP] {sig.name:45s} already resolved via symbol table")
             continue
 
-        # If we have a symbol hint, narrow the scan window
         scan_start = text_start
         scan_end = text_end
         if sig.name in sym_hints:
             hint_start, hint_end, hint_sym = sym_hints[sig.name]
-            # Use a wider window around the symbol to be safe
             scan_start = max(text_start, hint_start - 0x200)
             scan_end = min(text_end, hint_end + 0x200)
 
         file_off, err, tier = find_offset(data, sig, scan_start, scan_end)
 
-        # If narrowed scan failed, try full range
         if err and sig.name in sym_hints:
             file_off, err, tier = find_offset(data, sig, text_start, text_end)
 
@@ -3339,7 +2950,6 @@ def _discover_offsets_impl(data, bin_info):
             results[sig.name] = config_off
             tiers_used[sig.name] = tier
 
-    # Phase 1c: CLANG_ALT_PATTERNS when primary missed
     still_missing = [sig.name for sig in SIGNATURES if sig.name not in results]
     if still_missing:
         print("\n" + "=" * 65)
@@ -3399,22 +3009,21 @@ def _discover_offsets_impl(data, bin_info):
         if still_missing:
             print(f"  Still missing after Clang alts: {', '.join(still_missing)}")
 
-    # Phase 1b: patched-binary fallbacks
     patched_fallbacks = []
 
-    if "MonoDownmixer" not in results:
+    if "DownmixMono_BypassBranch" not in results:
         fb_pat = Signature._parse("48 89 F9 E8 ?? ?? ?? ?? 90 90 90 90 90 90 90 90 90 90 90 90 E9")
         matches = scan_pattern(data, fb_pat, start=text_start, end=text_end)
         if len(matches) > 1:
             matches = [m for m in matches if _mono_downmixer_disambiguator(data, m)]
         if len(matches) == 1:
             config_off = matches[0] + 8 + adj
-            results["MonoDownmixer"] = config_off
-            tiers_used["MonoDownmixer"] = "patched-fallback"
-            patched_fallbacks.append("MonoDownmixer")
-            print(f"  [FALL] MonoDownmixer{' ':30s} = 0x{config_off:X}  [patched NOP sled]")
+            results["DownmixMono_BypassBranch"] = config_off
+            tiers_used["DownmixMono_BypassBranch"] = "patched-fallback"
+            patched_fallbacks.append("DownmixMono_BypassBranch")
+            print(f"  [FALL] DownmixMono_BypassBranch{' ':30s} = 0x{config_off:X}  [patched NOP sled]")
 
-    if "SetsBitrateBitrateValue" not in results:
+    if "AudioEncoder_BitrateMovImm" not in results:
         for fb_hex in [
             "89 F8 48 B9 ?? ?? ?? ?? ?? ?? ?? ?? 90 90 90 48 89 4E 1C",
             "89 ?? 48 B9 ?? ?? ?? ?? ?? ?? ?? ?? 90 90 90 48 89 ?? ??",
@@ -3423,16 +3032,16 @@ def _discover_offsets_impl(data, bin_info):
             matches = scan_pattern(data, fb_pat, start=text_start, end=text_end)
             if len(matches) == 1:
                 config_off = matches[0] + 4 + adj
-                results["SetsBitrateBitrateValue"] = config_off
-                tiers_used["SetsBitrateBitrateValue"] = "patched-fallback"
-                patched_fallbacks.append("SetsBitrateBitrateValue")
-                print(f"  [FALL] SetsBitrateBitrateValue{' ':20s} = 0x{config_off:X}  [patched or->NOP]")
+                results["AudioEncoder_BitrateMovImm"] = config_off
+                tiers_used["AudioEncoder_BitrateMovImm"] = "patched-fallback"
+                patched_fallbacks.append("AudioEncoder_BitrateMovImm")
+                print(f"  [FALL] AudioEncoder_BitrateMovImm{' ':20s} = 0x{config_off:X}  [patched or->NOP]")
                 break
 
-    if "HighpassCutoffFilter" not in results:
-        hp_key = "HighPassFilter"
-        if hp_key not in results and "EmulateStereoSuccess1" in results:
-            results[hp_key] = results["EmulateStereoSuccess1"] + 0xC275
+    if "WebRtcHighpassCutoff_Injected" not in results:
+        hp_key = "WebRtcHighpass_Trampoline"
+        if hp_key not in results and "CodecProbe_ChannelCountPatch" in results:
+            results[hp_key] = results["CodecProbe_ChannelCountPatch"] + 0xC275
         if hp_key in results:
             hp_file = results[hp_key] - adj
             if (0 <= hp_file and hp_file + 11 <= len(data) and
@@ -3441,22 +3050,20 @@ def _discover_offsets_impl(data, bin_info):
                 if fmt == 'pe' and bin_info:
                     hpc_config = hpc_va - bin_info['image_base']
                     if 0 < hpc_config < len(data):
-                        results["HighpassCutoffFilter"] = hpc_config
-                        tiers_used["HighpassCutoffFilter"] = "patched-stub-extract"
-                        patched_fallbacks.append("HighpassCutoffFilter")
-                        print(f"  [FALL] HighpassCutoffFilter{' ':23s} = 0x{hpc_config:X}  [from HP stub VA=0x{hpc_va:X}]")
+                        results["WebRtcHighpassCutoff_Injected"] = hpc_config
+                        tiers_used["WebRtcHighpassCutoff_Injected"] = "patched-stub-extract"
+                        patched_fallbacks.append("WebRtcHighpassCutoff_Injected")
+                        print(f"  [FALL] WebRtcHighpassCutoff_Injected{' ':23s} = 0x{hpc_config:X}  [from HP stub VA=0x{hpc_va:X}]")
                 elif fmt in ('elf', 'macho'):
-                    # On ELF/Mach-O the stub VA is already relative (PIE, image_base=0)
                     if 0 < hpc_va < len(data) + adj:
-                        results["HighpassCutoffFilter"] = hpc_va
-                        tiers_used["HighpassCutoffFilter"] = "patched-stub-extract"
-                        patched_fallbacks.append("HighpassCutoffFilter")
-                        print(f"  [FALL] HighpassCutoffFilter{' ':23s} = 0x{hpc_va:X}  [from HP stub VA]")
+                        results["WebRtcHighpassCutoff_Injected"] = hpc_va
+                        tiers_used["WebRtcHighpassCutoff_Injected"] = "patched-stub-extract"
+                        patched_fallbacks.append("WebRtcHighpassCutoff_Injected")
+                        print(f"  [FALL] WebRtcHighpassCutoff_Injected{' ':23s} = 0x{hpc_va:X}  [from HP stub VA]")
 
     if patched_fallbacks:
         print(f"\n  NOTE: Binary appears already patched. Fallback used for: {', '.join(patched_fallbacks)}")
 
-    # Phase 2: DERIVATIONS chain
     print("\n" + "=" * 65)
     print("  PHASE 2: Relative Offset Derivation (chain-aware)")
     print("=" * 65)
@@ -3479,7 +3086,6 @@ def _discover_offsets_impl(data, bin_info):
             if file_off < 0 or file_off >= len(data):
                 continue
 
-            # Verify expected bytes at exact delta
             verified_exact = True
             _exp_drv = _build_expected_map(fmt)
             if derived_name in _exp_drv:
@@ -3497,7 +3103,6 @@ def _discover_offsets_impl(data, bin_info):
                 found = True
                 break
 
-        # If exact delta didn't verify, try sliding window
         if not found:
             for anchor_name, delta in paths:
                 if anchor_name not in results:
@@ -3515,8 +3120,6 @@ def _discover_offsets_impl(data, bin_info):
                     found = True
                     break
 
-        # If exact worked without verification (no expected bytes), accept it.
-        # Do NOT accept if expected bytes exist and failed to match.
         if not found:
             _exp_drv = _build_expected_map(fmt)
             for anchor_name, delta in paths:
@@ -3525,7 +3128,6 @@ def _discover_offsets_impl(data, bin_info):
                 config_off = results[anchor_name] + delta
                 file_off = config_off - adj
                 if 0 <= file_off < len(data):
-                    # Skip if we have expected bytes (verification failed earlier)
                     has_expected = False
                     if derived_name in _exp_drv:
                         exp_hex, _ = _exp_drv[derived_name]
@@ -3544,27 +3146,22 @@ def _discover_offsets_impl(data, bin_info):
             print(f"  [FAIL] {derived_name}: no anchor available (tried: {tried})")
             errors.append((derived_name, f"no anchor available (tried: {tried})"))
 
-    # Phase 2b: heuristics
-    missing = [n for n in _all_offset_names() if n not in results]
+    missing = _missing_discovered(results, fmt)
     if missing:
         print("\n" + "=" * 65)
         print("  PHASE 2b: Heuristic Recovery")
         print("=" * 65)
 
-        # Use Linux/Windows insight: find 32000 literal in window near EmulateStereoSuccess1
-        # when derivation failed (e.g. macOS/Clang different layout).
-        if "EmulateBitrateModified" in missing and "EmulateStereoSuccess1" in results:
-            anchor_file = results["EmulateStereoSuccess1"] - adj
+        if "OpusBitrate_Imul384k" in missing and "CodecProbe_ChannelCountPatch" in results:
+            anchor_file = results["CodecProbe_ChannelCountPatch"] - adj
             config_off, reason = _find_emulate_bitrate_in_anchor_window(data, anchor_file, adj, window=0x2000)
-            # Fallback: extend window using same-function bounds (Emulate48Khz / EmulateStereoSuccess2)
-            if config_off is None and "Emulate48Khz" in results and "EmulateStereoSuccess2" in results:
-                lo = min(anchor_file, results["Emulate48Khz"] - adj, results["EmulateStereoSuccess2"] - adj)
-                hi = max(anchor_file, results["Emulate48Khz"] - adj, results["EmulateStereoSuccess2"] - adj)
+            if config_off is None and "SampleRate_Select48kNop" in results and "CodecProbe_ForceSuccessBranch" in results:
+                lo = min(anchor_file, results["SampleRate_Select48kNop"] - adj, results["CodecProbe_ForceSuccessBranch"] - adj)
+                hi = max(anchor_file, results["SampleRate_Select48kNop"] - adj, results["CodecProbe_ForceSuccessBranch"] - adj)
                 mid = (lo + hi) // 2
                 config_off, reason = _find_emulate_bitrate_in_anchor_window(
                     data, mid, adj, window=(hi - lo) // 2 + 0x2000
                 )
-            # Scan entire .text if still missing (no 32000 in anchor/function window)
             if config_off is None and text_start < text_end:
                 full_window = max(anchor_file - text_start, text_end - anchor_file)
                 if full_window > 0x2000:
@@ -3572,38 +3169,33 @@ def _discover_offsets_impl(data, bin_info):
                     if config_off is not None:
                         reason = f"full-text-scan({reason})"
             if config_off is not None:
-                # Sanity: EBM must be in media region (within 0x20000 of anchor). Reject if full-text picked a far crypto imul.
                 ebm_file = config_off - adj
                 dist = abs(ebm_file - anchor_file)
                 if dist > 0x20000:
-                    print(f"  [REJECT] EmulateBitrateModified @ 0x{config_off:X} — too far from anchor (0x{dist:X} > 0x20000), skipping")
+                    print(f"  [REJECT] OpusBitrate_Imul384k @ 0x{config_off:X} — too far from anchor (0x{dist:X} > 0x20000), skipping")
                     config_off = None
                 else:
                     tag = "FULL-TEXT" if "full-text-scan" in reason else "ANCHOR"
-                    print(f"  [{tag}] EmulateBitrateModified    = 0x{config_off:X}  "
+                    print(f"  [{tag}] OpusBitrate_Imul384k    = 0x{config_off:X}  "
                           f"[{reason}]  (distance from ApplySettings anchor: 0x{dist:X})")
-                    results["EmulateBitrateModified"] = config_off
-                    tiers_used["EmulateBitrateModified"] = reason
-                    missing = [n for n in _all_offset_names() if n not in results]
+                    results["OpusBitrate_Imul384k"] = config_off
+                    tiers_used["OpusBitrate_Imul384k"] = reason
+                    missing = _missing_discovered(results, fmt)
 
         hints = _run_heuristic_scan(data, missing, adj, text_start, text_end)
-        # Collect far EmulateBitrateModified candidates for last-resort fallback (Mach-O x86_64 only)
         ebm_far_candidates = []
         if hints:
-            # Prefer 32000 sites near ApplySettings anchor (legacy MSVC heuristic);
-            # on Clang, correct EBM is often in another function — far hits go to ebm_far_candidates (Mach-O).
-            EMULATE_BITRATE_MAX_DISTANCE = 0x2000  # ~8KB
+            EMULATE_BITRATE_MAX_DISTANCE = 0x2000
             for name, file_off, reason in hints:
                 if name in results:
                     continue
-                if name == "EmulateBitrateModified" and "EmulateStereoSuccess1" in results:
-                    anchor_file = results["EmulateStereoSuccess1"] - adj
+                if name == "OpusBitrate_Imul384k" and "CodecProbe_ChannelCountPatch" in results:
+                    anchor_file = results["CodecProbe_ChannelCountPatch"] - adj
                     if abs(file_off - anchor_file) > EMULATE_BITRATE_MAX_DISTANCE:
                         ebm_far_candidates.append((file_off, reason))
-                        print(f"  [HEUR] Rejected {name} @ 0x{file_off + adj:X} — too far from EmulateStereoSuccess1 (delta 0x{abs(file_off - anchor_file):X} > 0x{EMULATE_BITRATE_MAX_DISTANCE:X})")
+                        print(f"  [HEUR] Rejected {name} @ 0x{file_off + adj:X} — too far from CodecProbe_ChannelCountPatch (delta 0x{abs(file_off - anchor_file):X} > 0x{EMULATE_BITRATE_MAX_DISTANCE:X})")
                         continue
                 config_off = file_off + adj
-                # Verify expected bytes before accepting heuristic result
                 _exp_map = _build_expected_map(fmt)
                 if name in _exp_map:
                     exp_hex, exp_len = _exp_map[name]
@@ -3616,10 +3208,9 @@ def _discover_offsets_impl(data, bin_info):
                 results[name] = config_off
                 tiers_used[name] = f"heuristic({reason})"
 
-        # Last-resort: Mach-O x86_64 — no 32000 in anchor window; accept closest far imul candidate
-        if "EmulateBitrateModified" not in results and ebm_far_candidates and fmt == "macho" and "EmulateStereoSuccess1" in results:
-            anchor_file = results["EmulateStereoSuccess1"] - adj
-            expected_32000 = bytes.fromhex("007D00")  # 3 bytes at patch site
+        if "OpusBitrate_Imul384k" not in results and ebm_far_candidates and fmt == "macho" and "CodecProbe_ChannelCountPatch" in results:
+            anchor_file = results["CodecProbe_ChannelCountPatch"] - adj
+            expected_32000 = bytes.fromhex("007D00")
             valid = []
             for file_off, reason in ebm_far_candidates:
                 if file_off + 3 <= len(data) and data[file_off:file_off + 3] == expected_32000:
@@ -3628,13 +3219,15 @@ def _discover_offsets_impl(data, bin_info):
                 valid.sort(key=lambda x: x[1])
                 file_off = valid[0][0]
                 config_off = file_off + adj
-                results["EmulateBitrateModified"] = config_off
-                tiers_used["EmulateBitrateModified"] = "fallback-far(imul 32000,closest-to-anchor)"
-                print(f"  [FALLBACK-FAR] EmulateBitrateModified = 0x{config_off:X}  (no in-window candidate; using closest imul 32000 — VERIFY bitrate after patch)")
-                missing = [n for n in _all_offset_names() if n not in results]
+                results["OpusBitrate_Imul384k"] = config_off
+                tiers_used["OpusBitrate_Imul384k"] = "fallback-far(imul 32000,closest-to-anchor)"
+                print(f"  [FALLBACK-FAR] OpusBitrate_Imul384k = 0x{config_off:X}  (no in-window candidate; using closest imul 32000 — VERIFY bitrate after patch)")
+                missing = _missing_discovered(results, fmt)
 
         if not hints:
-            print(f"  No heuristic candidates for: {', '.join(missing)}")
+            still = _missing_discovered(results, fmt)
+            if still:
+                print(f"  No heuristic candidates for: {', '.join(still)}")
 
     if fmt == "pe" and bin_info:
         _discover_windows_extended_offsets_pe(data, bin_info, results, tiers_used, text_start, text_end)
@@ -3655,7 +3248,6 @@ def _discover_offsets_impl(data, bin_info):
 
     _prune_results_to_allowed(results, tiers_used, label=fmt)
 
-    # Audit 2e: context fingerprint for top-5 critical offsets (checksum for auditing)
     _log_context_fingerprints(data, results, adj)
 
     return results, errors, adj, tiers_used
@@ -3667,67 +3259,63 @@ def _discover_offsets_impl(data, bin_info):
 # region Validation
 
 EXPECTED_ORIGINALS = {
-    "EmulateStereoSuccess1":    ("01", 1),
-    "EmulateStereoSuccess2":    ("75", 1),
-    "Emulate48Khz":             ("0F 42 C1", 3),
-    "EmulateBitrateModified":   (None, 3),
-    "SetsBitrateBitrateValue":  (None, 5),
-    "SetsBitrateBitwiseOr":     ("48 09 C1", 3),
-    "HighPassFilter":           (None, 11),
-    "CreateAudioFrameStereo":   (None, 4),
-    "AudioEncoderOpusConfigSetChannels": ("01", 1),
-    "AudioEncoderOpusConfigIsOk": ("8B 11 31 C0", 4),
-    "MonoDownmixer":            ("84 C0", 2),
-    "ThrowError":               ("41", 1),
-    "DownmixFunc":              ("41", 1),
-    "HighpassCutoffFilter":     (None, 0x100),
-    "DcReject":                 (None, 0x1B6),
-    "EncoderConfigInit1":       ("00 7D 00 00", 4),
-    "EncoderConfigInit2":       ("00 7D 00 00", 4),
-    "OpusPacketLossCvtt1":      ("F2 0F 2C D0", 4),
-    "OpusPacketLossCvtt2":      ("F2 0F 2C D0", 4),
-    "NetEqDelayMgr_MsPerLossPercent": ("48 B8 14 00 00 00 C8 00 00 00", 10),
-    "Pacer_BlockAudio_Disable": ("0F 94 C3", 3),
+    "CodecProbe_ChannelCountPatch":    ("01", 1),
+    "CodecProbe_ForceSuccessBranch":    ("75", 1),
+    "SampleRate_Select48kNop":             ("0F 42 C1", 3),
+    "OpusBitrate_Imul384k":   (None, 3),
+    "AudioEncoder_BitrateMovImm":  (None, 5),
+    "AudioEncoder_BitrateOrMaskNop":     ("48 09 C1", 3),
+    "WebRtcHighpass_Trampoline":           (None, 11),
+    "AudioFrame_StereoChannelAssign":   (None, 4),
+    "OpusEncoderConfig_SetStereoChannels": ("01", 1),
+    "OpusEncoderConfig_IsOkRetTrue": ("8B 11 31 C0", 4),
+    "DownmixMono_BypassBranch":            ("84 C0", 2),
+    "AudioEncoderCodec_ThrowNoOp":               ("41", 1),
+    "ChannelDownmix_RetStub":              ("41", 1),
+    "WebRtcHighpassCutoff_Injected":     (None, 0x100),
+    "WebRtcDcReject_Injected":                 (None, 0x1B6),
+    "OpusEncoderConfig_CtorBitrate_A":       ("00 7D 00 00", 4),
+    "OpusEncoderConfig_CtorBitrate_B":       ("00 7D 00 00", 4),
+    "OpusEncoderConfig_CtorUseInbandFecOn":   ("00", 1),
+    "NetEq_DelayMsPerLossPercent": ("48 B8 14 00 00 00 C8 00 00 00", 10),
+    "Pacer_ForceBlockAudioFalse": ("0F 94 C3", 3),
 }
 
 EXPECTED_ORIGINALS_CLANG = {
-    "DownmixFunc":              ("55", 1),
-    "AudioEncoderOpusConfigIsOk": ("55 48 89 E5", 4),
-    "Emulate48Khz":             (None, 4),
-    "EmulateBitrateModified":   ("00 7D 00", 3),
-    "HighpassCutoffFilter":     (None, 0x100),
-    "DcReject":                 (None, 0x1B6),
+    "ChannelDownmix_RetStub":              ("55", 1),
+    "OpusEncoderConfig_IsOkRetTrue": ("55 48 89 E5", 4),
+    "SampleRate_Select48kNop":             (None, 4),
+    "OpusBitrate_Imul384k":   ("00 7D 00", 3),
+    "WebRtcHighpassCutoff_Injected":     (None, 0x100),
+    "WebRtcDcReject_Injected":                 (None, 0x1B6),
 }
 
 EXPECTED_ORIGINALS_LINUX_ONLY = {
-    "EmulateStereoSuccess1":    ("00", 1),
-    # Older: jcc short (74/75). Current Clang: jz/jnz rel32 (0F 84/85) — validated specially in validate_offsets.
-    "EmulateStereoSuccess2":    ("74", 1),
-    "CreateAudioFrameStereo":   ("4C 0F 43", 4),
-    # CommitAudioCodec: REX.W + CMOVNB (4 bytes), not MSVC 3-byte cmovb.
-    "Emulate48Khz":             ("48 0F 43 D0", 4),
-    # Linux-only: MultiChannel Opus config default channels (same 1->2 patch intent as OpusConfigSetChannels).
-    "AudioEncoderMultiChannelOpusCh": ("01", 1),
+    "CodecProbe_ChannelCountPatch":    ("00", 1),
+    "CodecProbe_ForceSuccessBranch":    ("74", 1),
+    "AudioFrame_StereoChannelAssign":   ("4C 0F 43", 4),
+    "SampleRate_Select48kNop":             ("48 0F 43 D0", 4),
+    "OpusEncoderConfig_SetMultiChannelStereo": ("01", 1),
 }
 
 EXPECTED_ORIGINALS_MACHO_ONLY = {
-    "ThrowError":               ("55", 1),
-    "CreateAudioFrameStereo":   ("4C 0F 43 E0", 4),
-    "EmulateStereoSuccess2":    (None, 1),
-    "Emulate48Khz":             (None, 4),
+    "AudioEncoderCodec_ThrowNoOp":               ("55", 1),
+    "AudioFrame_StereoChannelAssign":   ("4C 0F 43 E0", 4),
+    "CodecProbe_ForceSuccessBranch":    (None, 1),
+    "SampleRate_Select48kNop":             (None, 4),
 }
 
 EXPECTED_ORIGINALS_ARM64 = {
-    "ThrowError":               (None, 4),
-    "DownmixFunc":              (None, 4),
-    "HighpassCutoffFilter":     (None, 4),
-    "DcReject":                 (None, 4),
-    "HighPassFilter":           (None, 4),
-    "AudioEncoderOpusConfigSetChannels": (None, 4),
-    "CreateAudioFrameStereo":   (None, 4),
-    "EmulateStereoSuccess1":    (None, 4),
-    "MonoDownmixer":            (None, 4),
-    "EncoderConfigInit2":       (None, 4),
+    "AudioEncoderCodec_ThrowNoOp":               (None, 4),
+    "ChannelDownmix_RetStub":              (None, 4),
+    "WebRtcHighpassCutoff_Injected":     (None, 4),
+    "WebRtcDcReject_Injected":                 (None, 4),
+    "WebRtcHighpass_Trampoline":           (None, 4),
+    "OpusEncoderConfig_SetStereoChannels": (None, 4),
+    "AudioFrame_StereoChannelAssign":   (None, 4),
+    "CodecProbe_ChannelCountPatch":    (None, 4),
+    "DownmixMono_BypassBranch":            (None, 4),
+    "OpusEncoderConfig_CtorBitrate_B":       (None, 4),
 }
 
 
@@ -3743,35 +3331,32 @@ def _build_expected_map(fmt, arch=None):
         m.update(EXPECTED_ORIGINALS_MACHO_ONLY)
     return m
 
-# Patch bytes for each offset (for already-patched detection)
 PATCH_INFO = {
-    "EmulateStereoSuccess1":    ("02", "Channel count 1->2"),
-    "EmulateStereoSuccess2":    ("EB", "PE: EB on short jcc. ELF: 6x NOP on jz/jnz rel32 (see discord_voice_patcher_linux.sh)"),
-    "Emulate48Khz":             ("90 90 90", "cmovb->NOPs (force 48kHz)"),
-    "EmulateBitrateModified":   (BITRATE_PATCH_3, "imul 32000->384000 bps"),
-    "SetsBitrateBitrateValue":  (BITRATE_PATCH_5, "384000 in imm64"),
-    "SetsBitrateBitwiseOr":     ("90 90 90", "or rcx,rax->NOPs"),
-    "HighPassFilter":           ("<dynamic: mov rax, IMAGE_BASE+HPC; ret>", "Redirect to HPC"),
-    "CreateAudioFrameStereo":   ("49 89 C4 90", "Clang ELF: cmovnb r12,rax -> mov r12,rax; nop (PE/MSVC uses 49 89 C5 90 / r13)"),
-    "AudioEncoderOpusConfigSetChannels": ("02", "Channel count 1->2"),
-    "AudioEncoderMultiChannelOpusCh": ("02", "MultiChannel Opus config channels 1->2 (Linux)"),
-    "AudioEncoderOpusConfigIsOk": ("48 C7 C0 01 00 00 00 C3", "return 1"),
-    "MonoDownmixer":            ("90 90 90 90 90 90 90 90 90 90 90 90 E9", "NOP sled + jmp"),
-    "ThrowError":               ("C3", "ret (disable throws)"),
-    "DownmixFunc":              ("C3", "ret (disable downmix)"),
-    "HighpassCutoffFilter":     ("<injected: hp_cutoff>", "Custom HP cutoff + gain"),
-    "DcReject":                 ("<injected: dc_reject>", "Custom DC reject + gain"),
-    "EncoderConfigInit1":       (BITRATE_PATCH_4, "Config qword: 32000->384000"),
-    "EncoderConfigInit2":       (BITRATE_PATCH_4, "Config qword: 32000->384000"),
-    "OpusPacketLossCvtt1":      ("31 D2 90 90", "cvtt -> xor edx; nop nop"),
-    "OpusPacketLossCvtt2":      ("31 D2 90 90", "cvtt -> xor edx; nop nop"),
-    "NetEqDelayMgr_MsPerLossPercent": ("48 B8 00 00 00 00 00 00 00 00", "imm64 -> 0"),
-    "Pacer_BlockAudio_Disable": ("30 DB 90", "setz bl -> xor bl,bl; nop"),
+    "CodecProbe_ChannelCountPatch":    ("02", "Channel count 1->2"),
+    "CodecProbe_ForceSuccessBranch":    ("EB", "PE: EB on short jcc. ELF: 6x NOP on jz/jnz rel32 (see discord_voice_patcher_linux.sh)"),
+    "SampleRate_Select48kNop":             ("90 90 90", "cmovb->NOPs (force 48kHz)"),
+    "OpusBitrate_Imul384k":   (BITRATE_PATCH_3, "imul 32000->384000 bps"),
+    "AudioEncoder_BitrateMovImm":  (BITRATE_PATCH_5, "384000 in imm64"),
+    "AudioEncoder_BitrateOrMaskNop":     ("90 90 90", "or rcx,rax->NOPs"),
+    "WebRtcHighpass_Trampoline":           ("<dynamic: mov rax, IMAGE_BASE+HPC; ret>", "Redirect to HPC"),
+    "AudioFrame_StereoChannelAssign":   ("49 89 C4 90", "Clang ELF: cmovnb r12,rax -> mov r12,rax; nop (PE/MSVC uses 49 89 C5 90 / r13)"),
+    "OpusEncoderConfig_SetStereoChannels": ("02", "Channel count 1->2"),
+    "OpusEncoderConfig_SetMultiChannelStereo": ("02", "MultiChannel Opus config channels 1->2 (Linux)"),
+    "OpusEncoderConfig_IsOkRetTrue": ("48 C7 C0 01 00 00 00 C3", "return 1"),
+    "DownmixMono_BypassBranch":            ("90 90 90 90 90 90 90 90 90 90 90 90 E9", "NOP sled + jmp"),
+    "AudioEncoderCodec_ThrowNoOp":               ("C3", "ret (disable throws)"),
+    "ChannelDownmix_RetStub":              ("C3", "ret (disable downmix)"),
+    "WebRtcHighpassCutoff_Injected":     ("<injected: hp_cutoff>", "Custom HP cutoff + gain"),
+    "WebRtcDcReject_Injected":                 ("<injected: dc_reject>", "Custom DC reject + gain"),
+    "OpusEncoderConfig_CtorBitrate_A":       (BITRATE_PATCH_4, "Config qword: 32000->384000"),
+    "OpusEncoderConfig_CtorBitrate_B":       (BITRATE_PATCH_4, "Config qword: 32000->384000"),
+    "OpusEncoderConfig_CtorUseInbandFecOn":   ("01", "AudioEncoderOpusConfig ctor: use_inband_fec imm 0->1"),
+    "NetEq_DelayMsPerLossPercent": ("48 B8 00 00 00 00 00 00 00 00", "imm64 -> 0"),
+    "Pacer_ForceBlockAudioFalse": ("30 DB 90", "setz bl -> xor bl,bl; nop"),
 }
 
 
 def validate_offsets(data, results, adj, bin_fmt='pe'):
-    """Validate discovered offsets against expected byte patterns."""
     print("\n" + "=" * 65)
     print("  PHASE 3: Byte Verification")
     print("=" * 65)
@@ -3779,7 +3364,6 @@ def validate_offsets(data, results, adj, bin_fmt='pe'):
     verified = 0
     warnings = 0
 
-    # Merge platform-specific overrides
     expected_map = _build_expected_map(bin_fmt)
 
     for name, config_off in sorted(results.items(), key=lambda x: x[1]):
@@ -3794,8 +3378,7 @@ def validate_offsets(data, results, adj, bin_fmt='pe'):
             expected_hex, length = expected_map[name]
             actual = data[file_off:file_off+length]
 
-            if name == "EmulateStereoSuccess2" and bin_fmt == "elf":
-                # expected_map length is 1; we must peek 6 bytes to detect jz/jnz rel32 (0F 84/85).
+            if name == "CodecProbe_ForceSuccessBranch" and bin_fmt == "elf":
                 peek = data[file_off : min(file_off + 6, len(data))]
                 if len(peek) >= 1 and peek[0] in (0x74, 0x75):
                     print(f"  [PASS] {name:45s} original bytes: {peek[:1].hex(' ')} (short jcc)")
@@ -3816,9 +3399,8 @@ def validate_offsets(data, results, adj, bin_fmt='pe'):
                     print(f"  [PASS] {name:45s} original bytes: {actual[:len(expected)].hex(' ')}")
                     verified += 1
                 else:
-                    # Check if already patched
                     patch_hex = PATCH_INFO.get(name, (None,))[0]
-                    if name == "Emulate48Khz" and bin_fmt == "elf":
+                    if name == "SampleRate_Select48kNop" and bin_fmt == "elf":
                         patch_hex = "90 90 90 90"
                     if patch_hex and not patch_hex.startswith('<'):
                         try:
@@ -3839,12 +3421,11 @@ def validate_offsets(data, results, adj, bin_fmt='pe'):
 
 
 def check_injection_sites(data, results, adj):
-    """Verify injection sites have enough room (scan for function padding)."""
     print("\n" + "=" * 65)
     print("  PHASE 4: Injection Site Capacity")
     print("=" * 65)
 
-    for name, inject_size, desc in [("HighpassCutoffFilter", 0x100, "hp_cutoff"), ("DcReject", 0x1B6, "dc_reject")]:
+    for name, inject_size, desc in [("WebRtcHighpassCutoff_Injected", 0x100, "hp_cutoff"), ("WebRtcDcReject_Injected", 0x1B6, "dc_reject")]:
         if name not in results:
             print(f"  [SKIP] {name}: not found")
             continue
@@ -3852,13 +3433,10 @@ def check_injection_sites(data, results, adj):
         file_off = results[name] - adj
         func_end = None
 
-        # Scan for function end: 0xCC padding (MSVC) or ret+NOP alignment (Clang)
         for i in range(file_off, min(file_off + 0x400, len(data) - 3)):
-            # MSVC: int3 padding
             if data[i:i+4] == b'\xcc\xcc\xcc\xcc':
                 func_end = i
                 break
-            # Clang: ret followed by NOP sled or alignment (66 2E 0F 1F / 0F 1F / 90)
             if data[i] == 0xC3 and i > file_off + 8:
                 nop_run = 0
                 for j in range(i+1, min(i+17, len(data))):
@@ -3867,11 +3445,10 @@ def check_injection_sites(data, results, adj):
                     else:
                         break
                 if nop_run >= 4:
-                    func_end = i + 1  # after the ret
+                    func_end = i + 1
                     break
 
         if func_end is None:
-            # Use symbol size as fallback
             print(f"  [INFO] {name}: no padding found; using symbol size for capacity")
             continue
 
@@ -3885,7 +3462,6 @@ def check_injection_sites(data, results, adj):
 
 
 def _md5_file_hex(file_path, lower=False):
-    """MD5 of file at path; always use context manager (no leaked handles)."""
     with open(file_path, "rb") as f:
         h = hashlib.md5(f.read()).hexdigest()
     return h.lower() if lower else h
@@ -3894,7 +3470,6 @@ def _md5_file_hex(file_path, lower=False):
 # region Output Formatters
 
 def format_powershell_config(results, bin_info=None, file_path=None, file_size=None):
-    """Generate PowerShell offset table - copy-paste directly into patcher."""
     lines = []
     fmt = (bin_info or {}).get('format', 'raw')
     adj = (bin_info or {}).get('file_offset_adjustment', 0)
@@ -3975,7 +3550,6 @@ def _validate_pe_offsets_for_patcher(results, bin_info, file_size):
     return True, None
 
 
-# Linux/macOS patch block: core Windows names only (no PE-only keys).
 WINDOWS_PATCHER_OFFSET_ORDER = list(WINDOWS_PATCHER_OFFSET_NAMES)
 
 
@@ -4012,7 +3586,6 @@ def _app_dir_semver_from_name(dir_name):
 
 
 def _discord_app_version_matching_install(file_path, data):
-    """Resolve version from an installed app-* tree when this file is byte-identical to that install's voice node."""
     path = Path(file_path) if file_path else None
     try:
         if data is None and path and path.is_file():
@@ -4139,8 +3712,6 @@ def _utf16_stringfileinfo_value(blob, key_ascii):
 
 
 def resolve_discord_app_version(file_path, data=None, bin_info=None, cli_version=None):
-    """(version, source) for patcher DiscordAppVersion. Precedence: cli, env, sidecar,
-    manifest keys, app-* in path, same-bytes match under LocalAppData/Library install, PE .rsrc."""
     path = Path(file_path) if file_path else None
     parent = path.parent if path else None
 
@@ -4189,7 +3760,6 @@ def resolve_discord_app_version(file_path, data=None, bin_info=None, cli_version
 
 
 def format_windows_patcher_block(results, bin_info, file_path, file_size, discord_app_version=None):
-    """Windows patcher copy block; order = $Script:RequiredOffsetNames."""
     if not bin_info or not file_path or file_size is None:
         return None
     if bin_info.get('format') != 'pe':
@@ -4207,8 +3777,6 @@ def format_windows_patcher_block(results, bin_info, file_path, file_size, discor
         app_ver = str(discord_app_version).strip() or "unspecified"
     lines = [
         "# region Offsets (PASTE HERE)",
-        "# finder <path>  [--discord-version … | manifest | env | matches Local install by file hash]",
-        "# Paste into Discord_voice_node_patcher.ps1",
         "",
         "$Script:OffsetsMeta = @{",
         '    FinderVersion = "discord_voice_node_offset_finder.py v%s"' % VERSION,
@@ -4234,67 +3802,55 @@ def format_windows_patcher_block(results, bin_info, file_path, file_size, discor
 
 PATCHER_DEBUG_GROUPS = {
     "STEREO": [
-        ("EmulateStereoSuccess1", "EmulateStereoSuccess1 (channels=2)"),
-        ("EmulateStereoSuccess2", "EmulateStereoSuccess2 (jne->jmp)"),
-        ("CreateAudioFrameStereo", "CreateAudioFrameStereo"),
-        ("AudioEncoderOpusConfigSetChannels", "AudioEncoderConfigSetChannels (ch=2)"),
-        ("MonoDownmixer", "MonoDownmixer (NOP sled + JMP)"),
+        ("CodecProbe_ChannelCountPatch", "LocalUser::CommitAudioCodec / ApplySettings (channel 1->2)"),
+        ("CodecProbe_ForceSuccessBranch", "LocalUser::CommitAudioCodec / ApplySettings (force success jmp)"),
+        ("AudioFrame_StereoChannelAssign", "EngineAudioTransport::CreateAudioFrameToProcess"),
+        ("OpusEncoderConfig_SetStereoChannels", "webrtc::AudioEncoderOpusConfig ctor (ch 1->2)"),
+        ("DownmixMono_BypassBranch", "CapturedAudioProcessor::Process (bypass mono path)"),
     ],
     "BITRATE": [
-        ("EmulateBitrateModified", "EmulateBitrateModified (384kbps)"),
-        ("SetsBitrateBitrateValue", "SetsBitrateBitrateValue (384kbps)"),
-        ("SetsBitrateBitwiseOr", "SetsBitrateBitwiseOr (NOP)"),
+        ("OpusBitrate_Imul384k", "OpusBitrate_Imul384k (384kbps)"),
+        ("AudioEncoder_BitrateMovImm", "AudioEncoder_BitrateMovImm (384kbps)"),
+        ("AudioEncoder_BitrateOrMaskNop", "AudioEncoder_BitrateOrMaskNop (NOP)"),
     ],
     "SAMPLERATE": [
-        ("Emulate48Khz", "Emulate48Khz (NOP cmovb)"),
+        ("SampleRate_Select48kNop", "SampleRate_Select48kNop (NOP cmovb)"),
     ],
     "FILTER": [
-        ("HighPassFilter", "HighPassFilter (RET stub)"),
-        ("HighpassCutoffFilter", "HighpassCutoffFilter (inject hp_cutoff)"),
-        ("DcReject", "DcReject (inject dc_reject)"),
-        ("DownmixFunc", "DownmixFunc (RET)"),
-        ("AudioEncoderOpusConfigIsOk", "AudioEncoderConfigIsOk (RET true)"),
-        ("ThrowError", "ThrowError (RET)"),
+        ("WebRtcHighpass_Trampoline", "WebRtcHighpass_Trampoline (RET stub)"),
+        ("WebRtcHighpassCutoff_Injected", "WebRtcHighpassCutoff_Injected (inject hp_cutoff)"),
+        ("WebRtcDcReject_Injected", "WebRtcDcReject_Injected (inject dc_reject)"),
+        ("ChannelDownmix_RetStub", "downmix_and_resample early RET"),
+        ("OpusEncoderConfig_IsOkRetTrue", "webrtc::AudioEncoderOpusConfig::IsOK (RET true)"),
+        ("AudioEncoderCodec_ThrowNoOp", "AudioEncoderCodec_ThrowNoOp (RET)"),
     ],
     "ENCODER": [
-        ("EncoderConfigInit1", "EncoderConfigInit1 (32000->384000)"),
-        ("EncoderConfigInit2", "EncoderConfigInit2 (32000->384000)"),
-        ("AudioEncoderMultiChannelOpusCh", "AudioEncoderMultiChannelOpusCh (Linux ch=2)"),
+        ("OpusEncoderConfig_CtorBitrate_A", "OpusEncoderConfig ctor literal (32000->384000)"),
+        ("OpusEncoderConfig_CtorBitrate_B", "OpusEncoderConfig ctor literal (32000->384000)"),
     ],
-    "PACKETLOSS": [
-        ("OpusPacketLossCvtt1", "Opus packet loss rate -> 0 (site 1)"),
-        ("OpusPacketLossCvtt2", "Opus packet loss rate -> 0 (site 2)"),
+    "FEC": [
+        ("OpusEncoderConfig_CtorUseInbandFecOn", "AudioEncoderOpusConfig ctor: default use_inband_fec -> 1 (Opus FEC)"),
     ],
     "NETEQ": [
-        ("NetEqDelayMgr_MsPerLossPercent", "NetEq ms_per_loss_percent -> 0"),
+        ("NetEq_DelayMsPerLossPercent", "NetEq ms_per_loss_percent -> 0 (FEC friendly; no Opus loss-hint hacks)"),
     ],
     "PACING": [
-        ("Pacer_BlockAudio_Disable", "Pacer BlockAudio -> false"),
+        ("Pacer_ForceBlockAudioFalse", "Pacer BlockAudio -> false"),
     ],
     "DISCORD_API_LOCK": [
-        ("Discord_SetAutomaticGainControl_1", "Discord::SetAutomaticGainControl (1)"),
-        ("Discord_SetAutomaticGainControl_2", "Discord::SetAutomaticGainControl (2)"),
-        ("Discord_SetNoiseSuppression_1", "Discord::SetNoiseSuppression (1)"),
-        ("Discord_SetNoiseSuppression_2", "Discord::SetNoiseSuppression (2)"),
-        ("Discord_SetEchoCancellation_1", "Discord::SetEchoCancellation (1)"),
-        ("Discord_SetEchoCancellation_2", "Discord::SetEchoCancellation (2)"),
-        ("Discord_SetEchoCancellationPre", "Discord::SetEchoCancellationPreEcho"),
-        ("Discord_EnableBuiltInAEC", "Discord::EnableBuiltInAEC"),
-        ("Discord_SetNoiseCancellation", "Discord::SetNoiseCancellation"),
-        ("Discord_SetNoiseCancellationDuring", "Discord::SetNoiseCancellationDuringProcessing"),
-        ("Discord_SetNoiseCancellationStats", "Discord::SetNoiseCancellationEnableStats"),
-        ("Discord_SetSidechainCompression", "Discord::SetSidechainCompression"),
-        ("Discord_SetHasFullbandPerformance", "Discord::SetHasFullbandPerformance"),
-        ("Discord_SetDuckingPreference", "Discord::SetDuckingPreference"),
-        ("Discord_SetIdleJitterBufferFlush", "Discord::SetIdleJitterBufferFlush"),
-        ("Discord_SetAudioInputEnabled", "Discord::SetAudioInputEnabled"),
-        ("Discord_SetAecDump", "Discord::SetAecDump"),
+        ("Discord_SetAutomaticGainControlConfig", "Discord::SetAutomaticGainControlConfig (AGC off)"),
+        ("Discord_SetAutomaticGainControl_bool", "Discord::SetAutomaticGainControl(bool) (AGC off)"),
+        ("Discord_SetNoiseSuppression_bool", "Discord::SetNoiseSuppression(bool) (NS off)"),
+        ("Discord_SetEchoCancellation_bool", "Discord::SetEchoCancellation(bool) (echo cancel off)"),
+        ("Discord_SetEchoCancellationPreEcho_bool", "Discord::SetEchoCancellationPreEcho (echo cancel off)"),
+        ("Discord_EnableBuiltInAcousticEchoCancel_bool", "Discord::EnableBuiltInAEC (acoustic echo off; not Opus FEC)"),
+        ("Discord_SetNoiseCancellation_bool", "Discord::SetNoiseCancellation (Krisp NC off)"),
+        ("Discord_SetNoiseCancellationDuringProcessing_bool", "Discord::SetNoiseCancellationDuringProcessing (Krisp NC off)"),
     ],
 }
 
 
 def format_windows_debug_mode(results=None):
-    """Format patch names only for patcher Debug Mode."""
     lines = []
     for group_name, patches in PATCHER_DEBUG_GROUPS.items():
         lines.append(f"  [{group_name}]")
@@ -4305,10 +3861,6 @@ def format_windows_debug_mode(results=None):
 
 
 def format_linux_patcher_block(results, bin_info, file_path, file_size):
-    """Linux patcher copy block (ELF file offsets + EXPECTED_MD5/SIZE).
-
-    Emits the 17 Windows-aligned offsets plus Linux-only OFFSET_AudioEncoderMultiChannelOpusCh when found.
-    """
     if not bin_info or not file_path or file_size is None:
         return None
     fmt = bin_info.get('format', 'raw')
@@ -4329,14 +3881,13 @@ def format_linux_patcher_block(results, bin_info, file_path, file_size):
             lines.append(f"OFFSET_{name}=0x{file_off:X}")
         else:
             lines.append(f"OFFSET_{name}=0x0")
-    # Linux-only MultiChannel Opus (after OpusConfigSetChannels in script).
     extra_val = 0
-    if "AudioEncoderMultiChannelOpusCh" in results:
-        extra_val = results["AudioEncoderMultiChannelOpusCh"] - adj
-    extra = f"OFFSET_AudioEncoderMultiChannelOpusCh=0x{extra_val:X}"
+    if "OpusEncoderConfig_SetMultiChannelStereo" in results:
+        extra_val = results["OpusEncoderConfig_SetMultiChannelStereo"] - adj
+    extra = f"OFFSET_OpusEncoderConfig_SetMultiChannelStereo=0x{extra_val:X}"
     inserted = False
     for i, line in enumerate(lines):
-        if line.startswith("OFFSET_AudioEncoderOpusConfigSetChannels="):
+        if line.startswith("OFFSET_OpusEncoderConfig_SetStereoChannels="):
             lines.insert(i + 1, extra)
             inserted = True
             break
@@ -4344,27 +3895,20 @@ def format_linux_patcher_block(results, bin_info, file_path, file_size):
         lines.append(extra)
     lines.append("FILE_OFFSET_ADJUSTMENT=0")
     lines.append("")
-    lines.append("# Required offset names (17 Windows + Linux MultiChannel); validate before build.")
+    lines.append("# Required offset names (18 Windows + Linux MultiChannel); validate before build.")
     lines.append("REQUIRED_OFFSET_NAMES=(")
-    lines.append("    CreateAudioFrameStereo AudioEncoderOpusConfigSetChannels AudioEncoderMultiChannelOpusCh MonoDownmixer")
-    lines.append("    EmulateStereoSuccess1 EmulateStereoSuccess2 EmulateBitrateModified")
-    lines.append("    SetsBitrateBitrateValue SetsBitrateBitwiseOr Emulate48Khz")
-    lines.append("    HighPassFilter HighpassCutoffFilter DcReject DownmixFunc")
-    lines.append("    AudioEncoderOpusConfigIsOk ThrowError")
-    lines.append("    EncoderConfigInit1 EncoderConfigInit2")
+    lines.append("    AudioFrame_StereoChannelAssign OpusEncoderConfig_SetStereoChannels OpusEncoderConfig_SetMultiChannelStereo DownmixMono_BypassBranch")
+    lines.append("    CodecProbe_ChannelCountPatch CodecProbe_ForceSuccessBranch OpusBitrate_Imul384k")
+    lines.append("    AudioEncoder_BitrateMovImm AudioEncoder_BitrateOrMaskNop SampleRate_Select48kNop")
+    lines.append("    WebRtcHighpass_Trampoline WebRtcHighpassCutoff_Injected WebRtcDcReject_Injected ChannelDownmix_RetStub")
+    lines.append("    OpusEncoderConfig_IsOkRetTrue AudioEncoderCodec_ThrowNoOp")
+    lines.append("    OpusEncoderConfig_CtorBitrate_A OpusEncoderConfig_CtorBitrate_B OpusEncoderConfig_CtorUseInbandFecOn")
     lines.append(")")
     return "\n".join(lines) + "\n"
 
 
 def format_macos_patcher_block(results, bin_info, file_path, file_size,
                                arm64_results=None, arm64_info=None, arm64_adj=None):
-    """Generate macOS patcher offset block for copy-paste into discord_voice_patcher_macos.sh.
-
-    Emits absolute file offsets in the on-disk blob (thin or fat universal). For each slice,
-    file_offset_adjustment already incorporates the slice base (see _parse_macho_slice:
-    raw_offset = s_offset + base_offset, adj = s_addr - raw_offset), so
-    config_va - adj is the correct offset from the start of the file — do not add fat_offset again.
-    """
     if not bin_info or not file_path or file_size is None:
         return None
     fmt = bin_info.get('format', 'raw')
@@ -4415,7 +3959,6 @@ def format_macos_patcher_block(results, bin_info, file_path, file_size,
 def format_json(results, bin_info, file_path, file_size, adj, tiers_used,
                 arm64_results=None, arm64_info=None, arm64_adj=None, arm64_tiers=None,
                 discord_app_version=None, discord_app_version_source=None):
-    """Generate machine-readable JSON output."""
     fmt = bin_info.get('format', 'raw') if bin_info else 'pe'
     offsets_only = {name: off for name, off in results.items() if name in ALLOWED_OFFSET_NAMES}
     out = {
@@ -4431,6 +3974,7 @@ def format_json(results, bin_info, file_path, file_size, adj, tiers_used,
         "resolution_tiers": {k: v for k, v in (tiers_used or {}).items() if k in ALLOWED_OFFSET_NAMES},
         "total_found": len(offsets_only),
         "total_expected": len(ALL_OFFSET_NAMES),
+        "linux_only_offset_names": list(LINUX_ONLY_OFFSET_NAMES),
         "discord_app_version": discord_app_version or "unspecified",
         "discord_app_version_source": (discord_app_version_source or "none"),
     }
@@ -4444,7 +3988,6 @@ def format_json(results, bin_info, file_path, file_size, adj, tiers_used,
         out["has_symbols"] = bin_info.get('has_symbols', False)
         out["file_offsets"] = {name: hex(off - adj) for name, off in sorted(offsets_only.items())}
 
-    # Patch specs for adaptive patcher (file_offset = VA - adj = fat-absolute for Mach-O)
     expected_map = _build_expected_map(fmt)
     patches = []
     for name in _all_offset_names():
@@ -4461,10 +4004,9 @@ def format_json(results, bin_info, file_path, file_size, adj, tiers_used,
         })
     out["patches"] = patches
 
-    # Injection sites for hp_cutoff / dc_reject (ELF / Mach-O)
     if fmt in ('elf', 'macho'):
         inject = []
-        for name, size in [("HighpassCutoffFilter", 0x100), ("DcReject", 0x1B6)]:
+        for name, size in [("WebRtcHighpassCutoff_Injected", 0x100), ("WebRtcDcReject_Injected", 0x1B6)]:
             if name in offsets_only:
                 file_off = offsets_only[name] - adj
                 inject.append({
@@ -4485,7 +4027,6 @@ def format_json(results, bin_info, file_path, file_size, adj, tiers_used,
         a64_tiers_out = {}
         for name in sorted(arm64_results.keys()):
             if name in ALLOWED_OFFSET_NAMES:
-                # file_off is absolute position in the fat file (slice-relative VA - adj); do not add fat_offset again
                 abs_file_off = arm64_results[name] - a64_adj
                 a64_offsets[name] = hex(arm64_results[name])
                 a64_file_offsets[name] = hex(abs_file_off)
@@ -4505,7 +4046,6 @@ def format_json(results, bin_info, file_path, file_size, adj, tiers_used,
 # region Visualization
 
 def generate_viz_graph(results, out_dir):
-    """Generate dependency graph PNG (requires networkx + matplotlib)."""
     if not VIZ_AVAILABLE:
         return None
     try:
@@ -4554,15 +4094,10 @@ def generate_viz_graph(results, out_dir):
 # region Auto-Detection
 
 def find_discord_node():
-    """Try to find discord_voice.node in standard install locations.
-
-    Supports Windows, macOS, and Linux (including Flatpak, Snap, AppImage).
-    """
     clients = ['discord', 'discordcanary', 'discordptb', 'discorddevelopment']
     clients_cap = ['Discord', 'DiscordCanary', 'DiscordPTB', 'DiscordDevelopment']
 
     def _search_modules_dirs(base):
-        """Search for discord_voice.node in a Discord install directory tree."""
         if not base.exists():
             return None
         for app_dir in sorted(base.glob('app-*'), reverse=True):
@@ -4573,7 +4108,6 @@ def find_discord_node():
                 for candidate in [vd / 'discord_voice' / 'discord_voice.node', vd / 'discord_voice.node']:
                     if candidate.exists():
                         return candidate
-        # Also check direct modules/ without app-* (some layouts)
         modules = base / 'modules'
         if modules.exists():
             for vd in modules.glob('discord_voice*'):
@@ -4583,11 +4117,9 @@ def find_discord_node():
         return None
 
     def _search_recursive(base, max_depth=5):
-        """Recursively search for discord_voice.node under a base path."""
         if not base.exists():
             return None
         for candidate in base.rglob('discord_voice.node'):
-            # Limit depth to avoid scanning entire filesystem
             try:
                 rel = candidate.relative_to(base)
                 if len(rel.parts) <= max_depth:
@@ -4607,26 +4139,22 @@ def find_discord_node():
     elif sys.platform == 'darwin':
         home = Path.home()
 
-        # /Applications/Discord*.app/Contents/Resources/app-*/modules/...
         for app_name in ['Discord', 'Discord Canary', 'Discord PTB', 'Discord Development']:
             app_path = Path(f'/Applications/{app_name}.app/Contents/Resources')
             if app_path.exists():
                 found = _search_modules_dirs(app_path)
                 if found:
                     return found
-                # Also check Frameworks directory
                 found = _search_recursive(app_path.parent / 'Frameworks', max_depth=6)
                 if found:
                     return found
 
-        # ~/Library/Application Support/discord*/...
         app_support = home / 'Library' / 'Application Support'
         for client in clients:
             found = _search_modules_dirs(app_support / client)
             if found:
                 return found
 
-        # Homebrew cask installs
         for cask_dir in [Path('/usr/local/Caskroom'), Path('/opt/homebrew/Caskroom')]:
             if cask_dir.exists():
                 for d in cask_dir.glob('discord*'):
@@ -4641,29 +4169,24 @@ def find_discord_node():
     else:
         home = Path.home()
 
-        # Standard config: ~/.config/discord*/...
         config_dir = home / '.config'
         for client in clients:
             found = _search_modules_dirs(config_dir / client)
             if found:
                 return found
 
-        # Flatpak: ~/.var/app/com.discordapp.Discord/...
         flatpak_base = home / '.var' / 'app'
         for flatpak_id in ['com.discordapp.Discord', 'com.discordapp.DiscordCanary']:
             flatpak = flatpak_base / flatpak_id
             if flatpak.exists():
-                # Search config dir within flatpak
                 for sub in ['config/discord', 'config/discordcanary', '.config/discord', '.config/discordcanary']:
                     found = _search_modules_dirs(flatpak / sub)
                     if found:
                         return found
-                # Recursive fallback
                 found = _search_recursive(flatpak, max_depth=8)
                 if found:
                     return found
 
-        # Snap: /snap/discord/current/... or ~/snap/discord/...
         for snap_base in [Path('/snap'), home / 'snap']:
             for client in ['discord', 'discord-canary']:
                 snap_dir = snap_base / client
@@ -4672,7 +4195,6 @@ def find_discord_node():
                     if found:
                         return found
 
-        # System installs: /opt/discord*, /usr/share/discord*, /usr/lib/discord*
         for sys_base in ['/opt', '/usr/share', '/usr/lib']:
             for pattern in ['discord*', 'Discord*']:
                 for d in Path(sys_base).glob(pattern):
@@ -4681,13 +4203,11 @@ def find_discord_node():
                         if found:
                             return found
 
-        # AppImage extracted directories
         for d in home.glob('.discord*'):
             found = _search_recursive(d, max_depth=6)
             if found:
                 return found
 
-        # /tmp AppImage mounts
         for d in Path('/tmp').glob('.mount_Discord*'):
             found = _search_recursive(d, max_depth=6)
             if found:
@@ -4707,7 +4227,6 @@ def find_discord_node():
 # region Main
 
 def _cleanup_created_files(path_list):
-    """Remove all files the script created (called at exit)."""
     for p in path_list:
         try:
             Path(p).unlink()
@@ -4718,11 +4237,9 @@ def _cleanup_created_files(path_list):
 
 
 def main():
-    # Track files we create so we can remove them on exit
     created_files = []
     atexit.register(_cleanup_created_files, created_files)
 
-    # CLI: --export, --discord-version, --json, -q
     json_only = '--json' in sys.argv
     quiet = ('--quiet' in sys.argv or '-q' in sys.argv) or json_only
     export_path = None
@@ -4907,16 +4424,21 @@ def main():
         if fmt == 'pe':
             patcher_count, n_pk = count_patcher_offsets_found(results)
             print(f"  Windows patcher:   {patcher_count} / {n_pk}  (required for Discord_voice_node_patcher.ps1)")
-            print(f"  x86_64 discovered: {len(results)} offsets")
+            core_hits = sum(1 for n in ALL_OFFSET_NAMES if n in results)
+            print(f"  Core offsets:      {core_hits} / {len(ALL_OFFSET_NAMES)}  (stereo/codec)")
+            print(f"  x86_64 keys in map: {len(results)}")
         else:
-            print(f"  x86_64 found:      {len(results)} / {len(ALL_OFFSET_NAMES)}")
+            core_hits = sum(1 for n in ALL_OFFSET_NAMES if n in results)
+            print(f"  Core offsets:       {core_hits} / {len(ALL_OFFSET_NAMES)}")
+            print(f"  x86_64 found:      {len(results)} (including platform extras in map)")
         print(f"  Bytes verified:   {verified}")
         print(f"  Warnings:         {warnings}")
         print(f"  Cross-validation: {len(xval_warnings)} issue(s)" if xval_warnings else "  Cross-validation: clean")
         print(f"  Errors:           {len(errors)}")
 
         if arm64_info:
-            print(f"  arm64 found:      {len(arm64_results)} / {len(ALL_OFFSET_NAMES)}")
+            ac = sum(1 for n in ALL_OFFSET_NAMES if n in arm64_results)
+            print(f"  arm64 core:       {ac} / {len(ALL_OFFSET_NAMES)}  (map size {len(arm64_results)})")
 
         tier_counts = {}
         for name, tier in tiers_used.items():
@@ -5015,14 +4537,13 @@ def main():
                 print("    }")
 
             stub_line = ""
-            if fmt == 'pe' and bin_info and "HighpassCutoffFilter" in results:
-                hpc_va = bin_info['image_base'] + results["HighpassCutoffFilter"]
+            if fmt == 'pe' and bin_info and "WebRtcHighpassCutoff_Injected" in results:
+                hpc_va = bin_info['image_base'] + results["WebRtcHighpassCutoff_Injected"]
                 va_bytes = struct.pack('<Q', hpc_va)
                 stub = b'\x48\xB8' + va_bytes + b'\xC3'
-                stub_line = f"\n  HighPassFilter stub: {stub.hex(' ')}\n    mov rax, 0x{hpc_va:X}; ret"
+                stub_line = f"\n  WebRtcHighpass_Trampoline stub: {stub.hex(' ')}\n    mov rax, 0x{hpc_va:X}; ret"
                 print(stub_line)
 
-            # Save offsets.txt
             script_dir = Path(__file__).resolve().parent
             if fmt == 'pe':
                 wb = format_windows_patcher_block(results, bin_info, file_path, file_size, discord_app_version=dapp_ver)
@@ -5063,7 +4584,7 @@ def main():
                     discord_app_version_source=dapp_src)
                 emitted_json_text = json_text
                 if json_only:
-                    pass  # printed in finally after restoring real stdout
+                    pass
                 elif export_path:
                     Path(export_path).write_text(json_text, encoding="ascii")
                     if not quiet:
@@ -5076,10 +4597,11 @@ def main():
             except Exception:
                 pass
 
-        total_x86 = len(results)
-        total_arm64 = len(arm64_results) if arm64_results else -1
         patcher_hits, n_pk = count_patcher_offsets_found(results or {})
         patcher_ok = (patcher_hits == n_pk) if results else False
+
+        core_hits = sum(1 for n in ALL_OFFSET_NAMES if n in results) if results else 0
+        arm64_core = sum(1 for n in ALL_OFFSET_NAMES if n in arm64_results) if arm64_results else -1
 
         if fmt == 'pe':
             if patcher_ok:
@@ -5094,22 +4616,22 @@ def main():
                     exit_code = 2
         else:
             n_required = len(ALL_OFFSET_NAMES)
-            arm64_ok = (total_arm64 < 0) or (total_arm64 == n_required)
-            if total_x86 == n_required and arm64_ok:
-                msg = f"*** ALL {n_required} x86_64 OFFSETS FOUND SUCCESSFULLY ***"
-                if total_arm64 >= 0:
-                    msg += f"  |  arm64: {total_arm64}/{n_required}"
+            arm64_ok = (arm64_core < 0) or (arm64_core == n_required)
+            if core_hits == n_required and arm64_ok:
+                msg = f"*** ALL {n_required} CORE OFFSETS FOUND ***"
+                if arm64_core >= 0:
+                    msg += f"  |  arm64 core: {arm64_core}/{n_required}"
                 print(f"\n  {msg}")
                 exit_code = 0
-            elif total_x86 >= n_required - 2:
-                print(f"\n  *** PARTIAL SUCCESS: {total_x86}/{n_required} x86_64 offsets found ***", end="")
-                if total_arm64 >= 0 and total_arm64 < n_required:
-                    print(f"  (arm64: {total_arm64}/{n_required})")
+            elif core_hits >= n_required - 2:
+                print(f"\n  *** PARTIAL SUCCESS: {core_hits}/{n_required} core x86_64 offsets ***", end="")
+                if arm64_core >= 0 and arm64_core < n_required:
+                    print(f"  (arm64 core: {arm64_core}/{n_required})")
                 else:
                     print()
                 exit_code = 1
             else:
-                print(f"\n  *** INSUFFICIENT RESULTS: {total_x86}/{n_required} x86_64 offsets found ***")
+                print(f"\n  *** INSUFFICIENT RESULTS: {core_hits}/{n_required} core x86_64 offsets ***")
                 exit_code = 2
     finally:
         if quiet:
