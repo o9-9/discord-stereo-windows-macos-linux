@@ -40,10 +40,10 @@ fi
 # pull from the same canonical folder. Path is URL-encoded (spaces=%20,
 # parens=%28/%29, slashes=%2F) - GitHub's API accepts either form, but encoding
 # matches the Hub byte-for-byte for grep-ability.
-#   Browse:  https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes/Patched%20Nodes%20(for%20Installer)/Linux
-VOICE_BACKUP_API="https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/Updates%2FNodes%2FPatched%20Nodes%20%28for%20Installer%29%2FLinux"
+#   Browse:  https://github.com/o9-9/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes/Patched%20Nodes%20(for%20Installer)/Linux
+VOICE_BACKUP_API="https://api.github.com/repos/o9-9/Discord-Stereo-Windows-MacOS-Linux/contents/Updates%2FNodes%2FPatched%20Nodes%20%28for%20Installer%29%2FLinux"
 VOICE_BACKUP_API_REF="main"
-UPDATE_URL="https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Linux/Updates/Stereo-Installer-Linux.sh"
+UPDATE_URL="https://raw.githubusercontent.com/o9-9/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Linux/Updates/Stereo-Installer-Linux.sh"
 =======
 VOICE_BACKUP_API="https://api.github.com/repos/o9-9/discord-stereo-windows-macos-linux/contents/Linux%20Patcher%20and%20Installer/discord_voice"
 UPDATE_URL="https://raw.githubusercontent.com/o9-9/discord-stereo-windows-macos-linux/main/Updates/Linux/Updates/Stereo-Installer-Linux.sh"

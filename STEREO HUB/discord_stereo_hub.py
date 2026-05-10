@@ -74,11 +74,11 @@ def _lerp_rgb(c1: str, c2: str, t: float) -> str:
 
 
 PATCHED_WINDOWS_GITHUB_CONTENTS_API = (
-    "https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/"
+    "https://api.github.com/repos/o9-9/Discord-Stereo-Windows-MacOS-Linux/contents/"
     "Updates%2FNodes%2FPatched%20Nodes%20%28for%20Installer%29%2FWindows"
 )
 PATCHED_LINUX_GITHUB_CONTENTS_API = (
-    "https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/"
+    "https://api.github.com/repos/o9-9/Discord-Stereo-Windows-MacOS-Linux/contents/"
     "Updates%2FNodes%2FPatched%20Nodes%20%28for%20Installer%29%2FLinux"
 )
 PATCHED_MACOS_ZIP_URL = "https://example.invalid/Updates/Nodes/Patched/macOS/latest.zip"
@@ -86,7 +86,7 @@ PATCHED_MACOS_ZIP_URL = "https://example.invalid/Updates/Nodes/Patched/macOS/lat
 OFFLINE_SKIP_REMOTE_ENV = "DISCORD_STEREO_SKIP_REMOTE"
 SKIP_HUB_SELF_UPDATE_ENV = "DISCORD_STEREO_SKIP_HUB_SELF_UPDATE"
 HUB_SELF_UPDATE_RAW_URL = (
-    "https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/"
+    "https://raw.githubusercontent.com/o9-9/Discord-Stereo-Windows-MacOS-Linux/"
     "main/STEREO%20HUB/discord_stereo_hub.py"
 )
 
