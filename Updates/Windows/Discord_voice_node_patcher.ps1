@@ -15,155 +15,123 @@ $ProgressPreference = 'SilentlyContinue'
 
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing -ErrorAction SilentlyContinue
 
-# TLS 1.2 for GitHub/HTTPS on older hosts.
-# Note: comparison ops bind tighter than -band, so the -band must be parenthesized
-# or the test is interpreted as `-band ($Tls12 -eq 0)` and never enables TLS 1.2.
 try {
     if ((([Net.ServicePointManager]::SecurityProtocol) -band [Net.SecurityProtocolType]::Tls12) -eq 0) {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
     }
 } catch { }
 
-# Self-update URL (raw script on GitHub).
-$Script:UPDATE_URL_BASE = "https://raw.githubusercontent.com/o9-9/discord-stereo-windows-macos-linux/main/Updates/Windows/Discord_voice_node_patcher.ps1"
-$Script:SCRIPT_VERSION = "8"
+$Script:UPDATE_URL_BASE = "https://raw.githubusercontent.com/o9-9/Discord-Stereo-Windows-MacOS-Linux/main/Updates/Windows/Discord_voice_node_patcher.ps1"
+$Script:SCRIPT_VERSION = "12"
 
 # region Offsets (PASTE HERE)
-# Paste output from: python discord_voice_node_offset_finder_v5.py <path\to\discord_voice.node>
-# Required: core 17 + extended Windows offsets (RVA hex). Copy the full block into Discord_voice_node_patcher.ps1.
 
 $Script:OffsetsMeta = @{
-    FinderVersion = "discord_voice_node_offset_finder.py v5.1.4"
-    DiscordAppVersion = "1.0.9235"
-    Size          = 14455736
-    MD5           = "c11c7f006f336704223263339f9dc95c"
+    FinderVersion = "discord_voice_node_offset_finder.py v5.1.9"
+    DiscordAppVersion = "1.0.9236"
+    Size          = 14470072
+    MD5           = "2a82ee8c2f27fb5d69942d7f22a95a1e"
 }
 
 $Script:Offsets = @{
-    CreateAudioFrameStereo             = 0x117AC1
-    AudioEncoderOpusConfigSetChannels  = 0x3B0854
-    MonoDownmixer                      = 0xD704E
-    EmulateStereoSuccess1              = 0x53C3CB
-    EmulateStereoSuccess2              = 0x53C3D7
-    EmulateBitrateModified             = 0x53C82A
-    SetsBitrateBitrateValue            = 0x53E651
-    SetsBitrateBitwiseOr               = 0x53E659
-    Emulate48Khz                       = 0x53C533
-    HighPassFilter                     = 0x548640
-    HighpassCutoffFilter               = 0x8DD350
-    DcReject                           = 0x8DD530
-    DownmixFunc                        = 0x8D96C0
-    AudioEncoderOpusConfigIsOk         = 0x3B0AF0
-    ThrowError                         = 0x2C6E80
-    EncoderConfigInit1                 = 0x3B085E
-    EncoderConfigInit2                 = 0x3B0167
-    OpusPacketLossCvtt1                = 0x53DA3A
-    OpusPacketLossCvtt2                = 0x53DBA7
-    NetEqDelayMgr_MsPerLossPercent     = 0xAA4EDD
-    Pacer_BlockAudio_Disable           = 0x6E1B62
-    Discord_SetAutomaticGainControl_1  = 0x79660
-    Discord_SetAutomaticGainControl_2  = 0x79970
-    Discord_SetNoiseSuppression_1      = 0x78FB0
-    Discord_SetNoiseSuppression_2      = 0x792B0
-    Discord_SetEchoCancellation_1      = 0x78990
-    Discord_SetEchoCancellation_2      = 0x78FA0
-    Discord_SetEchoCancellationPre     = 0x78C90
-    Discord_EnableBuiltInAEC           = 0x78690
-    Discord_SetNoiseCancellation       = 0x79980
-    Discord_SetNoiseCancellationAfter  = 0x7A820
-    Discord_SetNoiseCancellationDuring = 0x7A510
-    Discord_SetNoiseCancellationStats  = 0x7A200
-    Discord_SetSidechainCompression    = 0x92000
-    Discord_SetHasFullbandPerformance  = 0x944D0
-    Discord_SetDuckingPreference       = 0x8A1E0
-    Discord_SetIdleJitterBufferFlush   = 0x78380
-    Discord_SetAudioInputEnabled       = 0x91D00
-    Discord_SetAecDump                 = 0x8F5A0
+    AudioFrame_StereoChannelAssign                    = 0x117511
+    OpusEncoderConfig_SetStereoChannels               = 0x3B7BA4
+    DownmixMono_BypassBranch                          = 0xD6A42
+    CodecProbe_ChannelCountPatch                      = 0x559CEB
+    CodecProbe_ForceSuccessBranch                     = 0x559CF7
+    OpusBitrate_Imul384k                              = 0x55A14A
+    AudioEncoder_BitrateMovImm                        = 0x55BF71
+    AudioEncoder_BitrateOrMaskNop                     = 0x55BF79
+    SampleRate_Select48kNop                           = 0x559E53
+    WebRtcHighpass_Trampoline                         = 0x565F60
+    WebRtcHighpassCutoff_Injected                     = 0x8DF510
+    WebRtcDcReject_Injected                           = 0x8DF6F0
+    ChannelDownmix_RetStub                            = 0x8DB880
+    OpusEncoderConfig_IsOkRetTrue                     = 0x3B7E40
+    AudioEncoderCodec_ThrowNoOp                       = 0x2C83C0
+    OpusEncoderConfig_CtorBitrate_A                   = 0x3B7BAE
+    OpusEncoderConfig_CtorBitrate_B                   = 0x3B74B7
+    OpusEncoderConfig_CtorUseInbandFecOn              = 0x3B7BD5
+    NetEq_DelayMsPerLossPercent                       = 0xAA855D
+    Pacer_ForceBlockAudioFalse                        = 0x6F6502
+    Discord_SetAutomaticGainControlConfig             = 0x87BA0
+    Discord_SetAutomaticGainControl_bool              = 0x87F40
+    Discord_SetNoiseSuppression_bool                  = 0x87890
+    Discord_SetEchoCancellation_bool                  = 0x87270
+    Discord_SetEchoCancellationPreEcho_bool           = 0x87570
+    Discord_EnableBuiltInAcousticEchoCancel_bool      = 0x86F70
+    Discord_SetNoiseCancellation_bool                 = 0x88260
+    Discord_SetNoiseCancellationDuringProcessing_bool = 0x88DF0
 }
 
 # endregion Offsets
 
-# Offsets required before C++ codegen / copy block (order = PATCHER_OFFSET_NAMES in offset finder)
 $Script:RequiredOffsetNames = @(
-    "CreateAudioFrameStereo", "AudioEncoderOpusConfigSetChannels", "MonoDownmixer",
-    "EmulateStereoSuccess1", "EmulateStereoSuccess2", "EmulateBitrateModified",
-    "SetsBitrateBitrateValue", "SetsBitrateBitwiseOr", "Emulate48Khz",
-    "HighPassFilter", "HighpassCutoffFilter", "DcReject", "DownmixFunc",
-    "AudioEncoderOpusConfigIsOk", "ThrowError",
-    "EncoderConfigInit1", "EncoderConfigInit2",
-    "OpusPacketLossCvtt1", "OpusPacketLossCvtt2",
-    "NetEqDelayMgr_MsPerLossPercent", "Pacer_BlockAudio_Disable",
-    "Discord_SetAutomaticGainControl_1", "Discord_SetAutomaticGainControl_2",
-    "Discord_SetNoiseSuppression_1", "Discord_SetNoiseSuppression_2",
-    "Discord_SetEchoCancellation_1", "Discord_SetEchoCancellation_2",
-    "Discord_SetEchoCancellationPre",
-    "Discord_EnableBuiltInAEC",
-    "Discord_SetNoiseCancellation", "Discord_SetNoiseCancellationAfter",
-    "Discord_SetNoiseCancellationDuring", "Discord_SetNoiseCancellationStats",
-    "Discord_SetSidechainCompression", "Discord_SetHasFullbandPerformance",
-    "Discord_SetDuckingPreference", "Discord_SetIdleJitterBufferFlush",
-    "Discord_SetAudioInputEnabled", "Discord_SetAecDump"
+    "AudioFrame_StereoChannelAssign", "OpusEncoderConfig_SetStereoChannels", "DownmixMono_BypassBranch",
+    "CodecProbe_ChannelCountPatch", "CodecProbe_ForceSuccessBranch", "OpusBitrate_Imul384k",
+    "AudioEncoder_BitrateMovImm", "AudioEncoder_BitrateOrMaskNop", "SampleRate_Select48kNop",
+    "WebRtcHighpass_Trampoline", "WebRtcHighpassCutoff_Injected", "WebRtcDcReject_Injected", "ChannelDownmix_RetStub",
+    "OpusEncoderConfig_IsOkRetTrue", "AudioEncoderCodec_ThrowNoOp",
+    "OpusEncoderConfig_CtorBitrate_A", "OpusEncoderConfig_CtorBitrate_B", "OpusEncoderConfig_CtorUseInbandFecOn",
+    "NetEq_DelayMsPerLossPercent", "Pacer_ForceBlockAudioFalse",
+    "Discord_SetAutomaticGainControlConfig",
+    "Discord_SetAutomaticGainControl_bool",
+    "Discord_SetNoiseSuppression_bool",
+    "Discord_SetEchoCancellation_bool",
+    "Discord_SetEchoCancellationPreEcho_bool",
+    "Discord_EnableBuiltInAcousticEchoCancel_bool",
+    "Discord_SetNoiseCancellation_bool",
+    "Discord_SetNoiseCancellationDuringProcessing_bool"
 )
 
 # region Patch Definitions
 
 $Script:PatchGroups = [ordered]@{
     STEREO = [ordered]@{
-        EmulateStereoSuccess1 = @{ Name = "EmulateStereoSuccess1 (channels=2)"; Hex = "02" }
-        EmulateStereoSuccess2 = @{ Name = "EmulateStereoSuccess2 (jne->jmp)"; Hex = "EB" }
-        CreateAudioFrameStereo = @{ Name = "CreateAudioFrameStereo"; Hex = "49 89 C5 90" }
-        AudioEncoderOpusConfigSetChannels = @{ Name = "AudioEncoderConfigSetChannels (ch=2)"; Hex = "02" }
-        MonoDownmixer = @{ Name = "MonoDownmixer (NOP sled + JMP)"; Hex = "90 90 90 90 90 90 90 90 90 90 90 90 E9" }
+        CodecProbe_ChannelCountPatch = @{ Name = "LocalUser::CommitAudioCodec / ApplySettings  - channel probe 1->2"; Hex = "02" }
+        CodecProbe_ForceSuccessBranch = @{ Name = "LocalUser::CommitAudioCodec / ApplySettings  - force success branch"; Hex = "EB" }
+        AudioFrame_StereoChannelAssign = @{ Name = "EngineAudioTransport::CreateAudioFrameToProcess  - stereo channel assign"; Hex = "49 89 C5 90" }
+        OpusEncoderConfig_SetStereoChannels = @{ Name = "webrtc::AudioEncoderOpusConfig ctor  - channels 1->2"; Hex = "02" }
+        DownmixMono_BypassBranch = @{ Name = "CapturedAudioProcessor::Process  - bypass mono-collapse"; Hex = "90 90 90 90 90 90 90 90 90 90 90 90 E9" }
     }
     BITRATE = [ordered]@{
-        EmulateBitrateModified = @{ Name = "EmulateBitrateModified (384kbps)"; Hex = "00 DC 05" }
-        SetsBitrateBitrateValue = @{ Name = "SetsBitrateBitrateValue (384kbps)"; Hex = "00 DC 05 00 00" }
-        SetsBitrateBitwiseOr = @{ Name = "SetsBitrateBitwiseOr (NOP)"; Hex = "90 90 90" }
+        OpusBitrate_Imul384k = @{ Name = "OpusBitrate_Imul384k (384kbps)"; Hex = "00 DC 05" }
+        AudioEncoder_BitrateMovImm = @{ Name = "AudioEncoder_BitrateMovImm (384kbps)"; Hex = "00 DC 05 00 00" }
+        AudioEncoder_BitrateOrMaskNop = @{ Name = "AudioEncoder_BitrateOrMaskNop (NOP)"; Hex = "90 90 90" }
     }
     SAMPLERATE = [ordered]@{
-        Emulate48Khz = @{ Name = "Emulate48Khz (NOP cmovb)"; Hex = "90 90 90" }
+        SampleRate_Select48kNop = @{ Name = "SampleRate_Select48kNop (NOP cmovb)"; Hex = "90 90 90" }
     }
     FILTER = [ordered]@{
-        HighPassFilter = @{ Name = "HighPassFilter (RET stub)"; Hex = "mov rax, imm64; ret" }
-        HighpassCutoffFilter = @{ Name = "HighpassCutoffFilter (inject hp_cutoff)"; Hex = "shellcode" }
-        DcReject = @{ Name = "DcReject (inject dc_reject)"; Hex = "shellcode" }
-        DownmixFunc = @{ Name = "DownmixFunc (RET)"; Hex = "C3" }
-        AudioEncoderOpusConfigIsOk = @{ Name = "AudioEncoderConfigIsOk (RET true)"; Hex = "48 C7 C0 01 ... C3" }
-        ThrowError = @{ Name = "ThrowError (RET)"; Hex = "C3" }
+        WebRtcHighpass_Trampoline = @{ Name = "WebRtcHighpass_Trampoline (RET stub)"; Hex = "mov rax, imm64; ret" }
+        WebRtcHighpassCutoff_Injected = @{ Name = "WebRtcHighpassCutoff_Injected (inject hp_cutoff)"; Hex = "shellcode" }
+        WebRtcDcReject_Injected = @{ Name = "WebRtcDcReject_Injected (inject dc_reject)"; Hex = "shellcode" }
+        ChannelDownmix_RetStub = @{ Name = "ChannelDownmix_RetStub (RET)"; Hex = "C3" }
+        OpusEncoderConfig_IsOkRetTrue = @{ Name = "webrtc::AudioEncoderOpusConfig::IsOK  - RET true"; Hex = "48 C7 C0 01 ... C3" }
+        AudioEncoderCodec_ThrowNoOp = @{ Name = "AudioEncoderCodec_ThrowNoOp (RET)"; Hex = "C3" }
     }
     ENCODER = [ordered]@{
-        EncoderConfigInit1 = @{ Name = "EncoderConfigInit1 (32000->384000)"; Hex = "00 DC 05 00" }
-        EncoderConfigInit2 = @{ Name = "EncoderConfigInit2 (32000->384000)"; Hex = "00 DC 05 00" }
+        OpusEncoderConfig_CtorBitrate_A = @{ Name = "OpusEncoderConfig_CtorBitrate_A (32000->384000)"; Hex = "00 DC 05 00" }
+        OpusEncoderConfig_CtorBitrate_B = @{ Name = "OpusEncoderConfig_CtorBitrate_B (32000->384000)"; Hex = "00 DC 05 00" }
     }
-    PACKETLOSS = [ordered]@{
-        OpusPacketLossCvtt1 = @{ Name = "Opus packet loss rate -> 0 (site 1)"; Hex = "31 D2 90 90" }
-        OpusPacketLossCvtt2 = @{ Name = "Opus packet loss rate -> 0 (site 2)"; Hex = "31 D2 90 90" }
+    FEC = [ordered]@{
+        OpusEncoderConfig_CtorUseInbandFecOn = @{ Name = "webrtc::AudioEncoderOpusConfig ctor  - default use_inband_fec 0->1 (Opus in-band FEC)"; Hex = "01" }
     }
     NETEQ = [ordered]@{
-        NetEqDelayMgr_MsPerLossPercent = @{ Name = "NetEq delay inflation -> 0 (ms_per_loss_percent)"; Hex = "48 B8 00 00 00 00 00 00 00 00" }
+        NetEq_DelayMsPerLossPercent = @{ Name = "NetEq::DelayManager ms_per_loss_percent -> 0 (FEC/playout friendly; no Opus loss-hint hacks)"; Hex = "48 B8 00 00 00 00 00 00 00 00" }
     }
     PACING = [ordered]@{
-        Pacer_BlockAudio_Disable = @{ Name = "Pacer BlockAudio -> false"; Hex = "30 DB 90" }
+        Pacer_ForceBlockAudioFalse = @{ Name = "Pacer BlockAudio -> false"; Hex = "30 DB 90" }
     }
     DISCORD_API_LOCK = [ordered]@{
-        Discord_SetAutomaticGainControl_1 = @{ Name = "Discord::SetAutomaticGainControl (variant 1)"; Hex = "C3" }
-        Discord_SetAutomaticGainControl_2 = @{ Name = "Discord::SetAutomaticGainControl (variant 2)"; Hex = "C3" }
-        Discord_SetNoiseSuppression_1     = @{ Name = "Discord::SetNoiseSuppression (variant 1)"; Hex = "C3" }
-        Discord_SetNoiseSuppression_2     = @{ Name = "Discord::SetNoiseSuppression (variant 2)"; Hex = "C3" }
-        Discord_SetEchoCancellation_1     = @{ Name = "Discord::SetEchoCancellation (variant 1)"; Hex = "C3" }
-        Discord_SetEchoCancellation_2     = @{ Name = "Discord::SetEchoCancellation (variant 2)"; Hex = "C3" }
-        Discord_SetEchoCancellationPre    = @{ Name = "Discord::SetEchoCancellationPreEcho"; Hex = "C3" }
-        Discord_SetNoiseCancellation      = @{ Name = "Discord::SetNoiseCancellation"; Hex = "C3" }
-        Discord_SetNoiseCancellationAfter = @{ Name = "Discord::SetNoiseCancellationAfterProcessing"; Hex = "C3" }
-        Discord_SetNoiseCancellationDuring= @{ Name = "Discord::SetNoiseCancellationDuringProcessing"; Hex = "C3" }
-        Discord_SetNoiseCancellationStats = @{ Name = "Discord::SetNoiseCancellationEnableStats"; Hex = "C3" }
-        Discord_SetSidechainCompression   = @{ Name = "Discord::SetSidechainCompression"; Hex = "C3" }
-        Discord_SetHasFullbandPerformance = @{ Name = "Discord::SetHasFullbandPerformance"; Hex = "C3" }
-        Discord_EnableBuiltInAEC          = @{ Name = "Discord::EnableBuiltInAEC"; Hex = "C3" }
-        Discord_SetDuckingPreference      = @{ Name = "Discord::SetDuckingPreference"; Hex = "C3" }
-        Discord_SetIdleJitterBufferFlush  = @{ Name = "Discord::SetIdleJitterBufferFlush"; Hex = "C3" }
-        Discord_SetAudioInputEnabled      = @{ Name = "Discord::SetAudioInputEnabled"; Hex = "C3" }
-        Discord_SetAecDump                = @{ Name = "Discord::SetAecDump"; Hex = "C3" }
+        Discord_SetAutomaticGainControlConfig = @{ Name = "Discord::SetAutomaticGainControlConfig  - stub (AGC off)"; Hex = "C3" }
+        Discord_SetAutomaticGainControl_bool     = @{ Name = "Discord::SetAutomaticGainControl(bool)  - stub (AGC off)"; Hex = "C3" }
+        Discord_SetNoiseSuppression_bool         = @{ Name = "Discord::SetNoiseSuppression(bool)  - stub (NS off)"; Hex = "C3" }
+        Discord_SetEchoCancellation_bool         = @{ Name = "Discord::SetEchoCancellation(bool)  - stub (echo cancel off)"; Hex = "C3" }
+        Discord_SetEchoCancellationPreEcho_bool        = @{ Name = "Discord::SetEchoCancellationPreEcho  - stub (echo cancel off)"; Hex = "C3" }
+        Discord_EnableBuiltInAcousticEchoCancel_bool              = @{ Name = "Discord::EnableBuiltInAEC  - stub (acoustic echo cancel off; not Opus FEC)"; Hex = "C3" }
+        Discord_SetNoiseCancellation_bool          = @{ Name = "Discord::SetNoiseCancellation  - stub (Krisp NC off)"; Hex = "C3" }
+        Discord_SetNoiseCancellationDuringProcessing_bool    = @{ Name = "Discord::SetNoiseCancellationDuringProcessing  - stub (Krisp NC off)"; Hex = "C3" }
     }
 }
 
@@ -175,8 +143,9 @@ foreach ($grp in $Script:PatchGroups.Values) {
 $Script:SelectedPatches = @{}
 foreach ($k in $Script:AllPatchKeys) { $Script:SelectedPatches[$k] = $true }
 
-# Discord can fail to launch if DISCORD_API_LOCK offsets drift. Keep it opt-in.
-foreach ($k in $Script:PatchGroups.DISCORD_API_LOCK.Keys) { $Script:SelectedPatches[$k] = $false }
+if ($env:DISCORD_STEREO_DISABLE_API_LOCK_PATCHES -eq '1') {
+    foreach ($k in $Script:PatchGroups.DISCORD_API_LOCK.Keys) { $Script:SelectedPatches[$k] = $false }
+}
 
 # endregion Patch Definitions
 
@@ -235,7 +204,6 @@ $Script:Config = @{
     ModuleName = "discord_voice.node"
     TempDir = "$env:TEMP\DiscordVoicePatcher"; BackupDir = "$env:TEMP\DiscordVoicePatcher\Backups"
     LogFile = "$env:TEMP\DiscordVoicePatcher\patcher.log"; ConfigFile = "$env:TEMP\DiscordVoicePatcher\config.json"
-    # Backups can be large; keep only a few per client and prune old ones.
     MaxBackupsPerClient = 3
     MaxBackupAgeDays      = 45
     VoiceBackupAPI = "https://api.github.com/repos/o9-9/discord-stereo-windows-macos-linux/contents/Updates%2FNodes%2FUnpatched%20Nodes%20%28For%20Patcher%29%2FWindows"
@@ -277,10 +245,6 @@ function Get-FileMd5Hex {
 }
 
 function Get-PeFileOffsetAdjustment {
-    <#
-    RVA -> file offset uses: fileOffset = rva - (sectionVirtualAddress - sectionRawPointer).
-    Must match the offset-finder logic (PE .text vaddr - raw_offset).
-    #>
     param([Parameter(Mandatory)][string]$Path)
     try {
         $bytes = [System.IO.File]::ReadAllBytes($Path)
@@ -324,10 +288,6 @@ function Get-PeFileOffsetAdjustment {
 }
 
 function Test-DiscordVoiceNodeOffsetAnchors {
-    <#
-    Same gate as the native patcher CheckBytes for Emulate48Khz / ConfigIsOk / DownmixFunc.
-    Catches stale $Script:Offsets vs on-disk node (e.g. MD5 meta updated but RVA block not).
-    #>
     param(
         [Parameter(Mandatory)][string]$NodePath,
         [Parameter(Mandatory)][hashtable]$Offsets,
@@ -353,34 +313,24 @@ function Test-DiscordVoiceNodeOffsetAnchors {
         (($B[0..([Math]::Min($Len, $B.Length) - 1)] | ForEach-Object { $_.ToString('X2') }) -join ' ')
     }
 
-    $r48 = [int]$Offsets.Emulate48Khz
-    $rCfg = [int]$Offsets.AudioEncoderOpusConfigIsOk
-    $rDm = [int]$Offsets.DownmixFunc
+    $r48 = [int]$Offsets.SampleRate_Select48kNop
+    $rCfg = [int]$Offsets.OpusEncoderConfig_IsOkRetTrue
+    $rDm = [int]$Offsets.ChannelDownmix_RetStub
     $b48 = & $slice $r48 3
     $bCfg = & $slice $rCfg 4
     $bDm = & $slice $rDm 4
 
-    $rOp1 = $null; $bOp1 = $null
-    if ($Offsets.ContainsKey('OpusPacketLossCvtt1') -and $Offsets.OpusPacketLossCvtt1) {
-        $rOp1 = [int]$Offsets.OpusPacketLossCvtt1
-        $bOp1 = & $slice $rOp1 4
-    }
-    $rOp2 = $null; $bOp2 = $null
-    if ($Offsets.ContainsKey('OpusPacketLossCvtt2') -and $Offsets.OpusPacketLossCvtt2) {
-        $rOp2 = [int]$Offsets.OpusPacketLossCvtt2
-        $bOp2 = & $slice $rOp2 4
-    }
     $rNe = $null; $bNe = $null
-    if ($Offsets.ContainsKey('NetEqDelayMgr_MsPerLossPercent') -and $Offsets.NetEqDelayMgr_MsPerLossPercent) {
-        $rNe = [int]$Offsets.NetEqDelayMgr_MsPerLossPercent
+    if ($Offsets.ContainsKey('NetEq_DelayMsPerLossPercent') -and $Offsets.NetEq_DelayMsPerLossPercent) {
+        $rNe = [int]$Offsets.NetEq_DelayMsPerLossPercent
         $bNe = & $slice $rNe 10
     }
     $rPace = $null; $bPace = $null
-    if ($Offsets.ContainsKey('Pacer_BlockAudio_Disable') -and $Offsets.Pacer_BlockAudio_Disable) {
-        $rPace = [int]$Offsets.Pacer_BlockAudio_Disable
+    if ($Offsets.ContainsKey('Pacer_ForceBlockAudioFalse') -and $Offsets.Pacer_ForceBlockAudioFalse) {
+        $rPace = [int]$Offsets.Pacer_ForceBlockAudioFalse
         $bPace = & $slice $rPace 3
     }
-    if (-not $b48 -or -not $bCfg -or -not $bDm -or ($rOp1 -and -not $bOp1) -or ($rOp2 -and -not $bOp2) -or ($rNe -and -not $bNe) -or ($rPace -and -not $bPace)) {
+    if (-not $b48 -or -not $bCfg -or -not $bDm -or ($rNe -and -not $bNe) -or ($rPace -and -not $bPace)) {
         Write-Log "Anchor check: RVA->file offset out of range (FILE_OFFSET_ADJUSTMENT=0x$('{0:X}' -f $FileOffsetAdjustment))." -Level Error
         return $false
     }
@@ -400,47 +350,27 @@ function Test-DiscordVoiceNodeOffsetAnchors {
 
     $okNe = $true
     if ($rNe) {
-        # Accept original imm64 (0xC800000014) or patched imm64 (0)
         $okNe = (
             ($bNe[0] -eq 0x48 -and $bNe[1] -eq 0xB8 -and $bNe[2] -eq 0x14 -and $bNe[6] -eq 0xC8 -and ($bNe[3..5] | Where-Object { $_ -ne 0 }).Count -eq 0 -and ($bNe[7..9] | Where-Object { $_ -ne 0 }).Count -eq 0) -or
             ($bNe[0] -eq 0x48 -and $bNe[1] -eq 0xB8 -and ($bNe[2..9] | Where-Object { $_ -ne 0 }).Count -eq 0)
         )
     }
 
-    $okOp1 = $true
-    if ($rOp1) {
-        # cvttss2si edx,xmm0 (F2 0F 2C D0) or patched xor edx,edx; nop nop
-        $okOp1 = (
-            ($bOp1[0] -eq 0xF2 -and $bOp1[1] -eq 0x0F -and $bOp1[2] -eq 0x2C -and $bOp1[3] -eq 0xD0) -or
-            ($bOp1[0] -eq 0x31 -and $bOp1[1] -eq 0xD2 -and $bOp1[2] -eq 0x90 -and $bOp1[3] -eq 0x90)
-        )
-    }
-    $okOp2 = $true
-    if ($rOp2) {
-        $okOp2 = (
-            ($bOp2[0] -eq 0xF2 -and $bOp2[1] -eq 0x0F -and $bOp2[2] -eq 0x2C -and $bOp2[3] -eq 0xD0) -or
-            ($bOp2[0] -eq 0x31 -and $bOp2[1] -eq 0xD2 -and $bOp2[2] -eq 0x90 -and $bOp2[3] -eq 0x90)
-        )
-    }
-
     $okPace = $true
     if ($rPace) {
-        # Accept original setz bl or patched xor bl,bl; nop
         $okPace = (
             ($bPace[0] -eq 0x0F -and $bPace[1] -eq 0x94 -and $bPace[2] -eq 0xC3) -or
             ($bPace[0] -eq 0x30 -and $bPace[1] -eq 0xDB -and $bPace[2] -eq 0x90)
         )
     }
 
-    if ($ok48 -and $okCfg -and $okDm -and $okNe -and $okOp1 -and $okOp2 -and $okPace) { return $true }
+    if ($ok48 -and $okCfg -and $okDm -and $okNe -and $okPace) { return $true }
 
     Write-Log "Pre-patch anchor check failed (offsets do not match this discord_voice.node file)." -Level Error
     Write-Log ("  FILE_OFFSET_ADJUSTMENT=0x{0:X} (from PE .text); re-paste the full '# region Offsets' block from the offset finder." -f $FileOffsetAdjustment) -Level Error
-    Write-Log ("  Emulate48Khz @0x{0:X} file 0x{1:X}: {2} (expected 0F 42 C1 or 90 90 90)" -f $r48, ($r48 - $FileOffsetAdjustment), (& $hex $b48 3)) -Level Error
+    Write-Log ("  SampleRate_Select48kNop @0x{0:X} file 0x{1:X}: {2} (expected 0F 42 C1 or 90 90 90)" -f $r48, ($r48 - $FileOffsetAdjustment), (& $hex $b48 3)) -Level Error
     Write-Log ("  ConfigIsOk   @0x{0:X} file 0x{1:X}: {2} (expected 8B 11 31 C0 or 48 C7 C0 01)" -f $rCfg, ($rCfg - $FileOffsetAdjustment), (& $hex $bCfg 4)) -Level Error
-    Write-Log ("  DownmixFunc  @0x{0:X} file 0x{1:X}: {2} (expected 41 57 41 56 or C3)" -f $rDm, ($rDm - $FileOffsetAdjustment), (& $hex $bDm 4)) -Level Error
-    if ($rOp1) { Write-Log ("  OpusPacketLossCvtt1 @0x{0:X} file 0x{1:X}: {2} (expected F2 0F 2C D0 or 31 D2 90 90)" -f $rOp1, ($rOp1 - $FileOffsetAdjustment), (& $hex $bOp1 4)) -Level Error }
-    if ($rOp2) { Write-Log ("  OpusPacketLossCvtt2 @0x{0:X} file 0x{1:X}: {2} (expected F2 0F 2C D0 or 31 D2 90 90)" -f $rOp2, ($rOp2 - $FileOffsetAdjustment), (& $hex $bOp2 4)) -Level Error }
+    Write-Log ("  ChannelDownmix_RetStub  @0x{0:X} file 0x{1:X}: {2} (expected 41 57 41 56 or C3)" -f $rDm, ($rDm - $FileOffsetAdjustment), (& $hex $bDm 4)) -Level Error
     if ($rNe) { Write-Log ("  NetEq(ms/loss) @0x{0:X} file 0x{1:X}: {2} (expected 48 B8 14 00 00 00 C8 00 00 00 or 48 B8 00..00)" -f $rNe, ($rNe - $FileOffsetAdjustment), (& $hex $bNe 10)) -Level Error }
     if ($rPace) { Write-Log ("  Pacer(BlockAudio) @0x{0:X} file 0x{1:X}: {2} (expected 0F 94 C3 or 30 DB 90)" -f $rPace, ($rPace - $FileOffsetAdjustment), (& $hex $bPace 3)) -Level Error }
     return $false
@@ -535,10 +465,10 @@ function Get-OffsetsCopyBlock {
         "# region Offsets (PASTE HERE)",
         "",
         "`$Script:OffsetsMeta = @{",
-        "    FinderVersion     = `"$($meta.FinderVersion)`"",
+        "    FinderVersion = `"$($meta.FinderVersion)`"",
         "    DiscordAppVersion = `"$($meta.DiscordAppVersion)`"",
-        "    Size              = $($meta.Size)",
-        "    MD5               = `"$($meta.MD5)`"",
+        "    Size          = $($meta.Size)",
+        "    MD5           = `"$($meta.MD5)`"",
         "}",
         "",
         "`$Script:Offsets = @{"
@@ -581,7 +511,6 @@ function Get-PatcherRestartHelperScriptContent {
     $parts.Add('Bypass')
     $parts.Add('-File')
     $parts.Add($TargetScriptPath)
-    # Read script-scope param() values (nested function does not see script $PSBoundParameters)
     $parts.Add('-AudioGainMultiplier')
     $parts.Add([string]$script:AudioGainMultiplier)
     if ($script:SkipBackup) { $parts.Add('-SkipBackup') }
@@ -668,7 +597,6 @@ function Update-ScriptPatch {
     param([string]$UpdatedScriptPath, [string]$CurrentScriptPath, [switch]$RestartAfter)
     if (-not (Test-Path $UpdatedScriptPath)) { Write-Log "Update file not found: $UpdatedScriptPath" -Level Error; return $false }
     $batchFile = Join-Path $env:TEMP "DiscordVoicePatcher_Update.bat"
-    # Build .bat with single-quoted lines only: "..." would parse >nul, 2>&1, & as PowerShell redirection/operators.
     $bl = [System.Collections.Generic.List[string]]::new()
     [void]$bl.Add('@echo off')
     [void]$bl.Add('echo Applying update...')
@@ -1366,7 +1294,9 @@ function Show-ConfigurationGUI {
         SAMPLERATE = [Drawing.Color]::FromArgb(87,242,135)
         FILTER     = [Drawing.Color]::FromArgb(254,231,92)
         ENCODER    = [Drawing.Color]::FromArgb(254,231,92)
-        PACKETLOSS = [Drawing.Color]::FromArgb(87,242,135)
+        FEC        = [Drawing.Color]::FromArgb(78,205,196)
+        NETEQ      = [Drawing.Color]::FromArgb(87,242,135)
+        PACING     = [Drawing.Color]::FromArgb(87,242,135)
         DISCORD_API_LOCK = [Drawing.Color]::FromArgb(240,71,71)
     }
 
@@ -1834,7 +1764,6 @@ function Get-PatcherSourceCode {
     $offsets = $Script:Config.Offsets
     $c = $Script:Config
 
-    # Require full Windows offset list (core + extended) before generating C++ (avoids null/zero in embedded code)
     $missing = @($Script:RequiredOffsetNames | Where-Object { $null -eq $offsets[$_] -or ($offsets[$_] -is [int] -and $offsets[$_] -eq 0) })
     if ($missing.Count -gt 0) {
         throw "Missing or zero offset(s) required for patcher: $($missing -join ', '). Paste the full '# region Offsets' block from the offset finder ($($Script:RequiredOffsetNames.Count) entries)."
@@ -1866,48 +1795,36 @@ extern "C" void dc_reject(const float*, float*, int*, int, int, int);
 extern "C" void hp_cutoff(const float*, int, float*, int*, int, int, int, int);
 
 namespace Offsets {
-    constexpr uint32_t CreateAudioFrameStereo = $('0x{0:X}' -f $offsets.CreateAudioFrameStereo);
-    constexpr uint32_t AudioEncoderOpusConfigSetChannels = $('0x{0:X}' -f $offsets.AudioEncoderOpusConfigSetChannels);
-    constexpr uint32_t MonoDownmixer = $('0x{0:X}' -f $offsets.MonoDownmixer);
-    constexpr uint32_t EmulateStereoSuccess1 = $('0x{0:X}' -f $offsets.EmulateStereoSuccess1);
-    constexpr uint32_t EmulateStereoSuccess2 = $('0x{0:X}' -f $offsets.EmulateStereoSuccess2);
-    constexpr uint32_t EmulateBitrateModified = $('0x{0:X}' -f $offsets.EmulateBitrateModified);
-    constexpr uint32_t SetsBitrateBitrateValue = $('0x{0:X}' -f $offsets.SetsBitrateBitrateValue);
-    constexpr uint32_t SetsBitrateBitwiseOr = $('0x{0:X}' -f $offsets.SetsBitrateBitwiseOr);
-    constexpr uint32_t Emulate48Khz = $('0x{0:X}' -f $offsets.Emulate48Khz);
-    constexpr uint32_t HighPassFilter = $('0x{0:X}' -f $offsets.HighPassFilter);
-    constexpr uint32_t HighpassCutoffFilter = $('0x{0:X}' -f $offsets.HighpassCutoffFilter);
-    constexpr uint32_t DcReject = $('0x{0:X}' -f $offsets.DcReject);
-    constexpr uint32_t DownmixFunc = $('0x{0:X}' -f $offsets.DownmixFunc);
-    constexpr uint32_t AudioEncoderOpusConfigIsOk = $('0x{0:X}' -f $offsets.AudioEncoderOpusConfigIsOk);
-    constexpr uint32_t ThrowError = $('0x{0:X}' -f $offsets.ThrowError);
-    constexpr uint32_t EncoderConfigInit1 = $('0x{0:X}' -f $offsets.EncoderConfigInit1);
-    constexpr uint32_t EncoderConfigInit2 = $('0x{0:X}' -f $offsets.EncoderConfigInit2);
+    constexpr uint32_t AudioFrame_StereoChannelAssign = $('0x{0:X}' -f $offsets.AudioFrame_StereoChannelAssign);
+    constexpr uint32_t OpusEncoderConfig_SetStereoChannels = $('0x{0:X}' -f $offsets.OpusEncoderConfig_SetStereoChannels);
+    constexpr uint32_t DownmixMono_BypassBranch = $('0x{0:X}' -f $offsets.DownmixMono_BypassBranch);
+    constexpr uint32_t CodecProbe_ChannelCountPatch = $('0x{0:X}' -f $offsets.CodecProbe_ChannelCountPatch);
+    constexpr uint32_t CodecProbe_ForceSuccessBranch = $('0x{0:X}' -f $offsets.CodecProbe_ForceSuccessBranch);
+    constexpr uint32_t OpusBitrate_Imul384k = $('0x{0:X}' -f $offsets.OpusBitrate_Imul384k);
+    constexpr uint32_t AudioEncoder_BitrateMovImm = $('0x{0:X}' -f $offsets.AudioEncoder_BitrateMovImm);
+    constexpr uint32_t AudioEncoder_BitrateOrMaskNop = $('0x{0:X}' -f $offsets.AudioEncoder_BitrateOrMaskNop);
+    constexpr uint32_t SampleRate_Select48kNop = $('0x{0:X}' -f $offsets.SampleRate_Select48kNop);
+    constexpr uint32_t WebRtcHighpass_Trampoline = $('0x{0:X}' -f $offsets.WebRtcHighpass_Trampoline);
+    constexpr uint32_t WebRtcHighpassCutoff_Injected = $('0x{0:X}' -f $offsets.WebRtcHighpassCutoff_Injected);
+    constexpr uint32_t WebRtcDcReject_Injected = $('0x{0:X}' -f $offsets.WebRtcDcReject_Injected);
+    constexpr uint32_t ChannelDownmix_RetStub = $('0x{0:X}' -f $offsets.ChannelDownmix_RetStub);
+    constexpr uint32_t OpusEncoderConfig_IsOkRetTrue = $('0x{0:X}' -f $offsets.OpusEncoderConfig_IsOkRetTrue);
+    constexpr uint32_t AudioEncoderCodec_ThrowNoOp = $('0x{0:X}' -f $offsets.AudioEncoderCodec_ThrowNoOp);
+    constexpr uint32_t OpusEncoderConfig_CtorBitrate_A = $('0x{0:X}' -f $offsets.OpusEncoderConfig_CtorBitrate_A);
+    constexpr uint32_t OpusEncoderConfig_CtorBitrate_B = $('0x{0:X}' -f $offsets.OpusEncoderConfig_CtorBitrate_B);
+    constexpr uint32_t OpusEncoderConfig_CtorUseInbandFecOn = $('0x{0:X}' -f $offsets.OpusEncoderConfig_CtorUseInbandFecOn);
 
-    constexpr uint32_t OpusPacketLossCvtt1 = $('0x{0:X}' -f $offsets.OpusPacketLossCvtt1);
-    constexpr uint32_t OpusPacketLossCvtt2 = $('0x{0:X}' -f $offsets.OpusPacketLossCvtt2);
+    constexpr uint32_t NetEq_DelayMsPerLossPercent = $('0x{0:X}' -f $offsets.NetEq_DelayMsPerLossPercent);
+    constexpr uint32_t Pacer_ForceBlockAudioFalse       = $('0x{0:X}' -f $offsets.Pacer_ForceBlockAudioFalse);
 
-    constexpr uint32_t NetEqDelayMgr_MsPerLossPercent = $('0x{0:X}' -f $offsets.NetEqDelayMgr_MsPerLossPercent);
-    constexpr uint32_t Pacer_BlockAudio_Disable       = $('0x{0:X}' -f $offsets.Pacer_BlockAudio_Disable);
-
-    constexpr uint32_t Discord_SetAutomaticGainControl_1 = $('0x{0:X}' -f $offsets.Discord_SetAutomaticGainControl_1);
-    constexpr uint32_t Discord_SetAutomaticGainControl_2 = $('0x{0:X}' -f $offsets.Discord_SetAutomaticGainControl_2);
-    constexpr uint32_t Discord_SetNoiseSuppression_1     = $('0x{0:X}' -f $offsets.Discord_SetNoiseSuppression_1);
-    constexpr uint32_t Discord_SetNoiseSuppression_2     = $('0x{0:X}' -f $offsets.Discord_SetNoiseSuppression_2);
-    constexpr uint32_t Discord_SetEchoCancellation_1     = $('0x{0:X}' -f $offsets.Discord_SetEchoCancellation_1);
-    constexpr uint32_t Discord_SetEchoCancellation_2     = $('0x{0:X}' -f $offsets.Discord_SetEchoCancellation_2);
-    constexpr uint32_t Discord_SetEchoCancellationPre    = $('0x{0:X}' -f $offsets.Discord_SetEchoCancellationPre);
-    constexpr uint32_t Discord_EnableBuiltInAEC          = $('0x{0:X}' -f $offsets.Discord_EnableBuiltInAEC);
-    constexpr uint32_t Discord_SetNoiseCancellation      = $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellation);
-    constexpr uint32_t Discord_SetNoiseCancellationAfter = $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellationAfter);
-    constexpr uint32_t Discord_SetNoiseCancellationDuring= $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellationDuring);
-    constexpr uint32_t Discord_SetNoiseCancellationStats = $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellationStats);
-    constexpr uint32_t Discord_SetSidechainCompression   = $('0x{0:X}' -f $offsets.Discord_SetSidechainCompression);
-    constexpr uint32_t Discord_SetHasFullbandPerformance = $('0x{0:X}' -f $offsets.Discord_SetHasFullbandPerformance);
-    constexpr uint32_t Discord_SetDuckingPreference      = $('0x{0:X}' -f $offsets.Discord_SetDuckingPreference);
-    constexpr uint32_t Discord_SetIdleJitterBufferFlush  = $('0x{0:X}' -f $offsets.Discord_SetIdleJitterBufferFlush);
-    constexpr uint32_t Discord_SetAudioInputEnabled      = $('0x{0:X}' -f $offsets.Discord_SetAudioInputEnabled);
-    constexpr uint32_t Discord_SetAecDump                = $('0x{0:X}' -f $offsets.Discord_SetAecDump);
+    constexpr uint32_t Discord_SetAutomaticGainControlConfig = $('0x{0:X}' -f $offsets.Discord_SetAutomaticGainControlConfig);
+    constexpr uint32_t Discord_SetAutomaticGainControl_bool   = $('0x{0:X}' -f $offsets.Discord_SetAutomaticGainControl_bool);
+    constexpr uint32_t Discord_SetNoiseSuppression_bool     = $('0x{0:X}' -f $offsets.Discord_SetNoiseSuppression_bool);
+    constexpr uint32_t Discord_SetEchoCancellation_bool     = $('0x{0:X}' -f $offsets.Discord_SetEchoCancellation_bool);
+    constexpr uint32_t Discord_SetEchoCancellationPreEcho_bool    = $('0x{0:X}' -f $offsets.Discord_SetEchoCancellationPreEcho_bool);
+    constexpr uint32_t Discord_EnableBuiltInAcousticEchoCancel_bool          = $('0x{0:X}' -f $offsets.Discord_EnableBuiltInAcousticEchoCancel_bool);
+    constexpr uint32_t Discord_SetNoiseCancellation_bool      = $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellation_bool);
+    constexpr uint32_t Discord_SetNoiseCancellationDuringProcessing_bool= $('0x{0:X}' -f $offsets.Discord_SetNoiseCancellationDuringProcessing_bool);
     constexpr uint32_t FILE_OFFSET_ADJUSTMENT = $('0x{0:X}' -f $FileOffsetAdjustment);
 };
 
@@ -1983,29 +1900,29 @@ private:
         const unsigned char patched_downmix[]  = {0xC3};
         const unsigned char patched_enc384[]   = {0x00, 0xDC, 0x05, 0x00};
 
-        bool o1 = CheckBytes(Offsets::Emulate48Khz, orig_48khz, 3)
-               || CheckBytes(Offsets::Emulate48Khz, patched_48khz, 3);
-        bool o2 = CheckBytes(Offsets::AudioEncoderOpusConfigIsOk, orig_configok, 4)
-               || CheckBytes(Offsets::AudioEncoderOpusConfigIsOk, patched_configok, 4);
-        bool o3 = CheckBytes(Offsets::DownmixFunc, orig_downmix, 4)
-               || CheckBytes(Offsets::DownmixFunc, patched_downmix, 1);
-        bool o_enc1 = CheckBytes(Offsets::EncoderConfigInit1, orig_enc_32k, 4)
-               || CheckBytes(Offsets::EncoderConfigInit1, patched_enc384, 4);
-        bool o_enc2 = CheckBytes(Offsets::EncoderConfigInit2, orig_enc_32k, 4)
-               || CheckBytes(Offsets::EncoderConfigInit2, patched_enc384, 4);
+        bool o1 = CheckBytes(Offsets::SampleRate_Select48kNop, orig_48khz, 3)
+               || CheckBytes(Offsets::SampleRate_Select48kNop, patched_48khz, 3);
+        bool o2 = CheckBytes(Offsets::OpusEncoderConfig_IsOkRetTrue, orig_configok, 4)
+               || CheckBytes(Offsets::OpusEncoderConfig_IsOkRetTrue, patched_configok, 4);
+        bool o3 = CheckBytes(Offsets::ChannelDownmix_RetStub, orig_downmix, 4)
+               || CheckBytes(Offsets::ChannelDownmix_RetStub, patched_downmix, 1);
+        bool o_enc1 = CheckBytes(Offsets::OpusEncoderConfig_CtorBitrate_A, orig_enc_32k, 4)
+               || CheckBytes(Offsets::OpusEncoderConfig_CtorBitrate_A, patched_enc384, 4);
+        bool o_enc2 = CheckBytes(Offsets::OpusEncoderConfig_CtorBitrate_B, orig_enc_32k, 4)
+               || CheckBytes(Offsets::OpusEncoderConfig_CtorBitrate_B, patched_enc384, 4);
 
         if (!o1 || !o2 || !o3) {
             printf("ERROR: Binary validation failed - wrong build.\n");
-            printf("  Emulate48Khz: %s  ConfigIsOk: %s  DownmixFunc: %s\n", o1 ? "OK" : "MISMATCH", o2 ? "OK" : "MISMATCH", o3 ? "OK" : "MISMATCH");
+            printf("  SampleRate_Select48kNop: %s  ConfigIsOk: %s  ChannelDownmix_RetStub: %s\n", o1 ? "OK" : "MISMATCH", o2 ? "OK" : "MISMATCH", o3 ? "OK" : "MISMATCH");
             return false;
         }
-        if (CheckBytes(Offsets::Emulate48Khz, patched_48khz, 3)
-            && CheckBytes(Offsets::AudioEncoderOpusConfigIsOk, patched_configok, 4)
-            && CheckBytes(Offsets::DownmixFunc, patched_downmix, 1)) {
+        if (CheckBytes(Offsets::SampleRate_Select48kNop, patched_48khz, 3)
+            && CheckBytes(Offsets::OpusEncoderConfig_IsOkRetTrue, patched_configok, 4)
+            && CheckBytes(Offsets::ChannelDownmix_RetStub, patched_downmix, 1)) {
             printf("NOTE: Key sites look already patched; re-applying all enabled patches.\n\n");
         }
         if (!o_enc1 || !o_enc2) {
-            printf("WARNING: Encoder config sites do not match stock or 384k patched pattern; EncoderConfigInit1/2 will be skipped if selected.\n\n");
+            printf("WARNING: Encoder config sites do not match stock or 384k patched pattern; OpusEncoderConfig_CtorBitrate_A/B will be skipped if selected.\n\n");
         }
 
         auto PatchBytes = [&](uint32_t offset, const char* bytes, size_t len) -> bool {
@@ -2071,165 +1988,167 @@ private:
         int patchCount = 0;
         int skipCount = 0;
 
-#if PATCH_EmulateStereoSuccess1
-        printf("  [STEREO] EmulateStereoSuccess1 (channels=2)...\n");
-        if (!PatchBytes(Offsets::EmulateStereoSuccess1, "\x02", 1)) return false;
+#if PATCH_CodecProbe_ChannelCountPatch
+        printf("  [STEREO] CodecProbe_ChannelCountPatch (channels=2)...\n");
+        if (!PatchBytes(Offsets::CodecProbe_ChannelCountPatch, "\x02", 1)) return false;
         patchCount++;
 #else
-        printf("  [STEREO] EmulateStereoSuccess1 - SKIPPED\n"); skipCount++;
+        printf("  [STEREO] CodecProbe_ChannelCountPatch - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_EmulateStereoSuccess2
-        printf("  [STEREO] EmulateStereoSuccess2 (jne->jmp)...\n");
-        if (!PatchBytes(Offsets::EmulateStereoSuccess2, "\xEB", 1)) return false;
+#if PATCH_CodecProbe_ForceSuccessBranch
+        printf("  [STEREO] CodecProbe_ForceSuccessBranch (jne->jmp)...\n");
+        if (!PatchBytes(Offsets::CodecProbe_ForceSuccessBranch, "\xEB", 1)) return false;
         patchCount++;
 #else
-        printf("  [STEREO] EmulateStereoSuccess2 - SKIPPED\n"); skipCount++;
+        printf("  [STEREO] CodecProbe_ForceSuccessBranch - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_CreateAudioFrameStereo
-        printf("  [STEREO] CreateAudioFrameStereo...\n");
-        if (!PatchBytes(Offsets::CreateAudioFrameStereo, "\x49\x89\xC5\x90", 4)) return false;
+#if PATCH_AudioFrame_StereoChannelAssign
+        printf("  [STEREO] AudioFrame_StereoChannelAssign...\n");
+        if (!PatchBytes(Offsets::AudioFrame_StereoChannelAssign, "\x49\x89\xC5\x90", 4)) return false;
         patchCount++;
 #else
-        printf("  [STEREO] CreateAudioFrameStereo - SKIPPED\n"); skipCount++;
+        printf("  [STEREO] AudioFrame_StereoChannelAssign - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_AudioEncoderOpusConfigSetChannels
-        printf("  [STEREO] AudioEncoderConfigSetChannels (ch=2)...\n");
-        if (!PatchBytes(Offsets::AudioEncoderOpusConfigSetChannels, "\x02", 1)) return false;
+#if PATCH_OpusEncoderConfig_SetStereoChannels
+        printf("  [STEREO] webrtc::AudioEncoderOpusConfig channels 1->2...\n");
+        if (!PatchBytes(Offsets::OpusEncoderConfig_SetStereoChannels, "\x02", 1)) return false;
         patchCount++;
 #else
-        printf("  [STEREO] AudioEncoderConfigSetChannels - SKIPPED\n"); skipCount++;
+        printf("  [STEREO] OpusEncoderConfig_SetStereoChannels - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_MonoDownmixer
-        printf("  [STEREO] MonoDownmixer (NOP sled + JMP)...\n");
-        if (!PatchBytes(Offsets::MonoDownmixer, "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\xE9", 13)) return false;
+#if PATCH_DownmixMono_BypassBranch
+        printf("  [STEREO] DownmixMono_BypassBranch (NOP sled + JMP)...\n");
+        if (!PatchBytes(Offsets::DownmixMono_BypassBranch, "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\xE9", 13)) return false;
         patchCount++;
 #else
-        printf("  [STEREO] MonoDownmixer - SKIPPED\n"); skipCount++;
-#endif
-
-#if PATCH_EmulateBitrateModified
-        printf("  [BITRATE] EmulateBitrateModified (384kbps)...\n");
-        if (!PatchBytes(Offsets::EmulateBitrateModified, "\x00\xDC\x05", 3)) return false;
-        patchCount++;
-#else
-        printf("  [BITRATE] EmulateBitrateModified - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_SetsBitrateBitrateValue
-        printf("  [BITRATE] SetsBitrateBitrateValue (384kbps)...\n");
-        if (!PatchBytes(Offsets::SetsBitrateBitrateValue, "\x00\xDC\x05\x00\x00", 5)) return false;
-        patchCount++;
-#else
-        printf("  [BITRATE] SetsBitrateBitrateValue - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_SetsBitrateBitwiseOr
-        printf("  [BITRATE] SetsBitrateBitwiseOr (NOP)...\n");
-        if (!PatchBytes(Offsets::SetsBitrateBitwiseOr, "\x90\x90\x90", 3)) return false;
-        patchCount++;
-#else
-        printf("  [BITRATE] SetsBitrateBitwiseOr - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_Emulate48Khz
-        printf("  [SAMPLERATE] Emulate48Khz (NOP cmovb)...\n");
-        if (!PatchBytes(Offsets::Emulate48Khz, "\x90\x90\x90", 3)) return false;
-        patchCount++;
-#else
-        printf("  [SAMPLERATE] Emulate48Khz - SKIPPED\n"); skipCount++;
+        printf("  [STEREO] DownmixMono_BypassBranch - SKIPPED\n"); skipCount++;
 #endif
 
-#if PATCH_HighPassFilter
-        printf("  [FILTER] HighPassFilter (RET stub)...\n");
+#if PATCH_OpusBitrate_Imul384k
+        printf("  [BITRATE] OpusBitrate_Imul384k (384kbps)...\n");
+        if (!PatchBytes(Offsets::OpusBitrate_Imul384k, "\x00\xDC\x05", 3)) return false;
+        patchCount++;
+#else
+        printf("  [BITRATE] OpusBitrate_Imul384k - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_AudioEncoder_BitrateMovImm
+        printf("  [BITRATE] AudioEncoder_BitrateMovImm (384kbps)...\n");
+        if (!PatchBytes(Offsets::AudioEncoder_BitrateMovImm, "\x00\xDC\x05\x00\x00", 5)) return false;
+        patchCount++;
+#else
+        printf("  [BITRATE] AudioEncoder_BitrateMovImm - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_AudioEncoder_BitrateOrMaskNop
+        printf("  [BITRATE] AudioEncoder_BitrateOrMaskNop (NOP)...\n");
+        if (!PatchBytes(Offsets::AudioEncoder_BitrateOrMaskNop, "\x90\x90\x90", 3)) return false;
+        patchCount++;
+#else
+        printf("  [BITRATE] AudioEncoder_BitrateOrMaskNop - SKIPPED\n"); skipCount++;
+#endif
+#if PATCH_SampleRate_Select48kNop
+        printf("  [SAMPLERATE] SampleRate_Select48kNop (NOP cmovb)...\n");
+        if (!PatchBytes(Offsets::SampleRate_Select48kNop, "\x90\x90\x90", 3)) return false;
+        patchCount++;
+#else
+        printf("  [SAMPLERATE] SampleRate_Select48kNop - SKIPPED\n"); skipCount++;
+#endif
+
+#if PATCH_WebRtcHighpass_Trampoline
+        printf("  [FILTER] WebRtcHighpass_Trampoline (RET stub)...\n");
         {
             constexpr uint64_t IMAGE_BASE = 0x180000000ULL;
-            uint64_t hpcVA = IMAGE_BASE + Offsets::HighpassCutoffFilter;
+            uint64_t hpcVA = IMAGE_BASE + Offsets::WebRtcHighpassCutoff_Injected;
             unsigned char hpPatch[11];
             hpPatch[0] = 0x48;
             hpPatch[1] = 0xB8;
             memcpy(hpPatch + 2, &hpcVA, 8);
             hpPatch[10] = 0xC3;
-            if (!PatchBytes(Offsets::HighPassFilter, (const char*)hpPatch, 11)) return false;
+            if (!PatchBytes(Offsets::WebRtcHighpass_Trampoline, (const char*)hpPatch, 11)) return false;
         }
         patchCount++;
 #else
-        printf("  [FILTER] HighPassFilter - SKIPPED\n"); skipCount++;
+        printf("  [FILTER] WebRtcHighpass_Trampoline - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_HighpassCutoffFilter
-        printf("  [FILTER] HighpassCutoffFilter (inject hp_cutoff)...\n");
-        if (!PatchBytes(Offsets::HighpassCutoffFilter, (const char*)hp_cutoff, 0x100)) return false;
+#if PATCH_WebRtcHighpassCutoff_Injected
+        printf("  [FILTER] WebRtcHighpassCutoff_Injected (inject hp_cutoff)...\n");
+        if (!PatchBytes(Offsets::WebRtcHighpassCutoff_Injected, (const char*)hp_cutoff, 0x100)) return false;
         patchCount++;
 #else
-        printf("  [FILTER] HighpassCutoffFilter - SKIPPED\n"); skipCount++;
+        printf("  [FILTER] WebRtcHighpassCutoff_Injected - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_DcReject
-        printf("  [FILTER] DcReject (inject dc_reject)...\n");
-        if (!PatchBytes(Offsets::DcReject, (const char*)dc_reject, 0x1B6)) return false;
+#if PATCH_WebRtcDcReject_Injected
+        printf("  [FILTER] WebRtcDcReject_Injected (inject dc_reject)...\n");
+        if (!PatchBytes(Offsets::WebRtcDcReject_Injected, (const char*)dc_reject, 0x1B6)) return false;
         patchCount++;
 #else
-        printf("  [FILTER] DcReject - SKIPPED\n"); skipCount++;
+        printf("  [FILTER] WebRtcDcReject_Injected - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_DownmixFunc
-        printf("  [FILTER] DownmixFunc (RET)...\n");
-        if (!PatchBytes(Offsets::DownmixFunc, "\xC3", 1)) return false;
+#if PATCH_ChannelDownmix_RetStub
+        printf("  [FILTER] ChannelDownmix_RetStub (RET)...\n");
+        if (!PatchBytes(Offsets::ChannelDownmix_RetStub, "\xC3", 1)) return false;
         patchCount++;
 #else
-        printf("  [FILTER] DownmixFunc - SKIPPED\n"); skipCount++;
+        printf("  [FILTER] ChannelDownmix_RetStub - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_AudioEncoderOpusConfigIsOk
-        printf("  [FILTER] AudioEncoderConfigIsOk (RET true)...\n");
-        if (!PatchBytes(Offsets::AudioEncoderOpusConfigIsOk, "\x48\xC7\xC0\x01\x00\x00\x00\xC3", 8)) return false;
+#if PATCH_OpusEncoderConfig_IsOkRetTrue
+        printf("  [FILTER] webrtc::AudioEncoderOpusConfig::IsOK (RET true)...\n");
+        if (!PatchBytes(Offsets::OpusEncoderConfig_IsOkRetTrue, "\x48\xC7\xC0\x01\x00\x00\x00\xC3", 8)) return false;
         patchCount++;
 #else
-        printf("  [FILTER] AudioEncoderConfigIsOk - SKIPPED\n"); skipCount++;
+        printf("  [FILTER] OpusEncoderConfig_IsOkRetTrue - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_ThrowError
-        printf("  [FILTER] ThrowError (RET)...\n");
-        if (!PatchBytes(Offsets::ThrowError, "\xC3", 1)) return false;
+#if PATCH_AudioEncoderCodec_ThrowNoOp
+        printf("  [FILTER] AudioEncoderCodec_ThrowNoOp (RET)...\n");
+        if (!PatchBytes(Offsets::AudioEncoderCodec_ThrowNoOp, "\xC3", 1)) return false;
         patchCount++;
 #else
-        printf("  [FILTER] ThrowError - SKIPPED\n"); skipCount++;
+        printf("  [FILTER] AudioEncoderCodec_ThrowNoOp - SKIPPED\n"); skipCount++;
 #endif
 
-#if PATCH_EncoderConfigInit1
+#if PATCH_OpusEncoderConfig_CtorBitrate_A
         if (o_enc1) {
-            printf("  [ENCODER] EncoderConfigInit1 (32000 -> 384000)...\n");
-            if (!PatchBytes(Offsets::EncoderConfigInit1, "\x00\xDC\x05\x00", 4)) return false;
+            printf("  [ENCODER] OpusEncoderConfig_CtorBitrate_A (32000 -> 384000)...\n");
+            if (!PatchBytes(Offsets::OpusEncoderConfig_CtorBitrate_A, "\x00\xDC\x05\x00", 4)) return false;
             patchCount++;
-        } else { printf("  [ENCODER] EncoderConfigInit1 - SKIPPED (validation failed)\n"); skipCount++; }
+        } else { printf("  [ENCODER] OpusEncoderConfig_CtorBitrate_A - SKIPPED (validation failed)\n"); skipCount++; }
 #else
-        printf("  [ENCODER] EncoderConfigInit1 - SKIPPED\n"); skipCount++;
+        printf("  [ENCODER] OpusEncoderConfig_CtorBitrate_A - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_EncoderConfigInit2
+#if PATCH_OpusEncoderConfig_CtorBitrate_B
         if (o_enc2) {
-            printf("  [ENCODER] EncoderConfigInit2 (32000 -> 384000)...\n");
-            if (!PatchBytes(Offsets::EncoderConfigInit2, "\x00\xDC\x05\x00", 4)) return false;
+            printf("  [ENCODER] OpusEncoderConfig_CtorBitrate_B (32000 -> 384000)...\n");
+            if (!PatchBytes(Offsets::OpusEncoderConfig_CtorBitrate_B, "\x00\xDC\x05\x00", 4)) return false;
             patchCount++;
-        } else { printf("  [ENCODER] EncoderConfigInit2 - SKIPPED (validation failed)\n"); skipCount++; }
+        } else { printf("  [ENCODER] OpusEncoderConfig_CtorBitrate_B - SKIPPED (validation failed)\n"); skipCount++; }
 #else
-        printf("  [ENCODER] EncoderConfigInit2 - SKIPPED\n"); skipCount++;
+        printf("  [ENCODER] OpusEncoderConfig_CtorBitrate_B - SKIPPED\n"); skipCount++;
 #endif
 
-#if PATCH_OpusPacketLossCvtt1
-        printf("  [PACKETLOSS] Force Opus packet loss rate -> 0 (site 1)...\n");
-        if (!PatchBytes(Offsets::OpusPacketLossCvtt1, "\x31\xD2\x90\x90", 4)) return false;
-        patchCount++;
+#if PATCH_OpusEncoderConfig_CtorUseInbandFecOn
+        {
+            const unsigned char imm0[] = {0x00};
+            const unsigned char imm1[] = {0x01};
+            if (!CheckBytes(Offsets::OpusEncoderConfig_CtorUseInbandFecOn, imm0, 1)
+                && !CheckBytes(Offsets::OpusEncoderConfig_CtorUseInbandFecOn, imm1, 1)) {
+                printf("  [FEC] OpusEncoderConfig_CtorUseInbandFecOn - SKIPPED (unexpected byte)\n"); skipCount++;
+            } else {
+                printf("  [FEC] AudioEncoderOpusConfig ctor: use_inband_fec imm -> 1...\n");
+                if (!PatchBytes(Offsets::OpusEncoderConfig_CtorUseInbandFecOn, "\x01", 1)) return false;
+                patchCount++;
+            }
+        }
 #else
-        printf("  [PACKETLOSS] Opus packet loss rate (site 1) - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_OpusPacketLossCvtt2
-        printf("  [PACKETLOSS] Force Opus packet loss rate -> 0 (site 2)...\n");
-        if (!PatchBytes(Offsets::OpusPacketLossCvtt2, "\x31\xD2\x90\x90", 4)) return false;
-        patchCount++;
-#else
-        printf("  [PACKETLOSS] Opus packet loss rate (site 2) - SKIPPED\n"); skipCount++;
+        printf("  [FEC] use_inband_fec ctor default - SKIPPED\n"); skipCount++;
 #endif
 
-#if PATCH_NetEqDelayMgr_MsPerLossPercent
+#if PATCH_NetEq_DelayMsPerLossPercent
         printf("  [NETEQ] NetEq ms_per_loss_percent -> 0...\n");
         {
             const unsigned char orig[] = {0x48,0xB8,0x14,0x00,0x00,0x00,0xC8,0x00,0x00,0x00};
-            if (!CheckBytes(Offsets::NetEqDelayMgr_MsPerLossPercent, orig, 10)) {
+            if (!CheckBytes(Offsets::NetEq_DelayMsPerLossPercent, orig, 10)) {
                 printf("  [NETEQ] NetEq ms_per_loss_percent - SKIPPED (unexpected bytes)\n"); skipCount++;
             } else {
-                if (!PatchBytes(Offsets::NetEqDelayMgr_MsPerLossPercent, "\x48\xB8\x00\x00\x00\x00\x00\x00\x00\x00", 10)) return false;
+                if (!PatchBytes(Offsets::NetEq_DelayMsPerLossPercent, "\x48\xB8\x00\x00\x00\x00\x00\x00\x00\x00", 10)) return false;
                 patchCount++;
             }
         }
@@ -2237,14 +2156,14 @@ private:
         printf("  [NETEQ] NetEq ms_per_loss_percent - SKIPPED\n"); skipCount++;
 #endif
 
-#if PATCH_Pacer_BlockAudio_Disable
+#if PATCH_Pacer_ForceBlockAudioFalse
         printf("  [PACING] Pacer BlockAudio -> false...\n");
         {
             const unsigned char orig[] = {0x0F,0x94,0xC3}; // setz bl
-            if (!CheckBytes(Offsets::Pacer_BlockAudio_Disable, orig, 3)) {
+            if (!CheckBytes(Offsets::Pacer_ForceBlockAudioFalse, orig, 3)) {
                 printf("  [PACING] Pacer BlockAudio - SKIPPED (unexpected bytes)\n"); skipCount++;
             } else {
-                if (!PatchBytes(Offsets::Pacer_BlockAudio_Disable, "\x30\xDB\x90", 3)) return false;
+                if (!PatchBytes(Offsets::Pacer_ForceBlockAudioFalse, "\x30\xDB\x90", 3)) return false;
                 patchCount++;
             }
         }
@@ -2254,89 +2173,63 @@ private:
 
 #define RET_STUB "\xC3"
 
-#if PATCH_Discord_SetAutomaticGainControl_1
-        printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl (1) -> RET...\n");
+#if PATCH_Discord_SetAutomaticGainControlConfig
+        printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControlConfig -> RET...\n");
         {
             uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetAutomaticGainControl_1;
+            uint32_t target = Offsets::Discord_SetAutomaticGainControlConfig;
             if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] (1) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+                printf("  [DISCORD_API_LOCK] AGCConfig - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
             } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
             else patchCount++;
         }
 #else
-        printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl (1) - SKIPPED\n"); skipCount++;
+        printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControlConfig - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_Discord_SetAutomaticGainControl_2
-        printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl (2) -> RET...\n");
+#if PATCH_Discord_SetAutomaticGainControl_bool
+        printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl(bool) -> RET...\n");
         {
             uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetAutomaticGainControl_2;
+            uint32_t target = Offsets::Discord_SetAutomaticGainControl_bool;
             if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] (2) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+                printf("  [DISCORD_API_LOCK] AGC(bool) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
             } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
             else patchCount++;
         }
 #else
-        printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl (2) - SKIPPED\n"); skipCount++;
+        printf("  [DISCORD_API_LOCK] Discord::SetAutomaticGainControl(bool) - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_Discord_SetNoiseSuppression_1
-        printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression (1) -> RET...\n");
+#if PATCH_Discord_SetNoiseSuppression_bool
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression(bool) -> RET...\n");
         {
             uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetNoiseSuppression_1;
+            uint32_t target = Offsets::Discord_SetNoiseSuppression_bool;
             if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] NS(1) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+                printf("  [DISCORD_API_LOCK] NS(bool) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
             } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
             else patchCount++;
         }
 #else
-        printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression (1) - SKIPPED\n"); skipCount++;
+        printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression(bool) - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_Discord_SetNoiseSuppression_2
-        printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression (2) -> RET...\n");
+#if PATCH_Discord_SetEchoCancellation_bool
+        printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation(bool) -> RET...\n");
         {
             uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetNoiseSuppression_2;
+            uint32_t target = Offsets::Discord_SetEchoCancellation_bool;
             if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] NS(2) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+                printf("  [DISCORD_API_LOCK] EC(bool) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
             } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
             else patchCount++;
         }
 #else
-        printf("  [DISCORD_API_LOCK] Discord::SetNoiseSuppression (2) - SKIPPED\n"); skipCount++;
+        printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation(bool) - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_Discord_SetEchoCancellation_1
-        printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation (1) -> RET...\n");
-        {
-            uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetEchoCancellation_1;
-            if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] EC(1) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
-            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
-            else patchCount++;
-        }
-#else
-        printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation (1) - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_Discord_SetEchoCancellation_2
-        printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation (2) -> RET...\n");
-        {
-            uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetEchoCancellation_2;
-            if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] EC(2) - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
-            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
-            else patchCount++;
-        }
-#else
-        printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellation (2) - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_Discord_SetEchoCancellationPre
+#if PATCH_Discord_SetEchoCancellationPreEcho_bool
         printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellationPreEcho -> RET...\n");
         {
             uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetEchoCancellationPre;
+            uint32_t target = Offsets::Discord_SetEchoCancellationPreEcho_bool;
             if (!FindPdataFunctionStart(target, fs)) {
                 printf("  [DISCORD_API_LOCK] ECPre - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
             } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
@@ -2345,24 +2238,24 @@ private:
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetEchoCancellationPreEcho - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_Discord_EnableBuiltInAEC
-        printf("  [DISCORD_API_LOCK] Discord::EnableBuiltInAEC -> RET...\n");
+#if PATCH_Discord_EnableBuiltInAcousticEchoCancel_bool
+        printf("  [DISCORD_API_LOCK] Discord::EnableBuiltInAEC (acoustic echo cancel, not FEC) -> RET...\n");
         {
             uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_EnableBuiltInAEC;
+            uint32_t target = Offsets::Discord_EnableBuiltInAcousticEchoCancel_bool;
             if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] AEC - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
+                printf("  [DISCORD_API_LOCK] BuiltInAEC - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
             } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
             else patchCount++;
         }
 #else
-        printf("  [DISCORD_API_LOCK] Discord::EnableBuiltInAEC - SKIPPED\n"); skipCount++;
+        printf("  [DISCORD_API_LOCK] Discord::EnableBuiltInAEC (acoustic echo) - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_Discord_SetNoiseCancellation
+#if PATCH_Discord_SetNoiseCancellation_bool
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellation -> RET...\n");
         {
             uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetNoiseCancellation;
+            uint32_t target = Offsets::Discord_SetNoiseCancellation_bool;
             if (!FindPdataFunctionStart(target, fs)) {
                 printf("  [DISCORD_API_LOCK] NC - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
             } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
@@ -2371,24 +2264,11 @@ private:
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellation - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_Discord_SetNoiseCancellationAfter
-        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationAfterProcessing -> RET...\n");
-        {
-            uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetNoiseCancellationAfter;
-            if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] NCAfter - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
-            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
-            else patchCount++;
-        }
-#else
-        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationAfterProcessing - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_Discord_SetNoiseCancellationDuring
+#if PATCH_Discord_SetNoiseCancellationDuringProcessing_bool
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationDuringProcessing -> RET...\n");
         {
             uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetNoiseCancellationDuring;
+            uint32_t target = Offsets::Discord_SetNoiseCancellationDuringProcessing_bool;
             if (!FindPdataFunctionStart(target, fs)) {
                 printf("  [DISCORD_API_LOCK] NCDuring - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
             } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
@@ -2397,111 +2277,20 @@ private:
 #else
         printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationDuringProcessing - SKIPPED\n"); skipCount++;
 #endif
-#if PATCH_Discord_SetNoiseCancellationStats
-        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationEnableStats -> RET...\n");
-        {
-            uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetNoiseCancellationStats;
-            if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] NCStats - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
-            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
-            else patchCount++;
-        }
-#else
-        printf("  [DISCORD_API_LOCK] Discord::SetNoiseCancellationEnableStats - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_Discord_SetSidechainCompression
-        printf("  [DISCORD_API_LOCK] Discord::SetSidechainCompression -> RET...\n");
-        {
-            uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetSidechainCompression;
-            if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] Sidechain - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
-            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
-            else patchCount++;
-        }
-#else
-        printf("  [DISCORD_API_LOCK] Discord::SetSidechainCompression - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_Discord_SetHasFullbandPerformance
-        printf("  [DISCORD_API_LOCK] Discord::SetHasFullbandPerformance -> RET...\n");
-        {
-            uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetHasFullbandPerformance;
-            if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] Fullband - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
-            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
-            else patchCount++;
-        }
-#else
-        printf("  [DISCORD_API_LOCK] Discord::SetHasFullbandPerformance - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_Discord_SetDuckingPreference
-        printf("  [DISCORD_API_LOCK] Discord::SetDuckingPreference -> RET...\n");
-        {
-            uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetDuckingPreference;
-            if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] Ducking - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
-            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
-            else patchCount++;
-        }
-#else
-        printf("  [DISCORD_API_LOCK] Discord::SetDuckingPreference - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_Discord_SetIdleJitterBufferFlush
-        printf("  [DISCORD_API_LOCK] Discord::SetIdleJitterBufferFlush -> RET...\n");
-        {
-            uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetIdleJitterBufferFlush;
-            if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] IdleJitter - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
-            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
-            else patchCount++;
-        }
-#else
-        printf("  [DISCORD_API_LOCK] Discord::SetIdleJitterBufferFlush - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_Discord_SetAudioInputEnabled
-        printf("  [DISCORD_API_LOCK] Discord::SetAudioInputEnabled -> RET...\n");
-        {
-            uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetAudioInputEnabled;
-            if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] AudioInput - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
-            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
-            else patchCount++;
-        }
-#else
-        printf("  [DISCORD_API_LOCK] Discord::SetAudioInputEnabled - SKIPPED\n"); skipCount++;
-#endif
-#if PATCH_Discord_SetAecDump
-        printf("  [DISCORD_API_LOCK] Discord::SetAecDump -> RET...\n");
-        {
-            uint32_t fs = 0;
-            uint32_t target = Offsets::Discord_SetAecDump;
-            if (!FindPdataFunctionStart(target, fs)) {
-                printf("  [DISCORD_API_LOCK] AecDump - SKIPPED (no .pdata function for RVA 0x%X)\n", target); skipCount++;
-            } else if (!PatchBytes(fs, RET_STUB, 1)) return false;
-            else patchCount++;
-        }
-#else
-        printf("  [DISCORD_API_LOCK] Discord::SetAecDump - SKIPPED\n"); skipCount++;
-#endif
 
 #undef RET_STUB
 
-#if PATCH_EmulateBitrateModified && PATCH_SetsBitrateBitrateValue
+#if PATCH_OpusBitrate_Imul384k && PATCH_AudioEncoder_BitrateMovImm
         {
             const unsigned char bps384_3[] = {0x00, 0xDC, 0x05};
             const unsigned char bps384_5[] = {0x00, 0xDC, 0x05, 0x00, 0x00};
-            if (!CheckBytes(Offsets::EmulateBitrateModified, bps384_3, 3) ||
-                !CheckBytes(Offsets::SetsBitrateBitrateValue, bps384_5, 5)) {
+            if (!CheckBytes(Offsets::OpusBitrate_Imul384k, bps384_3, 3) ||
+                !CheckBytes(Offsets::AudioEncoder_BitrateMovImm, bps384_5, 5)) {
                 printf("ERROR: Post-patch bitrate verification failed (384000 bps pattern missing).\n");
                 return false;
             }
             uint32_t setBitrateValue = 0;
-            if (!ReadU32LE(Offsets::SetsBitrateBitrateValue, setBitrateValue)) {
+            if (!ReadU32LE(Offsets::AudioEncoder_BitrateMovImm, setBitrateValue)) {
                 printf("ERROR: Failed to read back bitrate value for verification.\n");
                 return false;
             }
@@ -3080,8 +2869,6 @@ function Start-Patching {
             return $false
         }
 
-        # PatchLocalOnly avoids downloading the repo "voice bundle" and patches the on-disk module in place.
-        # This is the mode Stereo Hub uses when it detects a new Discord build and regenerates offsets locally.
         $voiceBackupPath = $null
         if (-not $PatchLocalOnly) {
             $voiceBackupPath = Get-PreparedVoiceBackupPath

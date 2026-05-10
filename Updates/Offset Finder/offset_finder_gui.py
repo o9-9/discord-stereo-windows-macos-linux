@@ -337,7 +337,7 @@ class OffsetFinderGUI:
             self.status_var.set("Output copied to clipboard")
 
     def _copy_block(self):
-        # Prefer Windows block; else Linux; else macOS (Windows 17; Linux copy block adds MultiChannel = 18)
+        # Prefer Windows block; else Linux; else macOS (block lists all PATCHER_OFFSET_NAMES for that platform).
         block = (self.last_windows_block or self.last_linux_block or self.last_macos_block or "").strip()
         if not block:
             self.status_var.set("No patcher block to copy (run Find Offsets first)")
@@ -505,7 +505,8 @@ class OffsetFinderGUI:
                 n_patcher = len(patcher_names_u)
             else:
                 patcher_count = found
-                n_patcher = len(patcher_names_u) if patcher_names_u else 17
+                _fallback_n = len(getattr(mod, "PATCHER_OFFSET_NAMES", []) or [])
+                n_patcher = len(patcher_names_u) if patcher_names_u else (_fallback_n if _fallback_n else 18)
             n_expected = n_patcher
 
             try:

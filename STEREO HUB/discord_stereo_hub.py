@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Minimal Stereo Hub: Patch (download patched module) / Revert (UNPATCHED backup). Stdlib + Tk only."""
 
+# region Imports And Optional Modules
+
 from __future__ import annotations
 
 import io
@@ -14,7 +16,6 @@ import time
 import traceback
 import urllib.request
 import zipfile
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Tuple
@@ -30,7 +31,6 @@ try:
 except Exception:  # pragma: no cover
     tk = None  # type: ignore
 
-# Optional: reuse theme/modals from discord_stereo_hub_DEV (no side effects on import).
 try:  # pragma: no cover
     from . import discord_stereo_hub_DEV as devhub  # type: ignore
 except Exception:  # pragma: no cover
@@ -39,13 +39,20 @@ except Exception:  # pragma: no cover
     except Exception:
         devhub = None  # type: ignore
 
+# endregion Imports And Optional Modules
+
+# region App Metadata
+
 
 APP_NAME = "Discord Stereo Hub"
-APP_VERSION = "1.1"
+APP_VERSION = "1.2"
+
+# endregion App Metadata
+
+# region UI Helpers
 
 
 def _lerp_rgb(c1: str, c2: str, t: float) -> str:
-    """Linear blend between #RRGGBB colors (t in 0..1)."""
     t = max(0.0, min(1.0, float(t)))
 
     def parse(h: str) -> Tuple[int, int, int]:
@@ -61,14 +68,15 @@ def _lerp_rgb(c1: str, c2: str, t: float) -> str:
     b_ = int(a[2] + (b[2] - a[2]) * t)
     return "#%02x%02x%02x" % (r, g, b_)
 
-# region Repo sources
+# endregion UI Helpers
+
+# region Remote Configuration
+
 
 PATCHED_WINDOWS_GITHUB_CONTENTS_API = (
     "https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/"
     "Updates%2FNodes%2FPatched%20Nodes%20%28for%20Installer%29%2FWindows"
 )
-# Same layout as Windows: folder listing via API (see Patched Nodes … / Linux on repo).
-# https://github.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/tree/main/Updates/Nodes/Patched%20Nodes%20(for%20Installer)/Linux
 PATCHED_LINUX_GITHUB_CONTENTS_API = (
     "https://api.github.com/repos/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/contents/"
     "Updates%2FNodes%2FPatched%20Nodes%20%28for%20Installer%29%2FLinux"
@@ -76,8 +84,152 @@ PATCHED_LINUX_GITHUB_CONTENTS_API = (
 PATCHED_MACOS_ZIP_URL = "https://example.invalid/Updates/Nodes/Patched/macOS/latest.zip"
 
 OFFLINE_SKIP_REMOTE_ENV = "DISCORD_STEREO_SKIP_REMOTE"
+SKIP_HUB_SELF_UPDATE_ENV = "DISCORD_STEREO_SKIP_HUB_SELF_UPDATE"
+HUB_SELF_UPDATE_RAW_URL = (
+    "https://raw.githubusercontent.com/ProdHallow/Discord-Stereo-Windows-MacOS-Linux/"
+    "main/STEREO%20HUB/discord_stereo_hub.py"
+)
 
-# endregion Repo sources
+_RE_APP_VERSION_ASSIGN = re.compile(r"^\s*APP_VERSION\s*=\s*[\"']([^\"']+)[\"']", re.MULTILINE)
+
+# endregion Remote Configuration
+
+# region Hub Auto Update
+
+
+def _version_tuple_for_cmp(ver: str) -> Tuple[int, ...]:
+    parts = [int(x) for x in re.findall(r"\d+", ver or "")]
+    return tuple(parts) if parts else (0,)
+
+
+def _compare_semver_like(a: str, b: str) -> int:
+    ta = _version_tuple_for_cmp(a)
+    tb = _version_tuple_for_cmp(b)
+    n = max(len(ta), len(tb))
+    ta_x = ta + (0,) * (n - len(ta))
+    tb_x = tb + (0,) * (n - len(tb))
+    if ta_x < tb_x:
+        return -1
+    if ta_x > tb_x:
+        return 1
+    return 0
+
+
+def _parse_app_version_from_hub_source(src: str) -> Optional[str]:
+    m = _RE_APP_VERSION_ASSIGN.search(src)
+    if not m:
+        return None
+    return (m.group(1) or "").strip()
+
+
+def _hub_script_fs_path() -> Optional[Path]:
+    try:
+        p = Path(__file__).resolve()
+        if p.suffix.lower() == ".py" and p.is_file():
+            return p
+    except Exception:
+        pass
+    return None
+
+
+def _raw_download_looks_like_error_page(data: bytes) -> bool:
+    head = data[:512].lstrip()
+    return head.startswith(b"<!DOCTYPE") or head.startswith(b"<html") or b"<title>" in head[:220].lower()
+
+
+def _looks_like_stereo_hub_py(src: str) -> bool:
+    if len(src) < 800:
+        return False
+    if APP_NAME not in src:
+        return False
+    if _parse_app_version_from_hub_source(src) is None:
+        return False
+    if "def main()" not in src:
+        return False
+    return True
+
+
+def _atomic_replace_hub_py(hub_path: Path, new_text: str) -> None:
+    tmp_path = hub_path.with_name(hub_path.name + ".self_update.tmp")
+    try:
+        tmp_path.write_text(new_text, encoding="utf-8", newline="\n")
+        os.replace(tmp_path, hub_path)
+    except Exception:
+        try:
+            if tmp_path.exists():
+                tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+        raise
+
+
+def _restart_hub_program(hub_path: Path) -> None:
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception:
+        pass
+    hub_rp = hub_path.resolve()
+    cwd = str(hub_rp.parent)
+    exe = sys.executable
+    child_args = [exe, str(hub_rp)] + sys.argv[1:]
+
+    def _spawn_detach_and_hard_exit() -> None:
+        subprocess.Popen(child_args, cwd=cwd, close_fds=False)
+        os._exit(0)
+
+    if sys.platform == "win32":
+        try:
+            _spawn_detach_and_hard_exit()
+        except Exception as exc_win:
+            try:
+                subprocess.Popen(child_args, cwd=cwd, close_fds=False)
+                os._exit(0)
+            except Exception as exc2:
+                sys.stderr.write(
+                    "%s failed to restart after self-update (%s); %s. Re-open manually.\n"
+                    % (APP_NAME, human_exc(exc_win), human_exc(exc2))
+                )
+                sys.exit(1)
+
+    try:
+        try:
+            os.chdir(cwd)
+        except Exception:
+            pass
+        os.execv(exe, child_args)
+    except OSError as exc:
+        try:
+            _spawn_detach_and_hard_exit()
+        except Exception as exc2:
+            sys.stderr.write(
+                "%s failed to restart after self-update (%s); %s. Re-open manually.\n"
+                % (APP_NAME, human_exc(exc), human_exc(exc2))
+            )
+            sys.exit(1)
+
+
+def _hub_self_update_skip_reason_or_ready_path() -> Tuple[Optional[str], Optional[Path]]:
+    if os.environ.get(SKIP_HUB_SELF_UPDATE_ENV, "").strip() == "1":
+        return (SKIP_HUB_SELF_UPDATE_ENV + "=1", None)
+    if os.environ.get(OFFLINE_SKIP_REMOTE_ENV, "").strip() == "1":
+        return (OFFLINE_SKIP_REMOTE_ENV + "=1", None)
+    if getattr(sys, "frozen", False):
+        return ("frozen executable bundle (updates require a newer build or python script)", None)
+    hub_path = _hub_script_fs_path()
+    if hub_path is None:
+        return ("script location unavailable — run discord_stereo_hub.py as a file", None)
+    try:
+        probe = hub_path.stat()
+        if sys.platform != "win32" and not (probe.st_mode & 0o200):
+            return ("hub script path is read-only (%s)" % hub_path, hub_path)
+    except Exception as exc:
+        return ("cannot stat hub script: %s" % human_exc(exc), hub_path)
+    return (None, hub_path)
+
+# endregion Hub Auto Update
+
+# region Platform And Paths
 
 
 def detect_platform_key() -> str:
@@ -98,7 +250,6 @@ def hub_data_dir() -> Path:
         return Path(root) / "DiscordStereoHubSimple"
     if pf == "macos":
         return Path.home() / "Library" / "Application Support" / "DiscordStereoHubSimple"
-    # linux + other
     xdg = os.environ.get("XDG_DATA_HOME", "").strip()
     if xdg:
         return Path(xdg) / "DiscordStereoHubSimple"
@@ -119,6 +270,10 @@ def safe_mkdir(p: Path) -> None:
 
 def human_exc(e: BaseException) -> str:
     return f"{type(e).__name__}: {e}"
+
+# endregion Platform And Paths
+
+# region Discord Paths And Labels
 
 
 def _readable_os() -> str:
@@ -153,13 +308,11 @@ def _default_discord_roots() -> Tuple[Path, ...]:
             if p
         )
     if pf == "macos":
-        # Common locations; module directory may differ by Discord build.
         return (
             home / "Library" / "Application Support" / "discord",
             home / "Library" / "Application Support" / "discordcanary",
             home / "Library" / "Application Support" / "discordptb",
         )
-    # linux
     return (
         home / ".config" / "discord",
         home / ".config" / "discordcanary",
@@ -170,10 +323,6 @@ def _default_discord_roots() -> Tuple[Path, ...]:
 
 
 def infer_discord_release_channel_from_root(discord_root: Path) -> Optional[str]:
-    """
-    Stable / Canary / PTB / Development when the install folder name matches a known layout.
-    Uses the last path segment only (e.g. .../Discord, .../discordcanary).
-    """
     try:
         name = (discord_root.name or "").strip().lower()
     except Exception:
@@ -191,9 +340,6 @@ def infer_discord_release_channel_from_root(discord_root: Path) -> Optional[str]
     return None
 
 
-# Install folder names (lowercase) -> badge label. Vencord / Equicord / BetterVencord / stock
-# Discord are all shown as Stable (see quick_hub_client_prefix_for_badge). Only distinct
-# non-Discord clients listed here (e.g. Lightcord).
 _QUICK_HUB_CLIENT_FOLDER_ALIASES = {
     "lightcord": "Lightcord",
     "lightchord": "Lightcord",
@@ -201,14 +347,11 @@ _QUICK_HUB_CLIENT_FOLDER_ALIASES = {
 
 
 def quick_hub_client_prefix_for_badge(discord_root: Path) -> str:
-    """Badge client line: official channels + Lightcord; modded stock Discord layouts read as Stable."""
     try:
         leaf = (discord_root.name or "").strip().lower()
     except Exception:
         leaf = ""
 
-    # Addon mods (BetterDiscord, Vencord, Equicord, BetterVencord, etc.) use Discord's app
-    # layout under these LocalAppData folder names; show the same channel label as stock.
     if leaf in ("discord", "vencord", "equicord", "bettervencord"):
         return "Stable"
 
@@ -229,7 +372,6 @@ def quick_hub_client_prefix_for_badge(discord_root: Path) -> str:
 
 
 def quick_hub_badge_text(root_s: str) -> str:
-    """Badge string: '<Client or channel> <build>', e.g. Stable 9234, Lightcord 1234."""
     p = (root_s or "").strip()
     if not p:
         return "--"
@@ -247,21 +389,19 @@ def quick_hub_badge_text(root_s: str) -> str:
         return build
     return "--"
 
+# endregion Discord Paths And Labels
+
+# region Voice Module Discovery
+
 
 def _looks_like_discord_voice_dir(p: Path) -> bool:
-    # We operate on the module "discord_voice" directory contents (includes discord_voice.node + assets).
     return p.is_dir() and (p / "discord_voice.node").is_file()
 
 
 def find_discord_voice_dir_under(root: Path) -> Optional[Path]:
-    """Try to locate a discord_voice module directory under a Discord root."""
     if not root or not root.is_dir():
         return None
-    # Common Windows layout:
-    #   <root>/app-*/modules/discord_voice-*/discord_voice/discord_voice.node
-    # Common macOS/Linux: similar app resources, but varies. We keep this simple:
     try:
-        # Limit search to avoid huge recursion.
         app_dirs = sorted([p for p in root.glob("app-*") if p.is_dir()], reverse=True)
         for app in app_dirs[:6]:
             mods = app / "modules"
@@ -275,8 +415,6 @@ def find_discord_voice_dir_under(root: Path) -> Optional[Path]:
                     return m
     except Exception:
         pass
-    # Fallback: shallow rglob for the node. Prefer hits whose parent is named
-    # "discord_voice" (the canonical module folder); fall back to the newest hit.
     try:
         hits = []
         for p in root.rglob("discord_voice.node"):
@@ -298,13 +436,20 @@ def find_discord_voice_dir_under(root: Path) -> Optional[Path]:
     return None
 
 
-@dataclass
 class Target:
-    discord_root: Path
-    voice_dir: Path
-    app_dir: Optional[Path] = None
-    exe_name: Optional[str] = None
-    diagnostics: Optional[str] = None
+    def __init__(
+        self,
+        discord_root: Path,
+        voice_dir: Path,
+        app_dir: Optional[Path] = None,
+        exe_name: Optional[str] = None,
+        diagnostics: Optional[str] = None,
+    ):
+        self.discord_root = discord_root
+        self.voice_dir = voice_dir
+        self.app_dir = app_dir
+        self.exe_name = exe_name
+        self.diagnostics = diagnostics
 
 
 def _windows_client_exe_for_root(root: Path) -> str:
@@ -321,10 +466,6 @@ def _windows_client_exe_for_root(root: Path) -> str:
 
 
 def _parse_app_version_from_dirname(name: str) -> Tuple[int, int, int, int]:
-    """
-    Mirror DiscordVoiceFixer.ps1 sorting:
-      app-<digits.digits.digits[.digits]>
-    """
     m = re.search(r"(?i)\bapp-([\d\.]+)\b", name or "")
     if not m:
         return (0, 0, 0, 0)
@@ -340,7 +481,6 @@ def _parse_app_version_from_dirname(name: str) -> Tuple[int, int, int, int]:
 
 
 def find_discord_app_dir(discord_root: Path) -> Optional[Path]:
-    """Find latest app-* folder under a Discord root."""
     try:
         apps = [p for p in discord_root.glob("app-*") if p.is_dir()]
     except Exception:
@@ -350,7 +490,6 @@ def find_discord_app_dir(discord_root: Path) -> Optional[Path]:
 
 
 def _find_app_dir_from_voice_dir(voice_dir: Path) -> Optional[Path]:
-    """Walk up from a discord_voice module folder to the enclosing app-* directory."""
     try:
         p = voice_dir.resolve()
     except Exception:
@@ -371,9 +510,6 @@ def discord_client_build_label(
     app_dir: Optional[Path] = None,
     voice_dir: Optional[Path] = None,
 ) -> str:
-    """
-    Short build number for UI: last dotted segment of app-<version> (e.g. 1.0.9234 -> 9234, 0.0.134 -> 134).
-    """
     app = app_dir
     if app is None and voice_dir is not None:
         app = _find_app_dir_from_voice_dir(voice_dir)
@@ -392,7 +528,6 @@ def discord_client_build_label(
 
 
 def quick_hub_resolve_app_dir_for_root(root_s: str) -> Optional[Path]:
-    """Discord app-* directory for the path field only (same rules as the build badge)."""
     p = (root_s or "").strip()
     if not p:
         return None
@@ -413,7 +548,6 @@ def quick_hub_resolve_app_dir_for_root(root_s: str) -> Optional[Path]:
 
 
 def quick_hub_badge_label_for_discord_root(root_s: str) -> str:
-    """Short build label for the badge."""
     root = (root_s or "").strip()
     if not root:
         return ""
@@ -424,12 +558,10 @@ def quick_hub_badge_label_for_discord_root(root_s: str) -> str:
 
 
 def find_voice_dir_from_app_dir(app_dir: Path) -> Optional[Path]:
-    """Find discord_voice module folder under a specific app-* directory."""
     mods = app_dir / "modules"
     if not mods.is_dir():
         return None
     try:
-        # Prefer the same shape as the installer: discord_voice*/discord_voice or discord_voice* directly.
         for mdir in sorted(mods.glob("discord_voice*")):
             cand = mdir / "discord_voice"
             if _looks_like_discord_voice_dir(cand):
@@ -442,7 +574,6 @@ def find_voice_dir_from_app_dir(app_dir: Path) -> Optional[Path]:
 
 
 def find_voice_dir_with_diagnostics(discord_root: Path) -> Tuple[Optional[Path], Optional[Path], str]:
-    """Windows-installer style diagnostics: explain why detection failed."""
     if not discord_root or not discord_root.is_dir():
         return None, None, "Discord root folder not found."
     app_dir = find_discord_app_dir(discord_root)
@@ -468,14 +599,12 @@ def resolve_target(preferred_root: Optional[Path] = None) -> Tuple[Optional[Targ
 
     last_diag = ""
     for r in roots:
-        # Mirror installer behavior: locate latest app-* then modules/discord_voice.
         vd, app_dir, diag = find_voice_dir_with_diagnostics(r)
         if vd:
             exe_name = _windows_client_exe_for_root(r) if detect_platform_key() == "windows" else None
             return Target(discord_root=r, voice_dir=vd, app_dir=app_dir, exe_name=exe_name, diagnostics=None), ""
         if diag:
             last_diag = f"{r}: {diag}"
-        # Fallback to older heuristic search
         vd2 = find_discord_voice_dir_under(r)
         if vd2:
             exe_name = _windows_client_exe_for_root(r) if detect_platform_key() == "windows" else None
@@ -485,9 +614,12 @@ def resolve_target(preferred_root: Optional[Path] = None) -> Tuple[Optional[Targ
         msg += "\n\nDetails:\n" + last_diag
     return None, msg
 
+# endregion Voice Module Discovery
+
+# region Backup And Metadata
+
 
 def permanent_backup_dir(target: Target) -> Path:
-    # Keep one permanent backup per "discord root" path.
     key = str(target.discord_root).replace("\\", "_").replace("/", "_").replace(":", "")
     return hub_data_dir() / "backups" / key / "UNPATCHED"
 
@@ -526,7 +658,6 @@ def _format_last_patch_utc_for_ui(iso_utc: str) -> str:
 
 
 def quick_hub_last_patch_caption(root_s: str) -> str:
-    """One-line status for the UI: last Stereo patch time for this install folder."""
     p = (root_s or "").strip()
     if not p:
         return "Last patch with this hub: set a Discord install folder to see history."
@@ -546,6 +677,10 @@ def quick_hub_last_patch_caption(root_s: str) -> str:
     shown = _format_last_patch_utc_for_ui(iso)
     return "Last patch with this hub: %s" % shown if shown else "Last patch with this hub: never"
 
+# endregion Backup And Metadata
+
+# region Filesystem Helpers
+
 
 def copy_tree(src: Path, dst: Path) -> None:
     if dst.exists():
@@ -555,15 +690,16 @@ def copy_tree(src: Path, dst: Path) -> None:
 
 
 def _auth_token() -> str:
-    # Optional: helps avoid GitHub rate limiting for contents API.
     return (os.environ.get("DISCORD_STEREO_GITHUB_TOKEN") or os.environ.get("GITHUB_TOKEN") or "").strip()
+
+# endregion Filesystem Helpers
+
+# region Process Management
+
+# Mirrors Discord_voice_node_patcher.ps1: scope Update.exe under the selected install.
 
 
 def _windows_kill_discord_update_processes_under_root(discord_root: Path) -> None:
-    """
-    Update.exe is a common process name. Only kill Update.exe processes that actually belong to
-    the selected Discord install root. Mirrors the intent of DiscordVoiceFixer.ps1.
-    """
     root = str(discord_root).replace("'", "''")
     ps = (
         "$ErrorActionPreference='SilentlyContinue';"
@@ -585,7 +721,6 @@ def _windows_kill_discord_update_processes_under_root(discord_root: Path) -> Non
 
 
 def stop_discord_processes(log: "Logger", *, target: Optional[Target] = None) -> None:
-    """Best-effort stop Discord before replacing module files."""
     pf = detect_platform_key()
     names = [
         "Discord",
@@ -600,9 +735,7 @@ def stop_discord_processes(log: "Logger", *, target: Optional[Target] = None) ->
     ]
     try:
         if pf == "windows":
-            # Mirror the installer approach: aggressive taskkill of likely processes.
             for n in names:
-                # Kill Update.exe more safely below (it's a common name).
                 if n.lower() == "update":
                     continue
                 try:
@@ -614,7 +747,6 @@ def stop_discord_processes(log: "Logger", *, target: Optional[Target] = None) ->
                     )
                 except Exception:
                     pass
-            # Also catch wildcards
             try:
                 subprocess.run(
                     ["taskkill", "/F", "/IM", "Discord*.exe"],
@@ -624,7 +756,6 @@ def stop_discord_processes(log: "Logger", *, target: Optional[Target] = None) ->
                 )
             except Exception:
                 pass
-            # Kill only Discord-owned Update.exe processes under the selected root.
             try:
                 if target and target.discord_root and target.discord_root.is_dir():
                     _windows_kill_discord_update_processes_under_root(target.discord_root)
@@ -633,7 +764,6 @@ def stop_discord_processes(log: "Logger", *, target: Optional[Target] = None) ->
             time.sleep(0.6)
             log.ok("Closed Discord processes (best-effort).")
             return
-        # macOS / Linux: best-effort pkill
         for n in names:
             try:
                 subprocess.run(
@@ -651,12 +781,10 @@ def stop_discord_processes(log: "Logger", *, target: Optional[Target] = None) ->
 
 
 def relaunch_discord_for_target(target: Target, log: "Logger") -> None:
-    """Relaunch the Discord install we just patched/reverted (best-effort)."""
     pf = detect_platform_key()
     root = target.discord_root
 
     if pf == "windows":
-        # Match Discord_voice_node_patcher.ps1: hidden window, stdio to %TEMP%, cwd = install root.
         upd = root / "Update.exe"
         exe = (target.exe_name or _windows_client_exe_for_root(root)).strip() or "Discord.exe"
         tmp = os.environ.get("TEMP") or os.environ.get("TMP") or "."
@@ -665,9 +793,6 @@ def relaunch_discord_for_target(target: Target, log: "Logger") -> None:
         cflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
         def _popen_like_patcher(argv: list, cwd: str) -> None:
-            # Open log handles for the child, then close the parent's copies after
-            # Popen returns - the child has already duplicated them. Without this,
-            # repeated relaunches leak file handles in the parent process.
             out_f = open(out_log, "w", encoding="utf-8", errors="replace")
             try:
                 err_f = open(err_log, "w", encoding="utf-8", errors="replace")
@@ -693,13 +818,11 @@ def relaunch_discord_for_target(target: Target, log: "Logger") -> None:
             except Exception as e:
                 log.warn(f"Relaunch via Update.exe failed: {human_exc(e)}")
 
-        # Fallback: start the exe directly from the latest app-* folder.
         try:
             app = target.app_dir or find_discord_app_dir(root)
             if app:
                 exe_path = app / exe
                 if not exe_path.is_file() and exe != "Discord.exe":
-                    # Sane fallback to stable exe
                     if (app / "Discord.exe").is_file():
                         exe_path = app / "Discord.exe"
                 if exe_path.is_file():
@@ -712,7 +835,6 @@ def relaunch_discord_for_target(target: Target, log: "Logger") -> None:
         return
 
     if pf == "macos":
-        # Best-effort: open Discord by bundle identifier if present.
         try:
             subprocess.Popen(["open", "-a", "Discord"])
             log.ok("Relaunched Discord (open -a Discord)")
@@ -728,7 +850,6 @@ def relaunch_discord_for_target(target: Target, log: "Logger") -> None:
         return
 
     if pf == "linux":
-        # Best-effort: try common executable names.
         for cmd in (["discord"], ["Discord"], ["flatpak", "run", "com.discordapp.Discord"]):
             try:
                 subprocess.Popen(cmd)
@@ -740,6 +861,10 @@ def relaunch_discord_for_target(target: Target, log: "Logger") -> None:
         return
 
     log.warn("Auto-relaunch is not supported on this OS.")
+
+# endregion Process Management
+
+# region Staging And Downloads
 
 
 def clear_dir_contents(p: Path) -> None:
@@ -787,18 +912,12 @@ def download_bytes(url: str, timeout_s: int = 120, *, accept: Optional[str] = No
 
 
 def validate_download_payload(name: str, data: bytes) -> None:
-    """Lightweight validation borrowed from the project launchers: reject HTML/error pages.
-
-    Size floors apply only to binary assets; text assets (json/js/etc.) can legitimately be tiny.
-    """
     if not data:
         raise RuntimeError(f"{name}: empty download")
-    # Common rate-limit / error pages:
     head = data[:256].lstrip()
     if head.startswith(b"<!DOCTYPE html") or head.startswith(b"<html") or b"<title>" in head[:200].lower():
         raise RuntimeError(f"{name}: download looks like HTML (rate limit / error page)")
     low = (name or "").lower()
-    # Binary-ish assets should never be tiny; text assets can be.
     binary_exts = (".node", ".dll", ".exe", ".tflite", ".so", ".dylib")
     if low.endswith(binary_exts) and len(data) < 1024:
         raise RuntimeError(f"{name}: binary download too small ({len(data)} bytes)")
@@ -813,14 +932,10 @@ def extract_zip_bytes_to_dir(zip_bytes: bytes, dest: Path) -> None:
 
 
 def find_voice_dir_in_payload_dir(payload_root: Path) -> Optional[Path]:
-    # Accept either:
-    # - zip contains discord_voice/ directory
-    # - zip contains files directly (discord_voice.node at top)
     if _looks_like_discord_voice_dir(payload_root):
         return payload_root
     if _looks_like_discord_voice_dir(payload_root / "discord_voice"):
         return payload_root / "discord_voice"
-    # Try any nested folder
     try:
         for p in payload_root.rglob("discord_voice.node"):
             if p.is_file():
@@ -828,6 +943,10 @@ def find_voice_dir_in_payload_dir(payload_root: Path) -> Optional[Path]:
     except Exception:
         return None
     return None
+
+# endregion Staging And Downloads
+
+# region GitHub Patched Nodes
 
 
 def patched_zip_url_for_platform() -> str:
@@ -853,7 +972,6 @@ def _download_github_contents_listing(api_url: str, timeout_s: int = 60) -> list
 
 
 def download_github_folder_to_dir(api_url: str, dest: Path, log: "Logger") -> None:
-    """Download all files in a GitHub contents folder to dest."""
     listing = _download_github_contents_listing(api_url)
     if dest.exists():
         shutil.rmtree(dest, ignore_errors=True)
@@ -885,6 +1003,10 @@ def download_github_folder_to_dir(api_url: str, dest: Path, log: "Logger") -> No
     else:
         log.ok(f"Downloaded {n_ok} file(s).")
 
+# endregion GitHub Patched Nodes
+
+# region Patch And Revert
+
 
 def ensure_permanent_unpatched_backup(target: Target, log: "Logger") -> Path:
     bd = permanent_backup_dir(target)
@@ -898,9 +1020,8 @@ def ensure_permanent_unpatched_backup(target: Target, log: "Logger") -> Path:
 
 
 def _local_patched_bundle_dir_for_platform() -> Optional[Path]:
-    """Offline/local fallback: use this repo's patched bundle if present."""
     pf = detect_platform_key()
-    ws = Path(__file__).resolve().parents[1]  # .../Release
+    ws = Path(__file__).resolve().parents[1]
     if pf == "windows":
         return ws / "Updates" / "Nodes" / "Patched Nodes (for Installer)" / "Windows"
     if pf == "linux":
@@ -948,7 +1069,6 @@ def patch(target: Target, log: "Logger") -> None:
         raise RuntimeError("Downloaded payload does not contain a valid discord_voice module (discord_voice.node missing).")
 
     log.info(f"Installing patched module to: {target.voice_dir}")
-    # Replace contents in-place (matches DiscordVoiceFixer.ps1 behavior).
     clear_dir_contents(target.voice_dir)
     copy_dir_contents(payload_voice, target.voice_dir)
     log.ok("Patch applied.")
@@ -971,8 +1091,13 @@ def revert(target: Target, log: "Logger") -> None:
     log.ok("Revert complete.")
     relaunch_discord_for_target(target, log)
 
+# endregion Patch And Revert
+
+# region Logging
+
 
 class Logger:
+
     def __init__(self, text: "tk.Text"):
         self.text = text
         self._main_thread_id = threading.get_ident()
@@ -1029,6 +1154,10 @@ class Logger:
     def fail(self, msg: str) -> None:
         self._write(f"[{_now()}] FAIL: {msg}")
 
+# endregion Logging
+
+# region GUI
+
 
 class App:
     def __init__(self) -> None:
@@ -1053,7 +1182,6 @@ class App:
 
         self.platform_key = detect_platform_key()
 
-        # Theme (match dev hub when available)
         self._bg = getattr(devhub, "BG_DEEP", "#0e0e12")
         self._bg_mid = getattr(devhub, "BG_DEEP_MID", "#12121a")
         self._card = getattr(devhub, "CARD_BG", "#1a1a22")
@@ -1095,7 +1223,6 @@ class App:
         except Exception:
             self.root.geometry("820x600")
 
-        # Top chrome: layered accent stripes and animated bar
         top_chrome = tk.Frame(self.root, bg=self._bg, highlightthickness=0)
         top_chrome.pack(fill="x")
         stripe_row = tk.Frame(top_chrome, bg=self._bg, highlightthickness=0)
@@ -1109,7 +1236,6 @@ class App:
         outer = tk.Frame(self.root, bg=self._bg, highlightthickness=0)
         outer.pack(fill="both", expand=True, padx=18, pady=(16, 18))
 
-        # Hero row: sparkle + shadow title + badge
         hero = tk.Frame(outer, bg=self._bg, highlightthickness=0)
         hero.pack(fill="x")
         self._sparkle_lbl = tk.Label(
@@ -1179,6 +1305,18 @@ class App:
             fg=self._fg_dim,
             anchor="w",
         ).pack(fill="x", pady=(0, 14))
+
+        self._hub_script_status_lbl = tk.Label(
+            outer,
+            text="Stereo Hub · v%s · preparing update check…" % APP_VERSION,
+            font=self._font_small,
+            bg=self._bg,
+            fg=self._accent_glow,
+            anchor="w",
+            wraplength=820,
+            justify="left",
+        )
+        self._hub_script_status_lbl.pack(fill="x", pady=(0, 14))
 
         rim = tk.Frame(outer, bg=self._card_border, highlightthickness=0)
         rim.pack(fill="both", expand=True)
@@ -1323,6 +1461,174 @@ class App:
         self._start_motion()
         self.on_autodetect()
         self._refresh_install_derived_ui()
+        self.root.after(350, self._run_hub_github_self_update_thread)
+
+    def _hub_update_defer_to_ui(self, fn) -> None:
+        try:
+            if self._destroying:
+                fn()
+                return
+            self.root.after(0, fn)
+        except Exception:
+            try:
+                fn()
+            except Exception:
+                pass
+
+    def _set_hub_script_status(self, text: str) -> None:
+        if self._destroying:
+            return
+        try:
+            self._hub_script_status_lbl.configure(text=text)
+            self.root.update_idletasks()
+        except Exception:
+            pass
+
+    def _run_hub_github_self_update_thread(self) -> None:
+        t = threading.Thread(target=self._hub_github_self_update_worker, daemon=True)
+        t.start()
+
+    def _hub_github_self_update_worker(self) -> None:
+        lg = self.logger
+
+        def defer(fn):
+            self._hub_update_defer_to_ui(fn)
+
+        skip, hub_path = _hub_self_update_skip_reason_or_ready_path()
+        if skip:
+            lg.warn(f"Hub self-update: skipped — {skip}.")
+            short = skip if len(skip) <= 76 else skip[:73] + "…"
+
+            defer(lambda s=short: self._set_hub_script_status(f"Stereo Hub · v{APP_VERSION} · update check skipped ({s})"))
+            return
+
+        if hub_path is None:
+            lg.fail("Hub self-update: internal error — no hub script path despite checks passing.")
+            return
+
+        defer(lambda: self.set_busy(True))
+        defer(lambda: self.set_status("Hub script: checking for updates…"))
+        defer(lambda: self._set_hub_script_status(f"Stereo Hub · v{APP_VERSION} · checking GitHub for a newer hub…"))
+        lg.info(f"Hub self-update: checking GitHub (this copy v{APP_VERSION}).")
+
+        will_restart = False
+        remote_ver = ""
+        try:
+            lg.info("Hub self-update: (1/4) Downloading canonical hub script from GitHub raw…")
+            defer(
+                lambda: self._set_hub_script_status(f"Stereo Hub · v{APP_VERSION} · (1/4) Downloading hub from GitHub…")
+            )
+
+            raw = download_bytes(HUB_SELF_UPDATE_RAW_URL, timeout_s=45)
+            validate_download_payload("discord_stereo_hub.py", raw)
+            if _raw_download_looks_like_error_page(raw):
+                raise RuntimeError("download looks like HTML / rate-limit / error page")
+            remote_src = raw.decode("utf-8", errors="replace")
+            lg.ok(f"Hub self-update: (1/4) Download finished ({len(raw):,} bytes).")
+
+            lg.info("Hub self-update: (2/4) Reading remote APP_VERSION.")
+            defer(
+                lambda: self._set_hub_script_status(
+                    f"Stereo Hub · v{APP_VERSION} · (2/4) Parsing remote hub version…"
+                )
+            )
+            remote_ver = _parse_app_version_from_hub_source(remote_src) or ""
+            if not remote_ver:
+                raise RuntimeError("could not parse APP_VERSION from GitHub hub script.")
+
+            lg.info(f'Hub self-update: GitHub main reports Stereo Hub APP_VERSION="{remote_ver}".')
+
+            cmp = _compare_semver_like(APP_VERSION, remote_ver)
+            if cmp > 0:
+                lg.info(
+                    f"Hub self-update: this copy is newer than GitHub "
+                    f"(local v{APP_VERSION}, GitHub v{remote_ver}); keeping local script."
+                )
+                defer(
+                    lambda rv=remote_ver: self._set_hub_script_status(
+                        f"Stereo Hub · v{APP_VERSION} · ahead of GitHub (remote v{rv}) — no update."
+                    )
+                )
+                return
+            if cmp == 0:
+                lg.ok(
+                    f"Hub self-update: (3/4) Versions match — your hub script is up to date (v{APP_VERSION})."
+                )
+                defer(
+                    lambda: self._set_hub_script_status(
+                        f"Stereo Hub · v{APP_VERSION} · up to date (GitHub also v{APP_VERSION})."
+                    )
+                )
+                return
+
+            lg.warn(
+                f"Hub self-update: (3/4) Update available — GitHub v{remote_ver} is newer than local v{APP_VERSION}."
+            )
+            defer(
+                lambda rv=remote_ver: self._set_hub_script_status(
+                    f"Stereo Hub · v{APP_VERSION} → v{rv} · (4/4) Installing update…"
+                )
+            )
+
+            if not _looks_like_stereo_hub_py(remote_src):
+                raise RuntimeError("downloaded hub failed integrity checks")
+
+            lg.info("Hub self-update: (4/4) Replacing discord_stereo_hub.py on disk, then restarting…")
+            _atomic_replace_hub_py(hub_path, remote_src)
+
+            lg.ok(
+                f"Hub self-update: installed v{remote_ver}. Restarting this app so changes take effect…"
+            )
+            will_restart = True
+            defer(
+                lambda rv=remote_ver: self._set_hub_script_status(f"Stereo Hub · restarting · loading v{rv}…")
+            )
+            defer(lambda: self.set_status("Restarting Stereo Hub — loading new hub…"))
+
+            defer(lambda p=hub_path: self._invoke_hub_restart_safe(p))
+
+        except Exception as e:
+            lg.fail(f"Hub self-update: {human_exc(e)}")
+            fail_ver = remote_ver or "?"
+            defer(
+                lambda fv=fail_ver: self._set_hub_script_status(
+                    f"Stereo Hub · v{APP_VERSION} · update check/install failed · still on v{APP_VERSION}"
+                    + (f" · remote was v{fv}" if fv != "?" else "")
+                )
+            )
+
+        finally:
+            if not will_restart:
+                defer(lambda: self.set_busy(False))
+                defer(lambda: self.set_status("Ready."))
+
+    def _invoke_hub_restart_safe(self, hub_path: Path) -> None:
+        if self._destroying:
+            return
+        self._destroying = True
+        try:
+            try:
+                self.root.withdraw()
+                self.root.update_idletasks()
+            except Exception:
+                pass
+            for jid in (self._anim_job, self._tagline_job):
+                if jid:
+                    try:
+                        self.root.after_cancel(jid)
+                    except Exception:
+                        pass
+            try:
+                self.root.quit()
+            except Exception:
+                pass
+            try:
+                self.root.destroy()
+            except Exception:
+                pass
+        except Exception:
+            pass
+        _restart_hub_program(hub_path)
 
     def _on_path_var_changed(self, *_args: object) -> None:
         self._refresh_install_derived_ui()
@@ -1598,8 +1904,19 @@ class App:
     def run(self) -> None:
         self.root.mainloop()
 
+# endregion GUI
+
+# region Main Entry
+
 
 def main() -> int:
+    if os.environ.get("DISCORD_STEREO_SELF_UPDATE_FLOW_TEST", "").strip() == "1":
+        sys.stdout.write(APP_VERSION + "\n")
+        try:
+            sys.stdout.flush()
+        except Exception:
+            pass
+        return 0
     try:
         safe_mkdir(hub_data_dir())
     except Exception:
@@ -1611,6 +1928,8 @@ def main() -> int:
         sys.stderr.write(f"{APP_NAME} failed to start: {human_exc(e)}\n")
         return 1
 
+
+# endregion Main Entry
 
 if __name__ == "__main__":
     raise SystemExit(main())
