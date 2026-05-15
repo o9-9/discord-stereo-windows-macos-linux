@@ -28,40 +28,40 @@ $Script:SCRIPT_VERSION = "12"
 
 $Script:OffsetsMeta = @{
     FinderVersion = "discord_voice_node_offset_finder.py v5.1.9"
-    DiscordAppVersion = "1.0.9236"
-    Size          = 14470072
-    MD5           = "2a82ee8c2f27fb5d69942d7f22a95a1e"
+    DiscordAppVersion = "1.0.9237"
+    Size          = 14551992
+    MD5           = "1488829e4d7782627102a3ee9fcfbf53"
 }
 
 $Script:Offsets = @{
-    AudioFrame_StereoChannelAssign                    = 0x117511
-    OpusEncoderConfig_SetStereoChannels               = 0x3B7BA4
-    DownmixMono_BypassBranch                          = 0xD6A42
-    CodecProbe_ChannelCountPatch                      = 0x559CEB
-    CodecProbe_ForceSuccessBranch                     = 0x559CF7
-    OpusBitrate_Imul384k                              = 0x55A14A
-    AudioEncoder_BitrateMovImm                        = 0x55BF71
-    AudioEncoder_BitrateOrMaskNop                     = 0x55BF79
-    SampleRate_Select48kNop                           = 0x559E53
-    WebRtcHighpass_Trampoline                         = 0x565F60
-    WebRtcHighpassCutoff_Injected                     = 0x8DF510
-    WebRtcDcReject_Injected                           = 0x8DF6F0
-    ChannelDownmix_RetStub                            = 0x8DB880
-    OpusEncoderConfig_IsOkRetTrue                     = 0x3B7E40
-    AudioEncoderCodec_ThrowNoOp                       = 0x2C83C0
-    OpusEncoderConfig_CtorBitrate_A                   = 0x3B7BAE
-    OpusEncoderConfig_CtorBitrate_B                   = 0x3B74B7
-    OpusEncoderConfig_CtorUseInbandFecOn              = 0x3B7BD5
-    NetEq_DelayMsPerLossPercent                       = 0xAA855D
-    Pacer_ForceBlockAudioFalse                        = 0x6F6502
-    Discord_SetAutomaticGainControlConfig             = 0x87BA0
-    Discord_SetAutomaticGainControl_bool              = 0x87F40
-    Discord_SetNoiseSuppression_bool                  = 0x87890
-    Discord_SetEchoCancellation_bool                  = 0x87270
-    Discord_SetEchoCancellationPreEcho_bool           = 0x87570
-    Discord_EnableBuiltInAcousticEchoCancel_bool      = 0x86F70
-    Discord_SetNoiseCancellation_bool                 = 0x88260
-    Discord_SetNoiseCancellationDuringProcessing_bool = 0x88DF0
+    AudioFrame_StereoChannelAssign                    = 0x123181
+    OpusEncoderConfig_SetStereoChannels               = 0x3CA024
+    DownmixMono_BypassBranch                          = 0xDCE22
+    CodecProbe_ChannelCountPatch                      = 0x56B1DB
+    CodecProbe_ForceSuccessBranch                     = 0x56B1E7
+    OpusBitrate_Imul384k                              = 0x56B63A
+    AudioEncoder_BitrateMovImm                        = 0x56D461
+    AudioEncoder_BitrateOrMaskNop                     = 0x56D469
+    SampleRate_Select48kNop                           = 0x56B343
+    WebRtcHighpass_Trampoline                         = 0x577450
+    WebRtcHighpassCutoff_Injected                     = 0x8F1440
+    WebRtcDcReject_Injected                           = 0x8F1620
+    ChannelDownmix_RetStub                            = 0x8ED7B0
+    OpusEncoderConfig_IsOkRetTrue                     = 0x3CA2C0
+    AudioEncoderCodec_ThrowNoOp                       = 0x2DA6A0
+    OpusEncoderConfig_CtorBitrate_A                   = 0x3CA02E
+    OpusEncoderConfig_CtorBitrate_B                   = 0x3C9937
+    OpusEncoderConfig_CtorUseInbandFecOn              = 0x3CA055
+    NetEq_DelayMsPerLossPercent                       = 0xABA2DD
+    Pacer_ForceBlockAudioFalse                        = 0x705E12
+    Discord_SetAutomaticGainControlConfig             = 0x8B4C0
+    Discord_SetAutomaticGainControl_bool              = 0x8B860
+    Discord_SetNoiseSuppression_bool                  = 0x8B1B0
+    Discord_SetEchoCancellation_bool                  = 0x8AB90
+    Discord_SetEchoCancellationPreEcho_bool           = 0x8AE90
+    Discord_EnableBuiltInAcousticEchoCancel_bool      = 0x8A890
+    Discord_SetNoiseCancellation_bool                 = 0x8BB80
+    Discord_SetNoiseCancellationDuringProcessing_bool = 0x8C710
 }
 
 # endregion Offsets
@@ -369,10 +369,10 @@ function Test-DiscordVoiceNodeOffsetAnchors {
     Write-Log "Pre-patch anchor check failed (offsets do not match this discord_voice.node file)." -Level Error
     Write-Log ("  FILE_OFFSET_ADJUSTMENT=0x{0:X} (from PE .text); re-paste the full '# region Offsets' block from the offset finder." -f $FileOffsetAdjustment) -Level Error
     Write-Log ("  SampleRate_Select48kNop @0x{0:X} file 0x{1:X}: {2} (expected 0F 42 C1 or 90 90 90)" -f $r48, ($r48 - $FileOffsetAdjustment), (& $hex $b48 3)) -Level Error
-    Write-Log ("  ConfigIsOk   @0x{0:X} file 0x{1:X}: {2} (expected 8B 11 31 C0 or 48 C7 C0 01)" -f $rCfg, ($rCfg - $FileOffsetAdjustment), (& $hex $bCfg 4)) -Level Error
+    Write-Log ("  OpusEncoderConfig_IsOkRetTrue @0x{0:X} file 0x{1:X}: {2} (expected 8B 11 31 C0 or 48 C7 C0 01)" -f $rCfg, ($rCfg - $FileOffsetAdjustment), (& $hex $bCfg 4)) -Level Error
     Write-Log ("  ChannelDownmix_RetStub  @0x{0:X} file 0x{1:X}: {2} (expected 41 57 41 56 or C3)" -f $rDm, ($rDm - $FileOffsetAdjustment), (& $hex $bDm 4)) -Level Error
-    if ($rNe) { Write-Log ("  NetEq(ms/loss) @0x{0:X} file 0x{1:X}: {2} (expected 48 B8 14 00 00 00 C8 00 00 00 or 48 B8 00..00)" -f $rNe, ($rNe - $FileOffsetAdjustment), (& $hex $bNe 10)) -Level Error }
-    if ($rPace) { Write-Log ("  Pacer(BlockAudio) @0x{0:X} file 0x{1:X}: {2} (expected 0F 94 C3 or 30 DB 90)" -f $rPace, ($rPace - $FileOffsetAdjustment), (& $hex $bPace 3)) -Level Error }
+    if ($rNe) { Write-Log ("  NetEq_DelayMsPerLossPercent @0x{0:X} file 0x{1:X}: {2} (expected 48 B8 14 00 00 00 C8 00 00 00 or 48 B8 00..00)" -f $rNe, ($rNe - $FileOffsetAdjustment), (& $hex $bNe 10)) -Level Error }
+    if ($rPace) { Write-Log ("  Pacer_ForceBlockAudioFalse @0x{0:X} file 0x{1:X}: {2} (expected 0F 94 C3 or 30 DB 90)" -f $rPace, ($rPace - $FileOffsetAdjustment), (& $hex $bPace 3)) -Level Error }
     return $false
 }
 # endregion Voice Node Helpers
